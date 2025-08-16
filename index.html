@@ -62,7 +62,7 @@
     <!-- Courses Section -->
     <section class="courses solid-section fade-in" id="courses">
         <div class="container">
-            <div class="section-title">
+            <div class="course-title">
                 <h2>Our Regular Courses</h2>
                 <p>Comprehensive educational programs designed for different age groups</p>
             </div>
@@ -113,7 +113,7 @@
     <!-- Special Classes Section -->
     <section class="special-classes solid-section fade-in">
         <div class="container">
-            <div class="section-title">
+            <div class="special-title">
                 <h2>Our Special Classes</h2>
                 <p>Specialized programs designed to enhance specific skills and talents</p>
             </div>
@@ -227,7 +227,7 @@
     <!-- Student Registration & Booking Section -->
     <section class="registration-booking solid-section fade-in" id="register">
         <div class="container">
-            <div class="section-title">
+            <div class="register-title">
                 <h2>Register Your Child & Schedule a Meeting</h2>
                 <p>Complete your child's registration and book a consultation with our expert tutors</p>
             </div>
@@ -556,7 +556,7 @@
             <div class="contact-content">
                 <div class="contact-image">
                     <div class="contact-image-placeholder">
-                        Professional Consultation
+                       
                     </div>
                 </div>
                 <div class="contact-form">
@@ -1633,8 +1633,15 @@
         .courses-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            
             gap: 2rem;
             margin-top: 3rem;
+        }
+
+        .courses{
+            background: url(images/book5.jpg) no-repeat center center;
+            background-size: cover;
+            color: white;
         }
 
         .course-card {
@@ -1899,9 +1906,19 @@
             right: 0;
         }
 
+        .register-title, .course-title, .special-title {
+            color: white;
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: large;
+        }
+
         /* Registration & Booking Section - Compact */
         .registration-booking {
             padding: 4rem 0;
+            background: url(images/book1.jpg) no-repeat center center;
+            background-size: cover;
+            color: white;
         }
 
         .registration-tabs {
@@ -2250,6 +2267,10 @@
             backdrop-filter: blur(10px);
         }
 
+        .contact-form h3 {
+            color: black;
+        }
+
         .contact-form::before {
             content: '';
             position: absolute;
@@ -2260,10 +2281,16 @@
             background: linear-gradient(135deg, #4461F2, #7B68EE);
         }
 
+        .special-classes {
+            background: url(images/book4.jpg) no-repeat center center;
+            background-size: cover;
+        }
+
         .contact-image-placeholder {
             width: 100%;
             height: 400px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+            background: url(images/tutor3.jpg) ;
+            background-size: cover;
             border-radius: 25px;
             display: flex;
             align-items: center;
