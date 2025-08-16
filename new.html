@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduCare - We Focus on Your Children's Development</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4461F2;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #4461F2;
+        }
+
+        .cta-btn {
+            background: #4461F2;
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(68, 97, 242, 0.3);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #4461F2 0%, #7B68EE 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="60" cy="80" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-text h1 {
+            font-size: 3.5rem;
+            color: white;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero-text p {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #4461F2;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            padding: 1rem 2rem;
+            border: 2px solid white;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover, .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .hero-image .placeholder {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .section-title p {
+            font-size: 1.1rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Registration & Booking Section */
+        .registration-booking {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8efff 100%);
+        }
+
+        .registration-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 3rem;
+            background: white;
+            border-radius: 20px;
+            padding: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 3rem;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 1.2rem 1.5rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 15px;
+            transition: all 0.4s ease;
+            font-weight: 600;
+            color: #666;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            transition: left 0.4s ease;
+            z-index: 0;
+        }
+
+        .tab-btn.active::before {
+            left: 0;
+        }
+
+        .tab-btn.active {
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(68, 97, 242, 0.3);
+        }
+
+        .tab-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .registration-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced Form Styling */
+        .registration-form-container, .booking-container, .calendar-container {
+            background: white;
+            border-radius: 25px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .registration-form-container::before,
+        .booking-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+        }
+
+        /* Progress Bar */
+        .form-progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .progress-step {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.4s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .progress-step.active {
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(68, 97, 242, 0.3);
+        }
+
+        .progress-step.completed {
+            background: #28a745;
+            color: white;
+        }
+
+        .progress-line {
+            width: 100px;
+            height: 3px;
+            background: #e0e0e0;
+            transition: background 0.4s ease;
+            border-radius: 2px;
+        }
+
+        .progress-line.completed {
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+        }
+
+        /* Form Steps */
+        .form-step {
+            display: none;
+        }
+
+        .form-step.active {
+            display: block;
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .form-step h3 {
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .form-step h3::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            border-radius: 2px;
+        }
+
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            border: 2px solid #e8e9ef;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4461F2;
+            box-shadow: 0 0 0 4px rgba(68, 97, 242, 0.1);
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        .form-group select[multiple] {
+            min-height: 120px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Required field indicator */
+        .form-group label::after {
+            content: '*';
+            color: #e74c3c;
+            margin-left: 4px;
+        }
+
+        .form-group label:not([required])::after {
+            display: none;
+        }
+
+        /* Step Buttons */
+        .step-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+
+        .btn-prev,
+        .btn-next,
+        .btn-submit {
+            padding: 1.2rem 2.5rem;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-prev {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-next,
+        .btn-submit {
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            color: white;
+            box-shadow: 0 8px 25px rgba(68, 97, 242, 0.3);
+        }
+
+        .btn-prev:hover,
+        .btn-next:hover,
+        .btn-submit:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-next:hover,
+        .btn-submit:hover {
+            box-shadow: 0 12px 35px rgba(68, 97, 242, 0.4);
+        }
+
+        /* Tutor Selection */
+        .tutor-selection {
+            margin-bottom: 3rem;
+        }
+
+        .tutor-selection h3 {
+            color: #333;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .tutors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .tutor-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            border: 3px solid transparent;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tutor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            transition: left 0.4s ease;
+            z-index: 0;
+        }
+
+        .tutor-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .tutor-card.selected::before {
+            left: 0;
+        }
+
+        .tutor-card.selected {
+            color: white;
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(68, 97, 242, 0.3);
+        }
+
+        .tutor-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.3rem;
+            margin: 0 auto 1.5rem;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .tutor-card.selected .tutor-avatar {
+            background: white;
+            color: #4461F2;
+            transform: scale(1.1);
+        }
+
+        .tutor-card h4,
+        .tutor-card p,
+        .specialty,
+        .rating {
+            position: relative;
+            z-index: 1;
+            transition: color 0.3s ease;
+        }
+
+        .tutor-card h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .tutor-card p {
+            color: #666;
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+        }
+
+        .tutor-card.selected p {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .specialty {
+            font-size: 0.85rem;
+            color: #888;
+            display: block;
+            margin-bottom: 0.8rem;
+        }
+
+        .tutor-card.selected .specialty {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .rating {
+            font-size: 0.9rem;
+            color: #f39c12;
+        }
+
+        /* Success Messages */
+        .success-message {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            border-left: 5px solid #28a745;
+            display: none;
+            position: relative;
+        }
+
+        .success-message::before {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 15px;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideDown 0.4s ease;
+            padding-left: 3rem;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced Calendar Styling */
+        .calendar-container {
+            background: white;
+            border-radius: 25px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .calendar-header h3 {
+            color: #333;
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            background: #f8f9ff;
+            padding: 0.8rem 1.5rem;
+            border-radius: 15px;
+        }
+
+        .calendar-nav button {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            color: white;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calendar-nav button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(68, 97, 242, 0.3);
+        }
+
+        .calendar-nav span {
+            font-weight: bold;
+            font-size: 1.2rem;
+            min-width: 180px;
+            text-align: center;
+            color: #333;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 3rem;
+            background: #f8f9ff;
+            padding: 1.5rem;
+            border-radius: 20px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.95rem;
+            position: relative;
+            min-height: 45px;
+        }
+
+        .calendar-day.header {
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            color: white;
+            font-weight: bold;
+            cursor: default;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .calendar-day.other-month {
+            color: #ccc;
+            background: transparent;
+        }
+
+        .calendar-day.current-day {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+            font-weight: bold;
+        }
+
+        .calendar-day.available {
+            background: #e8f5e8;
+            color: #28a745;
+            border: 1px solid #c3e6cb;
+        }
+
+        .calendar-day.available:hover {
+            background: #28a745;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .calendar-day.booked {
+            background: #ffe8e8;
+            color: #dc3545;
+            cursor: not-allowed;
+            border: 1px solid #f5c6cb;
+        }
+
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(68, 97, 242, 0.4);
+        }
+
+        .time-slots {
+            margin-bottom: 2rem;
+            background: #f8f9ff;
+            padding: 2rem;
+            border-radius: 20px;
+        }
+
+        .time-slots h4 {
+            margin-bottom: 1.5rem;
+            color: #333;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+
+        .slots-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+
+        .time-slot {
+            padding: 1rem;
+            background: white;
+            color: #28a745;
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .time-slot:hover {
+            background: #28a745;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        }
+
+        .time-slot.booked {
+            background: #ffe8e8;
+            color: #dc3545;
+            border-color: #dc3545;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .time-slot.selected {
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+            color: white;
+            border-color: #4461F2;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(68, 97, 242, 0.4);
+        }
+
+        .calendar-legend {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+        }
+
+        .legend-color.available {
+            background: #e8f5e8;
+            border-color: #28a745;
+        }
+
+        .legend-color.booked {
+            background: #ffe8e8;
+            border-color: #dc3545;
+        }
+
+        .legend-color.selected {
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+        }
+
+        .legend-color.current {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        /* Contact Form Enhancement */
+        .contact {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8efff 100%);
+            padding: 5rem 0;
+        }
+
+        .contact-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .contact-form {
+            background: white;
+            padding: 3rem;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contact-form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(135deg, #4461F2, #7B68EE);
+        }
+
+        .contact-form h3 {
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        .contact-form .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .contact-form input,
+        .contact-form textarea {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            border: 2px solid #e8e9ef;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+        }
+
+        .contact-form input:focus,
+        .contact-form textarea:focus {
+            outline: none;
+            border-color: #4461F2;
+            box-shadow: 0 0 0 4px rgba(68, 97, 242, 0.1);
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .registration-tabs {
+                flex-direction: column;
+                max-width: 100%;
+            }
+
+            .tab-btn {
+                margin-bottom: 0.5rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tutors-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .calendar-nav span {
+                min-width: auto;
+            }
+
+            .step-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .contact-content {
+                grid-template-columns: 1fr;
+            }
+
+            .registration-form-container,
+            .booking-container,
+            .calendar-container {
+                padding: 2rem;
+            }
+        }
+
+        /* Smooth Scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Fade in animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="logo">EduCare</div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#register">Register</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <button class="cta-btn">Get Started</button>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>We Focus on Your Children's Development</h1>
+                <p>Creating a nurturing environment where children can grow, learn, and thrive through innovative educational programs and dedicated care.</p>
+                <div class="hero-buttons">
+                    <button class="btn-primary" onclick="document.getElementById('register').scrollIntoView()">Register Now</button>
+                    <button class="btn-secondary" onclick="document.getElementById('contact').scrollIntoView()">Contact Us</button>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="placeholder">Happy Children Learning</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Student Registration & Booking Section -->
+    <section class="registration-booking fade-in" id="register">
+        <div class="container">
+            <div class="section-title">
+                <h2>Register Your Child & Schedule a Meeting</h2>
+                <p>Complete your child's registration and book a consultation with our expert tutors in one simple process</p>
+            </div>
+            
+            <div class="registration-tabs">
+                <button class="tab-btn active" onclick="showTab('registration')">
+                    <span>Student Registration</span>
+                </button>
+                <button class="tab-btn" onclick="showTab('booking')">
+                    <span>Schedule Tutor Meeting</span>
+                </button>
+                <button class="tab-btn" onclick="showTab('calendar')">
+                    <span>Available Slots</span>
+                </button>
+            </div>
+
+            <div class="registration-content">
+                <!-- Registration Form Tab -->
+                <div class="tab-content active" id="registration-tab">
+                    <div class="registration-form-container">
+                        <div class="success-message" id="registrationSuccess">
+                            Registration completed successfully! We will contact you within 24 hours.
+                        </div>
+                        
+                        <div class="form-progress">
+                            <div class="progress-step active" data-step="1">1</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step" data-step="2">2</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step" data-step="3">3</div>
+                        </div>
+                        
+                        <form id="registrationForm" class="multi-step-form">
+                            <!-- Step 1: Student Information -->
+                            <div class="form-step active" id="step-1">
+                                <h3>Student Information</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label required>Student's Full Name</label>
+                                        <input type="text" name="studentName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Date of Birth</label>
+                                        <input type="date" name="dateOfBirth" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Gender</label>
+                                        <select name="gender" required>
+                                            <option value="">Select Gender</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Parent/Guardian Email</label>
+                                        <input type="email" name="parentEmail" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Grade/Class Level</label>
+                                        <select name="gradeLevel" required>
+                                            <option value="">Select Grade</option>
+                                            <option value="pre-k">Pre-K</option>
+                                            <option value="k">Kindergarten</option>
+                                            <option value="1">Grade 1</option>
+                                            <option value="2">Grade 2</option>
+                                            <option value="3">Grade 3</option>
+                                            <option value="4">Grade 4</option>
+                                            <option value="5">Grade 5</option>
+                                            <option value="6">Grade 6</option>
+                                            <option value="7">Grade 7</option>
+                                            <option value="8">Grade 8</option>
+                                            <option value="9">Grade 9</option>
+                                            <option value="10">Grade 10</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label>Previous School (if applicable)</label>
+                                        <input type="text" name="previousSchool">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label>Special Needs or Learning Requirements</label>
+                                        <textarea name="specialNeeds" rows="3" placeholder="Please describe any special requirements or learning needs"></textarea>
+                                    </div>
+                                </div>
+                                <div class="step-buttons">
+                                    <div></div>
+                                    <button type="button" class="btn-next" onclick="nextStep()">Next Step</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Parent/Guardian Information -->
+                            <div class="form-step" id="step-2">
+                                <h3>Parent/Guardian Information</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label required>Parent/Guardian Name</label>
+                                        <input type="text" name="parentName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Relationship to Student</label>
+                                        <select name="relationship" required>
+                                            <option value="">Select Relationship</option>
+                                            <option value="mother">Mother</option>
+                                            <option value="father">Father</option>
+                                            <option value="guardian">Guardian</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Primary Phone</label>
+                                        <input type="tel" name="primaryPhone" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Secondary Phone</label>
+                                        <input type="tel" name="secondaryPhone">
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Email Address</label>
+                                        <input type="email" name="email" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Occupation</label>
+                                        <input type="text" name="occupation">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label required>Home Address</label>
+                                        <textarea name="address" rows="3" required></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Emergency Contact Name</label>
+                                        <input type="text" name="emergencyName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Emergency Contact Phone</label>
+                                        <input type="tel" name="emergencyPhone" required>
+                                    </div>
+                                </div>
+                                <div class="step-buttons">
+                                    <button type="button" class="btn-prev" onclick="prevStep()">Previous</button>
+                                    <button type="button" class="btn-next" onclick="nextStep()">Next Step</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Program Selection & Preferences -->
+                            <div class="form-step" id="step-3">
+                                <h3>Program Selection & Preferences</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label required>Preferred Program</label>
+                                        <select name="program" required>
+                                            <option value="">Select Program</option>
+                                            <option value="regular">Regular Classes</option>
+                                            <option value="tutoring">One-on-One Tutoring</option>
+                                            <option value="group">Group Sessions</option>
+                                            <option value="special">Special Programs</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Subject Focus</label>
+                                        <select name="subjects" multiple>
+                                            <option value="math">Mathematics</option>
+                                            <option value="english">English</option>
+                                            <option value="science">Science</option>
+                                            <option value="art">Art</option>
+                                            <option value="music">Music</option>
+                                            <option value="computer">Computer</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Preferred Schedule</label>
+                                        <select name="schedule" required>
+                                            <option value="">Select Schedule</option>
+                                            <option value="morning">Morning (8AM - 12PM)</option>
+                                            <option value="afternoon">Afternoon (1PM - 5PM)</option>
+                                            <option value="evening">Evening (5PM - 8PM)</option>
+                                            <option value="flexible">Flexible</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Start Date</label>
+                                        <input type="date" name="startDate" required>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label>Additional Comments or Requirements</label>
+                                        <textarea name="comments" rows="4" placeholder="Any additional information or specific requirements"></textarea>
+                                    </div>
+                                </div>
+                                <div class="step-buttons">
+                                    <button type="button" class="btn-prev" onclick="prevStep()">Previous</button>
+                                    <button type="submit" class="btn-submit">Complete Registration</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Booking Form Tab -->
+                <div class="tab-content" id="booking-tab">
+                    <div class="booking-container">
+                        <div class="success-message" id="bookingSuccess">
+                            Appointment scheduled successfully! We will send you a confirmation email shortly.
+                        </div>
+                        
+                        <div class="tutor-selection">
+                            <h3>Select a Tutor</h3>
+                            <div class="tutors-grid">
+                                <div class="tutor-card" data-tutor="john-smith" onclick="selectTutor(this)">
+                                    <div class="tutor-avatar">JS</div>
+                                    <h4>John Smith</h4>
+                                    <p>Mathematics Teacher</p>
+                                    <span class="specialty">Algebra, Geometry</span>
+                                    <div class="rating">⭐⭐⭐⭐⭐ 4.9</div>
+                                </div>
+                                <div class="tutor-card" data-tutor="sarah-johnson" onclick="selectTutor(this)">
+                                    <div class="tutor-avatar">SJ</div>
+                                    <h4>Sarah Johnson</h4>
+                                    <p>English Teacher</p>
+                                    <span class="specialty">Literature, Writing</span>
+                                    <div class="rating">⭐⭐⭐⭐⭐ 4.8</div>
+                                </div>
+                                <div class="tutor-card" data-tutor="michael-brown" onclick="selectTutor(this)">
+                                    <div class="tutor-avatar">MB</div>
+                                    <h4>Michael Brown</h4>
+                                    <p>Science Teacher</p>
+                                    <span class="specialty">Physics, Chemistry</span>
+                                    <div class="rating">⭐⭐⭐⭐⭐ 4.9</div>
+                                </div>
+                                <div class="tutor-card" data-tutor="emily-davis" onclick="selectTutor(this)">
+                                    <div class="tutor-avatar">ED</div>
+                                    <h4>Emily Davis</h4>
+                                    <p>Art Teacher</p>
+                                    <span class="specialty">Drawing, Painting</span>
+                                    <div class="rating">⭐⭐⭐⭐⭐ 4.7</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form id="bookingForm" class="booking-form">
+                            <div class="booking-details">
+                                <h3>Appointment Details</h3>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Selected Tutor</label>
+                                        <input type="text" id="selectedTutor" readonly placeholder="Please select a tutor above">
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Student Name</label>
+                                        <input type="text" name="bookingStudentName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Parent Name</label>
+                                        <input type="text" name="bookingParentName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Contact Phone</label>
+                                        <input type="tel" name="bookingPhone" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Email</label>
+                                        <input type="email" name="bookingEmail" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Meeting Type</label>
+                                        <select name="meetingType" required>
+                                            <option value="">Select Type</option>
+                                            <option value="consultation">Initial Consultation</option>
+                                            <option value="assessment">Academic Assessment</option>
+                                            <option value="trial">Trial Session</option>
+                                            <option value="parent-meeting">Parent Meeting</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Preferred Date</label>
+                                        <input type="date" name="bookingDate" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label required>Preferred Time</label>
+                                        <select name="bookingTime" required>
+                                            <option value="">Select Time</option>
+                                            <option value="09:00">9:00 AM</option>
+                                            <option value="10:00">10:00 AM</option>
+                                            <option value="11:00">11:00 AM</option>
+                                            <option value="14:00">2:00 PM</option>
+                                            <option value="15:00">3:00 PM</option>
+                                            <option value="16:00">4:00 PM</option>
+                                            <option value="17:00">5:00 PM</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label>Message/Notes</label>
+                                        <textarea name="bookingMessage" rows="4" placeholder="Please describe what you'd like to discuss or any specific concerns"></textarea>
+                                    </div>
+                                </div>
+                                <div class="step-buttons">
+                                    <div></div>
+                                    <button type="submit" class="btn-submit">Schedule Appointment</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Calendar Tab -->
+                <div class="tab-content" id="calendar-tab">
+                    <div class="calendar-container">
+                        <div class="calendar-header">
+                            <h3>Available Time Slots</h3>
+                            <div class="calendar-nav">
+                                <button id="prevMonth" onclick="changeMonth(-1)">‹</button>
+                                <span id="currentMonth"></span>
+                                <button id="nextMonth" onclick="changeMonth(1)">›</button>
+                            </div>
+                        </div>
+                        <div class="calendar-grid" id="calendarGrid"></div>
+                        <div class="time-slots" id="timeSlots">
+                            <h4>Available Times for <span id="selectedDate">Select a Date</span></h4>
+                            <div class="slots-container" id="slotsContainer">
+                                <p style="text-align: center; color: #666; padding: 2rem;">Select a date to see available time slots</p>
+                            </div>
+                        </div>
+                        <div class="calendar-legend" style="margin-top: 2rem;">
+                            <div class="legend-item">
+                                <span class="legend-color available"></span>
+                                <span>Available</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color booked"></span>
+                                <span>Booked</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color selected"></span>
+                                <span>Selected</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color current"></span>
+                                <span>Today</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact fade-in" id="contact">
+        <div class="container">
+            <div class="section-title">
+                <h2>Get in Touch</h2>
+                <p>Have questions? We're here to help! Contact us for any information about our programs.</p>
+            </div>
+            <div class="contact-content">
+                <div class="contact-image">
+                    <div style="width: 100%; height: 400px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 25px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);">
+                        Professional Consultation
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <div class="success-message" id="contactSuccess">
+                        Thank you for your message! We will get back to you within 24 hours.
+                    </div>
+                    <h3>Send us a Message</h3>
+                    <form id="contactForm">
+                        <div class="form-group">
+                            <label required>Your Name</label>
+                            <input type="text" name="contactName" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label required>Your Email</label>
+                            <input type="email" name="contactEmail" placeholder="Enter your email address" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Your Phone</label>
+                            <input type="tel" name="contactPhone" placeholder="Enter your phone number">
+                        </div>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <select name="contactSubject">
+                                <option value="">Select a topic</option>
+                                <option value="enrollment">Enrollment Information</option>
+                                <option value="programs">Program Details</option>
+                                <option value="scheduling">Scheduling Questions</option>
+                                <option value="fees">Fees & Pricing</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label required>Your Message</label>
+                            <textarea name="contactMessage" rows="5" placeholder="Tell us how we can help you..." required></textarea>
+                        </div>
+                        <div class="step-buttons">
+                            <div></div>
+                            <button type="submit" class="btn-submit">Send Message</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Global Variables
+        let currentStep = 1;
+        let selectedTutorName = '';
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+
+        // Tab Switching
+        function showTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Initialize calendar if calendar tab is selected
+            if (tabName === 'calendar') {
+                initializeCalendar();
+            }
+        }
+
+        // Multi-step Form Navigation
+        function nextStep() {
+            const currentStepEl = document.getElementById(`step-${currentStep}`);
+            const inputs = currentStepEl.querySelectorAll('input[required], select[required], textarea[required]');
+            
+            // Validate current step
+            let isValid = true;
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    input.style.borderColor = '#e74c3c';
+                    isValid = false;
+                } else {
+                    input.style.borderColor = '#e8e9ef';
+                }
+            });
+            
+            if (!isValid) {
+                alert('Please fill in all required fields before proceeding.');
+                return;
+            }
+            
+            if (currentStep < 3) {
+                // Hide current step
+                currentStepEl.classList.remove('active');
+                
+                // Update progress
+                document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.add('completed');
+                document.querySelectorAll('.progress-line')[currentStep - 1].classList.add('completed');
+                
+                // Show next step
+                currentStep++;
+                document.getElementById(`step-${currentStep}`).classList.add('active');
+                document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.add('active');
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                // Hide current step
+                document.getElementById(`step-${currentStep}`).classList.remove('active');
+                document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.remove('active');
+                
+                // Show previous step
+                currentStep--;
+                document.getElementById(`step-${currentStep}`).classList.add('active');
+                
+                // Update progress
+                document.querySelector(`.progress-step[data-step="${currentStep + 1}"]`).classList.remove('completed');
+                if (currentStep < 3) {
+                    document.querySelectorAll('.progress-line')[currentStep - 1].classList.remove('completed');
+                }
+            }
+        }
+
+        // Tutor Selection
+        function selectTutor(tutorCard) {
+            // Remove selection from all cards
+            document.querySelectorAll('.tutor-card').forEach(card => card.classList.remove('selected'));
+            
+            // Add selection to clicked card
+            tutorCard.classList.add('selected');
+            
+            // Update selected tutor field
+            selectedTutorName = tutorCard.querySelector('h4').textContent;
+            document.getElementById('selectedTutor').value = selectedTutorName;
+        }
+
+        // Enhanced Calendar Functions
+        function initializeCalendar() {
+            updateCalendarDisplay();
+        }
+
+        function changeMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            updateCalendarDisplay();
+        }
+
+        function updateCalendarDisplay() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            document.getElementById('currentMonth').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayHeaders.forEach(day => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day header';
+                dayEl.textContent = day;
+                calendarGrid.appendChild(dayEl);
+            });
+            
+            // Calculate calendar layout
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const today = new Date();
+            const isCurrentMonth = currentMonth === today.getMonth() && currentYear === today.getFullYear();
+            
+            // Add empty cells for days before month starts
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Add days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayEl = document.createElement('div');
+                let dayClass = 'calendar-day';
+                
+                // Mark current day
+                if (isCurrentMonth && day === today.getDate()) {
+                    dayClass += ' current-day';
+                } else if (Math.random() > 0.7) {
+                    // Randomly mark some days as booked (for demo)
+                    dayClass += ' booked';
+                } else {
+                    dayClass += ' available';
+                }
+                
+                dayEl.className = dayClass;
+                dayEl.textContent = day;
+                
+                if (!dayEl.classList.contains('booked')) {
+                    dayEl.onclick = () => selectDate(day, dayEl);
+                }
+                
+                calendarGrid.appendChild(dayEl);
+            }
+        }
+
+        function selectDate(day, dayEl) {
+            // Remove previous selection
+            document.querySelectorAll('.calendar-day.selected').forEach(d => d.classList.remove('selected'));
+            
+            // Add selection to clicked day
+            dayEl.classList.add('selected');
+            
+            // Update selected date display
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            document.getElementById('selectedDate').textContent = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
+            
+            // Show available time slots
+            showTimeSlots();
+        }
+
+        function showTimeSlots() {
+            const slotsContainer = document.getElementById('slotsContainer');
+            const timeSlots = [
+                { time: '9:00 AM', available: true },
+                { time: '10:00 AM', available: true },
+                { time: '11:00 AM', available: false },
+                { time: '12:00 PM', available: true },
+                { time: '2:00 PM', available: true },
+                { time: '3:00 PM', available: false },
+                { time: '4:00 PM', available: true },
+                { time: '5:00 PM', available: true }
+            ];
+            
+            slotsContainer.innerHTML = '';
+            
+            timeSlots.forEach(slot => {
+                const slotEl = document.createElement('div');
+                slotEl.className = slot.available ? 'time-slot' : 'time-slot booked';
+                slotEl.textContent = slot.time;
+                
+                if (slot.available) {
+                    slotEl.onclick = () => selectTimeSlot(slotEl);
+                }
+                
+                slotsContainer.appendChild(slotEl);
+            });
+        }
+
+        function selectTimeSlot(slotEl) {
+            // Remove previous selection
+            document.querySelectorAll('.time-slot').forEach(slot => slot.classList.remove('selected'));
+            
+            // Add selection to clicked slot
+            slotEl.classList.add('selected');
+        }
+
+        // Form Submissions
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.innerHTML = '<span class="loading"></span> Processing...';
+            submitBtn.disabled = true;
+            
+            // Simulate form submission
+            setTimeout(() => {
+                document.getElementById('registrationSuccess').classList.add('show');
+                this.reset();
+                currentStep = 1;
+                
+                // Reset progress
+                document.querySelectorAll('.progress-step').forEach((step, index) => {
+                    step.classList.remove('active', 'completed');
+                    if (index === 0) step.classList.add('active');
+                });
+                document.querySelectorAll('.progress-line').forEach(line => line.classList.remove('completed'));
+                
+                // Show first step
+                document.querySelectorAll('.form-step').forEach((step, index) => {
+                    step.classList.remove('active');
+                    if (index === 0) step.classList.add('active');
+                });
+                
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }, 2000);
+        });
+
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!selectedTutorName) {
+                alert('Please select a tutor before submitting.');
+                return;
+            }
+            
+            const submitBtn = this.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.innerHTML = '<span class="loading"></span> Scheduling...';
+            submitBtn.disabled = true;
+            
+            // Simulate form submission
+            setTimeout(() => {
+                document.getElementById('bookingSuccess').classList.add('show');
+                this.reset();
+                document.getElementById('selectedTutor').value = '';
+                selectedTutorName = '';
+                document.querySelectorAll('.tutor-card').forEach(card => card.classList.remove('selected'));
+                
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }, 2000);
+        });
+
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.innerHTML = '<span class="loading"></span> Sending...';
+            submitBtn.disabled = true;
+            
+            // Simulate form submission
+            setTimeout(() => {
+                document.getElementById('contactSuccess').classList.add('show');
+                this.reset();
+                
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }, 2000);
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Initialize calendar on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCalendar();
+        });
+
+        // Enhanced input validation
+        document.querySelectorAll('input, select, textarea').forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.hasAttribute('required') && !this.value.trim()) {
+                    this.style.borderColor = '#e74c3c';
+                } else {
+                    this.style.borderColor = '#e8e9ef';
+                }
+            });
+            
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#4461F2';
+            });
+        });
+    </script>
+</body>
+</html>
