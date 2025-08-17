@@ -1351,7 +1351,6 @@
     </script>
 
 
-
 <style>
         * {
             margin: 0;
@@ -1359,7 +1358,7 @@
             box-sizing: border-box;
         }
 
-        /* Static Background with Mobile Optimization */
+        /* Optimized Background for All Screen Sizes */
         body {
             font-family: 'Arial', sans-serif;
             line-height: 1.6;
@@ -1370,6 +1369,30 @@
             background-color: #1a1a1a; /* Fallback color */
             overflow-x: hidden;
             min-height: 100vh;
+        }
+
+        /* Large Desktop screens (1440px and above) */
+        @media (min-width: 1440px) {
+            body {
+                background-position: center center;
+                background-size: cover;
+            }
+        }
+
+        /* Standard Desktop screens (1200px - 1439px) */
+        @media (min-width: 1200px) and (max-width: 1439px) {
+            body {
+                background-position: center center;
+                background-size: cover;
+            }
+        }
+
+        /* Small Desktop/Laptop screens (992px - 1199px) */
+        @media (min-width: 992px) and (max-width: 1199px) {
+            body {
+                background-position: center 20%;
+                background-size: cover;
+            }
         }
 
         @keyframes gradientShift {
@@ -2442,7 +2465,30 @@
             transform: translateY(0);
         }
 
-        /* Mobile Responsive with Enhanced Background Optimization */
+        /* Tablet-specific optimizations (769px - 1024px) */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            body {
+                background-attachment: scroll;
+                background-size: cover;
+                background-position: center 15%;
+                background-image: 
+                    linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),
+                    url('images/tutor1.jpg');
+            }
+            
+            /* Hero section uses same background image for tablets */
+            .hero {
+                background: 
+                    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+                    url('images/tutor1.jpg');
+                background-attachment: scroll;
+                background-size: cover;
+                background-position: center 15%;
+                background-repeat: no-repeat;
+            }
+        }
+
+        /* Mobile Responsive with Enhanced Background Optimization (≤768px) */
         @media (max-width: 768px) {
             body {
                 /* Remove fixed attachment for better mobile performance */
@@ -2456,14 +2502,15 @@
                     url('images/tutor1.jpg');
             }
             
-            /* Ensure sections maintain readability */
+            /* Hero section uses same background image as body for mobile/tablet */
             .hero {
                 background: 
-                    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-                    inherit;
+                    linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+                    url('images/tutor1.jpg');
                 background-attachment: scroll;
                 background-size: cover;
-                background-position: center;
+                background-position: center center;
+                background-repeat: no-repeat;
             }
 
             .mobile-menu-toggle {
@@ -2637,19 +2684,24 @@
             }
         }
 
-        /* Extra small mobile devices */
+        /* Extra small mobile devices (≤480px) */
         @media (max-width: 480px) {
             body {
-                background-position: center top;
-                background-size: cover;
+                background-position: center center;
+                background-size: auto 100vh;
+                background-repeat: no-repeat;
                 /* Stronger overlay for very small screens */
                 background-image: 
                     linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
                     url('images/tutor1.jpg');
+                background-color: #1a1a1a;
             }
 
             .hero {
-                background: url('images/tutor1.jpg');
+                background-position: center center;
+                background-size: auto 100vh;
+                background-repeat: no-repeat;
+                background-color: #1a1a1a;
             }
 
             .hero-text h1 {
@@ -2705,6 +2757,44 @@
             body {
                 background-size: cover;
                 background-position: center center;
+            }
+            
+            .hero {
+                background-position: center center;
+            }
+        }
+
+        /* Alternative mobile background sizing for very wide or very narrow images */
+        @media (max-width: 768px) and (max-aspect-ratio: 1/1) {
+            body {
+                background-size: 100vw auto;
+                background-position: center top;
+            }
+            
+            .hero {
+                background-size: 100vw auto;
+                background-position: center top;
+            }
+        }
+
+        /* For very tall mobile screens */
+        @media (max-width: 768px) and (min-aspect-ratio: 1/2) {
+            body {
+                background-size: cover;
+                background-position: center 30%;
+            }
+            
+            .hero {
+                background-size: cover;
+                background-position: center 30%;
+            }
+        }
+
+        /* Ultra-wide screens (≥1920px) */
+        @media (min-width: 1920px) {
+            body {
+                background-position: center center;
+                background-size: cover;
             }
         }
 
