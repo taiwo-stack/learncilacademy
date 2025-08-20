@@ -1397,15 +1397,22 @@ body::before {
 
 /* Header */
 header {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 0.8rem 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+    padding: 1rem 0;
     position: fixed;
     width: 100%;
     top: 0;
     z-index: 1000;
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(68, 97, 242, 0.1);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.4s ease;
+}
+
+header.scrolled {
+    padding: 0.7rem 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 1) 100%);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.12);
 }
 
 nav {
@@ -1418,42 +1425,126 @@ nav {
 }
 
 .logo {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: #4461F2;
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #4461F2 0%, #7B68EE 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.logo::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(135deg, #4461F2 0%, #7B68EE 100%);
+    transition: width 0.4s ease;
+}
+
+.logo:hover::after {
+    width: 100%;
 }
 
 .nav-links {
     display: flex;
     list-style: none;
-    gap: 2rem;
+    gap: 2.5rem;
+    align-items: center;
+}
+
+.nav-links li {
+    position: relative;
 }
 
 .nav-links a {
     text-decoration: none;
     color: #333;
-    font-weight: 500;
-    transition: color 0.3s;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.5rem 0;
+    position: relative;
+    transition: all 0.3s ease;
+    text-transform: capitalize;
+}
+
+.nav-links a::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: linear-gradient(135deg, #4461F2 0%, #7B68EE 100%);
+    border-radius: 1px;
+    transition: width 0.3s ease;
 }
 
 .nav-links a:hover {
     color: #4461F2;
+    transform: translateY(-1px);
+}
+
+.nav-links a:hover::before {
+    width: 100%;
+}
+
+.nav-links a.active {
+    color: #4461F2;
+    font-weight: 700;
+}
+
+.nav-links a.active::before {
+    width: 100%;
 }
 
 .cta-btn {
-    background: #4461F2;
+    background: linear-gradient(135deg, #4461F2 0%, #7B68EE 100%);
     color: white;
-    padding: 0.7rem 1.5rem;
+    padding: 0.8rem 2rem;
     border: none;
-    border-radius: 25px;
+    border-radius: 50px;
     cursor: pointer;
-    font-weight: 600;
-    transition: transform 0.3s, box-shadow 0.3s;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    box-shadow: 0 4px 15px rgba(68, 97, 242, 0.3);
+}
+
+.cta-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #7B68EE 0%, #4461F2 100%);
+    transition: left 0.4s ease;
+    z-index: -1;
+}
+
+.cta-btn:hover::before {
+    left: 0;
 }
 
 .cta-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(68, 97, 242, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(68, 97, 242, 0.4);
+}
+
+.cta-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(68, 97, 242, 0.3);
 }
 
 /* Mobile Menu Toggle */
@@ -1461,9 +1552,23 @@ nav {
     display: none;
     background: none;
     border: none;
-    font-size: 1.5rem;
-    color: #333;
+    font-size: 1.8rem;
+    color: #4461F2;
     cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.mobile-menu-toggle:hover {
+    background: rgba(68, 97, 242, 0.1);
+    transform: rotate(90deg);
+}
+
+.mobile-menu-toggle.active {
+    transform: rotate(180deg);
+    color: #7B68EE;
 }
 
 /* Transparent Sections */
@@ -2501,7 +2606,28 @@ html {
     }
     
     .hero {
-        background: inherit;
+        background: url('images/tutor1.jpg') no-repeat center top;
+        background-size: cover;
+        background-attachment: scroll;
+        min-height: 100vh;
+        position: relative;
+    }
+    
+    /* Hero overlay to match the body pattern */
+    .hero::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 1;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 2;
     }
 }
 
@@ -2608,11 +2734,25 @@ html {
         top: 100%;
         left: 0;
         width: 100%;
-        background: rgba(255, 255, 255, 0.95);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 1) 100%);
         flex-direction: column;
-        padding: 1rem 0;
-        backdrop-filter: blur(10px);
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 2rem 0;
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(68, 97, 242, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        animation: slideDown 0.4s ease;
+        border-radius: 0 0 20px 20px;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .nav-links.show {
@@ -2620,7 +2760,44 @@ html {
     }
 
     .nav-links li {
-        margin: 0.5rem 0;
+        margin: 0.8rem 0;
+        padding: 0 2rem;
+    }
+
+    .nav-links a {
+        font-size: 1.1rem;
+        padding: 1rem 0;
+        display: block;
+        text-align: center;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .nav-links a:hover {
+        background: rgba(68, 97, 242, 0.05);
+        transform: translateX(10px);
+    }
+
+    .mobile-menu-toggle {
+        display: block;
+    }
+
+    .cta-btn {
+        padding: 0.7rem 1.5rem;
+        font-size: 0.9rem;
+        border-radius: 30px;
+    }
+
+    header {
+        padding: 0.8rem 0;
+    }
+
+    nav {
+        padding: 0 1rem;
+    }
+
+    .logo {
+        font-size: 1.6rem;
     }
 
     .hero-content {
