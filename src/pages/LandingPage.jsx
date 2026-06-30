@@ -1,0 +1,1373 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  getTutors,
+  getCourses,
+  registerStudent, 
+  createBooking, 
+  createContactMessage 
+} from '../services/dataService';
+import { 
+  Star, 
+  ChevronLeft, 
+  ChevronRight, 
+  Check, 
+  BookOpen, 
+  Calendar, 
+  GraduationCap, 
+  User, 
+  Sparkles, 
+  Mail, 
+  Phone, 
+  MapPin 
+} from 'lucide-react';
+import '../styles/LandingPage.css';
+
+const getSpecialClassImage = (title, index) => {
+  const lowercaseTitle = title.toLowerCase();
+  if (lowercaseTitle.includes('programming') || lowercaseTitle.includes('code') || lowercaseTitle.includes('python') || lowercaseTitle.includes('java')) {
+    return '/images/book4.jpg';
+  }
+  if (lowercaseTitle.includes('ai') || lowercaseTitle.includes('intelligence') || lowercaseTitle.includes('artificial')) {
+    return '/images/ai.jpg';
+  }
+  if (lowercaseTitle.includes('science') || lowercaseTitle.includes('data')) {
+    return '/images/student5.jpg';
+  }
+  if (lowercaseTitle.includes('excel') || lowercaseTitle.includes('word') || lowercaseTitle.includes('microsoft') || lowercaseTitle.includes('office')) {
+    return '/images/student6.jpg';
+  }
+  if (lowercaseTitle.includes('web') || lowercaseTitle.includes('design') || lowercaseTitle.includes('html')) {
+    return '/images/student10.jpg';
+  }
+  if (lowercaseTitle.includes('writing') || lowercaseTitle.includes('creative') || lowercaseTitle.includes('essay')) {
+    return '/images/student3.jpg';
+  }
+  
+  const images = [
+    '/images/book4.jpg',
+    '/images/ai.jpg',
+    '/images/student5.jpg',
+    '/images/student6.jpg',
+    '/images/student10.jpg',
+    '/images/student3.jpg'
+  ];
+  return images[index % images.length];
+};
+
+export default function LandingPage() {
+  const [tutors, setTutors] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [loadingTutors, setLoadingTutors] = useState(true);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+
+  // Forms success states
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
+  // Tab State: 'registration' | 'booking' | 'calendar'
+  const [activeTab, setActiveTab] = useState('registration');
+
+  // Multi-step form state
+  const [regStep, setRegStep] = useState(1);
+  const [studentForm, setStudentForm] = useState({
+    studentName: '',
+    dateOfBirth: '',
+    gender: '',
+    gradeLevel: '',
+    previousSchool: '',
+    specialNeeds: '',
+    parentName: '',
+    relationship: '',
+    primaryPhone: '',
+    email: '',
+    address: '',
+    emergencyName: '',
+    emergencyPhone: '',
+    program: '',
+    schedule: '',
+    startDate: '',
+    comments: ''
+  });
+
+  // Booking form state
+  const [selectedTutor, setSelectedTutor] = useState(null); // Tutor object
+  const [bookingForm, setBookingForm] = useState({
+    bookingStudentName: '',
+    bookingParentName: '',
+    bookingPhone: '',
+    bookingEmail: '',
+    meetingType: '',
+    bookingDate: '',
+    bookingTime: '',
+    bookingMessage: ''
+  });
+
+  // Contact form state
+  const [contactForm, setContactForm] = useState({
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
+    contactSubject: '',
+    contactMessage: ''
+  });
+
+  // Calendar State
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
+  const [selectedCalendarTime, setSelectedCalendarTime] = useState('');
+  const [bookedDates, setBookedDates] = useState({}); // Date-string -> boolean
+
+  // Scroll wrappers
+  const teachersScrollRef = useRef(null);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [tutorData, courseData] = await Promise.all([
+          getTutors(),
+          getCourses()
+        ]);
+        setTutors(tutorData);
+        setCourses(courseData);
+
+        // Randomly pre-fill some booked days for the calendar demo
+        const tempBooked = {};
+        const today = new Date();
+        for (let i = 1; i <= 30; i++) {
+          const checkDate = new Date(today.getFullYear(), today.getMonth(), i);
+          if (Math.random() > 0.75) {
+            tempBooked[checkDate.toDateString()] = true;
+          }
+        }
+        setBookedDates(tempBooked);
+      } catch (err) {
+        console.error('Failed to load public page data:', err);
+      } finally {
+        setLoadingTutors(false);
+        setLoadingCourses(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  // Scroll teachers grid
+  const scrollTeachers = (direction) => {
+    if (teachersScrollRef.current) {
+      const scrollAmount = 300;
+      teachersScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Student Registration Form Handlers
+  const handleRegChange = (e) => {
+    const { name, value } = e.target;
+    setStudentForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNextStep = () => {
+    // Basic validation for step 1 & 2
+    let requiredFields = [];
+    if (regStep === 1) {
+      requiredFields = ['studentName', 'dateOfBirth', 'gender', 'gradeLevel'];
+    } else if (regStep === 2) {
+      requiredFields = ['parentName', 'relationship', 'primaryPhone', 'email', 'address', 'emergencyName', 'emergencyPhone'];
+    }
+
+    const missing = requiredFields.filter(f => !studentForm[f].trim());
+    if (missing.length > 0) {
+      alert('Please fill in all required fields before proceeding.');
+      return;
+    }
+    setRegStep(prev => Math.min(prev + 1, 3));
+  };
+
+  const handlePrevStep = () => {
+    setRegStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const dataToSave = {
+        full_name: studentForm.studentName,
+        date_of_birth: studentForm.dateOfBirth,
+        gender: studentForm.gender,
+        grade_level: studentForm.gradeLevel,
+        previous_school: studentForm.previousSchool,
+        special_needs: studentForm.specialNeeds,
+        program: studentForm.program,
+        schedule: studentForm.schedule,
+        start_date: studentForm.startDate,
+        additional_comments: studentForm.comments,
+        // parent info will map to profiles / metadata
+        parentName: studentForm.parentName,
+        relationship: studentForm.relationship,
+        email: studentForm.email,
+        phone: studentForm.primaryPhone
+      };
+      await registerStudent(dataToSave);
+      setRegisterSuccess(true);
+      setStudentForm({
+        studentName: '', dateOfBirth: '', gender: '', gradeLevel: '', previousSchool: '', specialNeeds: '',
+        parentName: '', relationship: '', primaryPhone: '', email: '', address: '', emergencyName: '', emergencyPhone: '',
+        program: '', schedule: '', startDate: '', comments: ''
+      });
+      setRegStep(1);
+      setTimeout(() => setRegisterSuccess(false), 5000);
+    } catch (err) {
+      alert('Error during registration: ' + err.message);
+    }
+  };
+
+  // Booking Form Handlers
+  const handleBookingChange = (e) => {
+    const { name, value } = e.target;
+    setBookingForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedTutor) {
+      alert('Please select a tutor first.');
+      return;
+    }
+    try {
+      const bookingData = {
+        tutor_id: selectedTutor.id,
+        tutor_name: selectedTutor.full_name,
+        student_name: bookingForm.bookingStudentName,
+        parent_name: bookingForm.bookingParentName,
+        phone: bookingForm.bookingPhone,
+        email: bookingForm.bookingEmail,
+        meeting_type: bookingForm.meetingType,
+        booking_date: bookingForm.bookingDate,
+        booking_time: bookingForm.bookingTime,
+        message: bookingForm.bookingMessage
+      };
+      await createBooking(bookingData);
+      setBookingSuccess(true);
+      setBookingForm({
+        bookingStudentName: '', bookingParentName: '', bookingPhone: '', bookingEmail: '',
+        meetingType: '', bookingDate: '', bookingTime: '', bookingMessage: ''
+      });
+      setSelectedTutor(null);
+      setTimeout(() => setBookingSuccess(false), 5000);
+    } catch (err) {
+      alert('Error scheduling booking: ' + err.message);
+    }
+  };
+
+  // Contact Form Handlers
+  const handleContactChange = (e) => {
+    const { name, value } = e.target;
+    setContactForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await createContactMessage({
+        name: contactForm.contactName,
+        email: contactForm.contactEmail,
+        phone: contactForm.contactPhone,
+        subject: contactForm.contactSubject,
+        message: contactForm.contactMessage
+      });
+      setContactSuccess(true);
+      setContactForm({
+        contactName: '', contactEmail: '', contactPhone: '', contactSubject: '', contactMessage: ''
+      });
+      setTimeout(() => setContactSuccess(false), 5000);
+    } catch (err) {
+      alert('Error sending message: ' + err.message);
+    }
+  };
+
+  // Calendar Helper Functions
+  const changeMonth = (direction) => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev.getFullYear(), prev.getMonth() + direction, 1);
+      return newDate;
+    });
+    setSelectedCalendarDate(null);
+    setSelectedCalendarTime('');
+  };
+
+  const selectCalendarDate = (day) => {
+    const newSel = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    setSelectedCalendarDate(newSel);
+    setSelectedCalendarTime('');
+  };
+
+  const confirmCalendarSelection = () => {
+    if (!selectedCalendarDate || !selectedCalendarTime) return;
+    // Format date as YYYY-MM-DD
+    const yyyy = selectedCalendarDate.getFullYear();
+    const mm = String(selectedCalendarDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(selectedCalendarDate.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    
+    // Switch to booking form and prefill
+    setBookingForm(prev => ({
+      ...prev,
+      bookingDate: dateStr,
+      bookingTime: selectedCalendarTime
+    }));
+    setActiveTab('booking');
+    
+    // Scroll to the registration/booking block
+    const registerSection = document.getElementById('register');
+    if (registerSection) {
+      registerSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Generate calendar days
+  const renderCalendar = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const today = new Date();
+    
+    const calendarCells = [];
+    
+    // Day Headers
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Blank padding before the first day of the month
+    for (let i = 0; i < firstDayIndex; i++) {
+      calendarCells.push(
+        <div key={`empty-${i}`} className="calendar-day other-month"></div>
+      );
+    }
+    
+    // Add month days
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cellDate = new Date(year, month, d);
+      const isToday = cellDate.toDateString() === today.toDateString();
+      const isBooked = bookedDates[cellDate.toDateString()] === true;
+      const isSelected = selectedCalendarDate && cellDate.toDateString() === selectedCalendarDate.toDateString();
+      
+      let dayClass = 'calendar-day';
+      if (isSelected) dayClass += ' selected';
+      else if (isToday) dayClass += ' current-day';
+      else if (isBooked) dayClass += ' booked';
+      else dayClass += ' available';
+
+      calendarCells.push(
+        <div 
+          key={`day-${d}`} 
+          className={dayClass}
+          onClick={() => !isBooked && selectCalendarDate(d)}
+        >
+          {d}
+        </div>
+      );
+    }
+    
+    return { daysOfWeek, calendarCells };
+  };
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const calendarData = renderCalendar();
+
+  const mockTimeSlots = [
+    '09:00 AM',
+    '10:00 AM',
+    '11:00 AM',
+    '12:00 PM',
+    '02:00 PM',
+    '03:00 PM',
+    '04:00 PM',
+    '05:00 PM'
+  ];
+
+  return (
+    <div className="fade-in">
+      {/* Hero Section */}
+      <section className="hero" id="home">
+        <div className="container">
+          <div className="hero-content">
+            <div className="hero-text">
+              <h1>One-on-One Tutoring That Helps Students Grow and Thrive</h1>
+              <p>
+                We provide personalized learning experiences and innovative educational programs 
+                that nurture every student's potential, helping them learn, grow, and succeed.
+              </p>
+              <div className="hero-buttons">
+                <button 
+                  className="btn-primary" 
+                  onClick={() => {
+                    const el = document.getElementById('register');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  Register Now
+                </button>
+              </div>
+            </div>
+            <div className="hero-form-card">
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.75rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setActiveTab('registration')}
+                  style={{
+                    flex: 1,
+                    padding: '0.5rem 0.25rem',
+                    background: activeTab === 'registration' ? 'var(--accent-color)' : 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: '6px',
+                    fontSize: '0.82rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Quick Register
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setActiveTab('booking')}
+                  style={{
+                    flex: 1,
+                    padding: '0.5rem 0.25rem',
+                    background: activeTab === 'booking' ? 'var(--accent-color)' : 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: '6px',
+                    fontSize: '0.82rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Book Meeting
+                </button>
+              </div>
+
+              {activeTab === 'registration' && (
+                <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.75)', margin: '0 0 0.4rem 0', lineHeight: '1.4' }}>
+                    <strong>Quick Register:</strong> Enroll your child in our courses to setup their study account and choose grade programs.
+                  </p>
+                  {registerSuccess && (
+                    <div style={{ padding: '0.5rem', background: 'rgba(40, 167, 69, 0.2)', border: '1px solid #28a745', borderRadius: '6px', fontSize: '0.75rem', textAlign: 'center', color: '#28a745', fontWeight: 'bold' }}>
+                      Registration completed successfully!
+                    </div>
+                  )}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Student's Full Name *</label>
+                    <input 
+                      type="text" 
+                      name="studentName" 
+                      value={studentForm.studentName} 
+                      onChange={handleRegChange} 
+                      placeholder="e.g. John Doe"
+                      required 
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Parent Email *</label>
+                      <input 
+                        type="email" 
+                        name="email" 
+                        value={studentForm.email} 
+                        onChange={handleRegChange} 
+                        placeholder="parent@example.com"
+                        required 
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Contact Phone *</label>
+                      <input 
+                        type="tel" 
+                        name="primaryPhone" 
+                        value={studentForm.primaryPhone} 
+                        onChange={handleRegChange} 
+                        placeholder="080..."
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Grade Level *</label>
+                      <select name="gradeLevel" value={studentForm.gradeLevel} onChange={handleRegChange} required>
+                        <option value="">Select Grade</option>
+                        <option value="Grade 1">Grade 1</option>
+                        <option value="Grade 2">Grade 2</option>
+                        <option value="Grade 3">Grade 3</option>
+                        <option value="Grade 4">Grade 4</option>
+                        <option value="Grade 5">Grade 5</option>
+                        <option value="Grade 6">Grade 6</option>
+                        <option value="Grade 7">Grade 7</option>
+                        <option value="Grade 8">Grade 8</option>
+                        <option value="Grade 9">Grade 9</option>
+                        <option value="Grade 10">Grade 10</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Preferred Program *</label>
+                      <select name="program" value={studentForm.program} onChange={handleRegChange} required>
+                        <option value="">Select Program</option>
+                        <option value="regular">Regular Classes</option>
+                        <option value="tutoring">One-on-One Tutoring</option>
+                        <option value="group">Group Sessions</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="submit" className="btn-primary" style={{ padding: '0.65rem', fontSize: '0.85rem', width: '100%', marginTop: '0.5rem', boxShadow: 'none' }}>
+                    Submit Registration
+                  </button>
+                </form>
+              )}
+
+              {activeTab === 'booking' && (
+                <form onSubmit={handleBookingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.75)', margin: '0 0 0.4rem 0', lineHeight: '1.4' }}>
+                    <strong>Book Meeting:</strong> Schedule a 1-on-1 counseling call or academic consultation session with a tutor.
+                  </p>
+                  {bookingSuccess && (
+                    <div style={{ padding: '0.5rem', background: 'rgba(40, 167, 69, 0.2)', border: '1px solid #28a745', borderRadius: '6px', fontSize: '0.75rem', textAlign: 'center', color: '#28a745', fontWeight: 'bold' }}>
+                      Meeting scheduled successfully!
+                    </div>
+                  )}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Select a Tutor *</label>
+                    <select 
+                      value={selectedTutor ? selectedTutor.id : ''} 
+                      onChange={(e) => {
+                        const t = tutors.find(x => x.id === e.target.value);
+                        setSelectedTutor(t || null);
+                      }}
+                      required
+                    >
+                      <option value="">-- Choose Instructor --</option>
+                      {tutors.map(t => (
+                        <option key={t.id} value={t.id}>{t.full_name} ({t.subject})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Parent Name *</label>
+                    <input 
+                      type="text" 
+                      name="bookingParentName" 
+                      value={bookingForm.bookingParentName} 
+                      onChange={handleBookingChange} 
+                      placeholder="e.g. David Doe"
+                      required 
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Contact Phone *</label>
+                      <input 
+                        type="tel" 
+                        name="bookingPhone" 
+                        value={bookingForm.bookingPhone} 
+                        onChange={handleBookingChange} 
+                        placeholder="080..."
+                        required 
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Student Name *</label>
+                      <input 
+                        type="text" 
+                        name="bookingStudentName" 
+                        value={bookingForm.bookingStudentName} 
+                        onChange={handleBookingChange} 
+                        placeholder="Child's Name"
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Preferred Date *</label>
+                      <input 
+                        type="date" 
+                        name="bookingDate" 
+                        value={bookingForm.bookingDate} 
+                        onChange={handleBookingChange} 
+                        required 
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Preferred Time *</label>
+                      <select name="bookingTime" value={bookingForm.bookingTime} onChange={handleBookingChange} required>
+                        <option value="">Select Time</option>
+                        {mockTimeSlots.map(slot => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <button type="submit" className="btn-primary" style={{ padding: '0.65rem', fontSize: '0.85rem', width: '100%', marginTop: '0.5rem', boxShadow: 'none' }}>
+                    Book Consultation
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="features">
+        <div className="container">
+          <div className="section-title">
+            <h2>Our Learning Approach</h2>
+            <p>We believe in a comprehensive, student-centered approach that addresses every aspect of your child's development</p>
+          </div>
+          <div className="features-grid">
+            <div className="feature-card">
+              <div className="feature-icon">🎯</div>
+              <h3>Personalized Learning Plans</h3>
+              <p>Every student receives a customized learning plan tailored to their unique needs, learning style, and academic goals. We assess each student's strengths and areas for improvement.</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">⏰</div>
+              <h3>Flexible Scheduling</h3>
+              <p>We're open 8:00 AM - 6:00 PM, Monday through Saturday, with flexible appointment scheduling to accommodate busy family schedules and different learning preferences.</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">🎨</div>
+              <h3>Holistic Development</h3>
+              <p>Beyond academics, we incorporate activities including arts, music, STEM projects, and physical fitness to develop well-rounded, confident learners.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Courses Section — loaded from DB */}
+      <section className="courses" id="courses">
+        <div className="container">
+          <div className="section-title">
+            <h2>Our Regular Courses</h2>
+            <p>Comprehensive educational programs designed for different age groups</p>
+          </div>
+          <div className="courses-grid">
+            {loadingCourses ? (
+              <div style={{ color: '#718096', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>Loading courses...</div>
+            ) : courses.filter(c => c.course_type !== 'special').length === 0 ? (
+              <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>
+                No courses available yet. Check back soon!
+              </div>
+            ) : (
+              courses.filter(c => c.course_type !== 'special').map((c) => (
+                <div className="course-card" key={c.id}>
+                  <h3>{c.title}</h3>
+                  <p>{c.description}</p>
+                  <button
+                    className="learn-more"
+                    onClick={() => {
+                      const el = document.getElementById('register');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Learn More
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us Section */}
+      <section className="why-choose" id="about">
+        <div className="container">
+          <div className="why-choose-content">
+            <div className="why-choose-image"></div>
+            <div className="why-choose-text">
+              <h2>Why Families Trust Foundaxia</h2>
+              <p>We've built our reputation on delivering exceptional educational outcomes while maintaining the highest standards of care and professionalism. Here's what sets us apart from other tutoring centers:</p>
+              <ul className="checkmark-list">
+                <li><strong>Certified Expert Teachers</strong> - All our educators hold advanced degrees and specialized certifications</li>
+                <li><strong>Safe & Nurturing Environment</strong> - Background-checked staff and secure, child-friendly facilities</li>
+                <li><strong>Proven Track Record</strong> - 98% of our students show measurable improvement within 3 months</li>
+                <li><strong>Individual Attention</strong> - Maximum 1:3 teacher-to-student ratio in all sessions</li>
+                <li><strong>Modern Learning Tech</strong> - Interactive whiteboards, educational apps, and digital resources</li>
+                <li><strong>Transparent Pricing</strong> - No hidden fees, flexible payment plans, and excellent value</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Special Classes Section */}
+      <section className="special-classes">
+        <div className="container">
+          <div className="section-title">
+            <h2>Our Special Classes</h2>
+            <p>Specialized programs designed to enhance specific skills and talents</p>
+          </div>
+          <div className="classes-grid">
+            {loadingCourses ? (
+              <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>Loading special classes...</div>
+            ) : courses.filter(c => c.course_type === 'special').length === 0 ? (
+              <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>
+                No special classes available yet.
+              </div>
+            ) : (
+              courses.filter(c => c.course_type === 'special').map((c, idx) => (
+                <div className="class-card" key={c.id}>
+                  <div className="class-card-content" style={{ background: `url(${getSpecialClassImage(c.title, idx)}) center center`, backgroundSize: 'cover' }}></div>
+                  <div className="class-overlay">
+                    <h3>{c.title}</h3>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Teachers Section */}
+      <section className="teachers" id="teachers">
+        <div className="container">
+          <div className="section-title">
+            <h2>Honorable Teachers</h2>
+            <p>Meet our dedicated and experienced teaching staff committed to your child's success</p>
+          </div>
+          <div className="teachers-container">
+            <button className="teachers-nav prev" onClick={() => scrollTeachers('left')} aria-label="Scroll left">‹</button>
+            <button className="teachers-nav next" onClick={() => scrollTeachers('right')} aria-label="Scroll right">›</button>
+            <div className="teachers-scroll-wrapper" ref={teachersScrollRef}>
+              <div className="teachers-grid">
+                {loadingTutors ? (
+                  <div style={{ color: 'white', padding: '2rem' }}>Loading teachers...</div>
+                ) : (
+                  tutors.map((t) => (
+                    <div className="teacher-card" key={t.id}>
+                      <div 
+                        className="teacher-avatar" 
+                        style={{ 
+                          background: `url(${t.avatar_url}) center center`, 
+                          backgroundSize: 'cover' 
+                        }}
+                      ></div>
+                      <h3>{t.full_name}</h3>
+                      <p>{t.subject} Teacher</p>
+                      <p>{t.experience}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Registration & Booking Section */}
+      <section className="registration-booking" id="register">
+        <div className="container">
+          <div className="section-title">
+            <h2>Register Your Child & Schedule a Meeting</h2>
+            <p>Complete your child's registration and book a consultation with our expert tutors</p>
+          </div>
+          
+          <div className="registration-tabs">
+            <button 
+              className={`tab-btn ${activeTab === 'registration' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('registration')}
+            >
+              Registration
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'booking' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('booking')}
+            >
+              Book Meeting
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('calendar')}
+            >
+              Available Slots
+            </button>
+          </div>
+
+          <div className="registration-content">
+            {/* Registration Form Tab */}
+            {activeTab === 'registration' && (
+              <div className="registration-form-container">
+                {registerSuccess && (
+                  <div className="success-message">
+                    Registration completed successfully! We will contact you within 24 hours.
+                  </div>
+                )}
+                
+                <div className="form-progress">
+                  <div className={`progress-step ${regStep >= 1 ? 'active' : ''} ${regStep > 1 ? 'completed' : ''}`}>1</div>
+                  <div className={`progress-line ${regStep > 1 ? 'completed' : ''}`}></div>
+                  <div className={`progress-step ${regStep >= 2 ? 'active' : ''} ${regStep > 2 ? 'completed' : ''}`}>2</div>
+                  <div className={`progress-line ${regStep > 2 ? 'completed' : ''}`}></div>
+                  <div className={`progress-step ${regStep === 3 ? 'active' : ''}`}>3</div>
+                </div>
+                
+                <form onSubmit={handleRegisterSubmit}>
+                  {/* Step 1: Student Information */}
+                  {regStep === 1 && (
+                    <div className="form-step active">
+                      <h3>Student Information</h3>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Student's Full Name *</label>
+                          <input 
+                            type="text" 
+                            name="studentName" 
+                            value={studentForm.studentName} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Date of Birth *</label>
+                          <input 
+                            type="date" 
+                            name="dateOfBirth" 
+                            value={studentForm.dateOfBirth} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Gender *</label>
+                          <select 
+                            name="gender" 
+                            value={studentForm.gender} 
+                            onChange={handleRegChange} 
+                            required
+                          >
+                            <option value="">Select Gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Grade/Class Level *</label>
+                          <select 
+                            name="gradeLevel" 
+                            value={studentForm.gradeLevel} 
+                            onChange={handleRegChange} 
+                            required
+                          >
+                            <option value="">Select Grade</option>
+                            <option value="Pre-K">Pre-K</option>
+                            <option value="Kindergarten">Kindergarten</option>
+                            <option value="Grade 1">Grade 1</option>
+                            <option value="Grade 2">Grade 2</option>
+                            <option value="Grade 3">Grade 3</option>
+                            <option value="Grade 4">Grade 4</option>
+                            <option value="Grade 5">Grade 5</option>
+                            <option value="Grade 6">Grade 6</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                            <option value="Grade 10">Grade 10</option>
+                          </select>
+                        </div>
+                        <div className="form-group full-width">
+                          <label>Previous School (if applicable)</label>
+                          <input 
+                            type="text" 
+                            name="previousSchool" 
+                            value={studentForm.previousSchool} 
+                            onChange={handleRegChange} 
+                          />
+                        </div>
+                        <div className="form-group full-width">
+                          <label>Special Learning Requirements</label>
+                          <textarea 
+                            name="specialNeeds" 
+                            value={studentForm.specialNeeds} 
+                            onChange={handleRegChange} 
+                            rows={2} 
+                            placeholder="Any special requirements or learning needs"
+                          ></textarea>
+                        </div>
+                      </div>
+                      <div className="step-buttons">
+                        <div></div>
+                        <button type="button" className="btn-next" onClick={handleNextStep}>Next Step</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Parent/Guardian Information */}
+                  {regStep === 2 && (
+                    <div className="form-step active">
+                      <h3>Parent/Guardian Information</h3>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Parent/Guardian Name *</label>
+                          <input 
+                            type="text" 
+                            name="parentName" 
+                            value={studentForm.parentName} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Relationship to Student *</label>
+                          <select 
+                            name="relationship" 
+                            value={studentForm.relationship} 
+                            onChange={handleRegChange} 
+                            required
+                          >
+                            <option value="">Select Relationship</option>
+                            <option value="mother">Mother</option>
+                            <option value="father">Father</option>
+                            <option value="guardian">Guardian</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Primary Phone *</label>
+                          <input 
+                            type="tel" 
+                            name="primaryPhone" 
+                            value={studentForm.primaryPhone} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Email Address *</label>
+                          <input 
+                            type="email" 
+                            name="email" 
+                            value={studentForm.email} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                        <div className="form-group full-width">
+                          <label>Home Address *</label>
+                          <textarea 
+                            name="address" 
+                            value={studentForm.address} 
+                            onChange={handleRegChange} 
+                            rows={2} 
+                            required
+                          ></textarea>
+                        </div>
+                        <div className="form-group">
+                          <label>Emergency Contact Name *</label>
+                          <input 
+                            type="text" 
+                            name="emergencyName" 
+                            value={studentForm.emergencyName} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Emergency Contact Phone *</label>
+                          <input 
+                            type="tel" 
+                            name="emergencyPhone" 
+                            value={studentForm.emergencyPhone} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                      </div>
+                      <div className="step-buttons">
+                        <button type="button" className="btn-prev" onClick={handlePrevStep}>Previous</button>
+                        <button type="button" className="btn-next" onClick={handleNextStep}>Next Step</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Program Selection */}
+                  {regStep === 3 && (
+                    <div className="form-step active">
+                      <h3>Program Selection</h3>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Preferred Program *</label>
+                          <select 
+                            name="program" 
+                            value={studentForm.program} 
+                            onChange={handleRegChange} 
+                            required
+                          >
+                            <option value="">Select Program</option>
+                            <option value="regular">Regular Classes</option>
+                            <option value="tutoring">One-on-One Tutoring</option>
+                            <option value="group">Group Sessions</option>
+                            <option value="special">Special Programs</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Preferred Schedule *</label>
+                          <select 
+                            name="schedule" 
+                            value={studentForm.schedule} 
+                            onChange={handleRegChange} 
+                            required
+                          >
+                            <option value="">Select Schedule</option>
+                            <option value="morning">Morning (8AM - 12PM)</option>
+                            <option value="afternoon">Afternoon (1PM - 5PM)</option>
+                            <option value="evening">Evening (5PM - 8PM)</option>
+                            <option value="flexible">Flexible</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Start Date *</label>
+                          <input 
+                            type="date" 
+                            name="startDate" 
+                            value={studentForm.startDate} 
+                            onChange={handleRegChange} 
+                            required 
+                          />
+                        </div>
+                        <div className="form-group full-width">
+                          <label>Additional Comments</label>
+                          <textarea 
+                            name="comments" 
+                            value={studentForm.comments} 
+                            onChange={handleRegChange} 
+                            rows={3} 
+                            placeholder="Any additional information or requirements"
+                          ></textarea>
+                        </div>
+                      </div>
+                      <div className="step-buttons">
+                        <button type="button" className="btn-prev" onClick={handlePrevStep}>Previous</button>
+                        <button type="submit" className="btn-submit">Complete Registration</button>
+                      </div>
+                    </div>
+                  )}
+                </form>
+              </div>
+            )}
+
+            {/* Booking Form Tab */}
+            {activeTab === 'booking' && (
+              <div className="booking-container">
+                {bookingSuccess && (
+                  <div className="success-message">
+                    Appointment scheduled successfully! We will send you a confirmation shortly.
+                  </div>
+                )}
+                
+                <div className="tutor-selection">
+                  <h3>Select a Tutor *</h3>
+                  <div className="tutors-grid-selection">
+                    {loadingTutors ? (
+                      <div>Loading tutors...</div>
+                    ) : (
+                      tutors.map((t) => (
+                        <div 
+                          className={`tutor-selection-card ${selectedTutor?.id === t.id ? 'selected' : ''}`}
+                          key={t.id}
+                          onClick={() => setSelectedTutor(t)}
+                        >
+                          <h4>{t.full_name}</h4>
+                          <p>{t.subject}</p>
+                          <div className="rating-badge">⭐ {t.rating}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <form onSubmit={handleBookingSubmit}>
+                  <div className="booking-details">
+                    <h3>Appointment Details</h3>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Selected Tutor</label>
+                        <input 
+                          type="text" 
+                          readOnly 
+                          value={selectedTutor ? selectedTutor.full_name : ''} 
+                          placeholder="Please select a tutor above" 
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Student Name *</label>
+                        <input 
+                          type="text" 
+                          name="bookingStudentName" 
+                          value={bookingForm.bookingStudentName} 
+                          onChange={handleBookingChange} 
+                          required 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Parent Name *</label>
+                        <input 
+                          type="text" 
+                          name="bookingParentName" 
+                          value={bookingForm.bookingParentName} 
+                          onChange={handleBookingChange} 
+                          required 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Contact Phone *</label>
+                        <input 
+                          type="tel" 
+                          name="bookingPhone" 
+                          value={bookingForm.bookingPhone} 
+                          onChange={handleBookingChange} 
+                          required 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Email *</label>
+                        <input 
+                          type="email" 
+                          name="bookingEmail" 
+                          value={bookingForm.bookingEmail} 
+                          onChange={handleBookingChange} 
+                          required 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Meeting Type *</label>
+                        <select 
+                          name="meetingType" 
+                          value={bookingForm.meetingType} 
+                          onChange={handleBookingChange} 
+                          required
+                        >
+                          <option value="">Select Type</option>
+                          <option value="initial consultation">Initial Consultation</option>
+                          <option value="academic assessment">Academic Assessment</option>
+                          <option value="trial session">Trial Session</option>
+                          <option value="parent meeting">Parent Meeting</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Preferred Date *</label>
+                        <input 
+                          type="date" 
+                          name="bookingDate" 
+                          value={bookingForm.bookingDate} 
+                          onChange={handleBookingChange} 
+                          required 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Preferred Time *</label>
+                        <select 
+                          name="bookingTime" 
+                          value={bookingForm.bookingTime} 
+                          onChange={handleBookingChange} 
+                          required
+                        >
+                          <option value="">Select Time</option>
+                          <option value="9:00 AM">9:00 AM</option>
+                          <option value="10:00 AM">10:00 AM</option>
+                          <option value="11:00 AM">11:00 AM</option>
+                          <option value="12:00 PM">12:00 PM</option>
+                          <option value="2:00 PM">2:00 PM</option>
+                          <option value="3:00 PM">3:00 PM</option>
+                          <option value="4:00 PM">4:00 PM</option>
+                          <option value="5:00 PM">5:00 PM</option>
+                        </select>
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Message/Notes</label>
+                        <textarea 
+                          name="bookingMessage" 
+                          value={bookingForm.bookingMessage} 
+                          onChange={handleBookingChange} 
+                          rows={3} 
+                          placeholder="What would you like to discuss?"
+                        ></textarea>
+                      </div>
+                    </div>
+                    <div className="step-buttons">
+                      <div></div>
+                      <button type="submit" className="btn-submit">Schedule Appointment</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Calendar Tab */}
+            {activeTab === 'calendar' && (
+              <div className="calendar-container">
+                <div className="calendar-header">
+                  <h3>Available Time Slots</h3>
+                  <div className="calendar-nav">
+                    <button onClick={() => changeMonth(-1)}>‹</button>
+                    <span>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
+                    <button onClick={() => changeMonth(1)}>›</button>
+                  </div>
+                </div>
+
+                <div className="calendar-grid">
+                  {calendarData.daysOfWeek.map((day) => (
+                    <div key={`header-${day}`} className="calendar-day header">{day}</div>
+                  ))}
+                  {calendarData.calendarCells}
+                </div>
+
+                <div className="time-slots">
+                  <h4>Available Times for {selectedCalendarDate ? selectedCalendarDate.toDateString() : 'Select a Date'}</h4>
+                  <div className="slots-container">
+                    {selectedCalendarDate ? (
+                      mockTimeSlots.map((slot) => (
+                        <div 
+                          key={slot} 
+                          className={`time-slot ${selectedCalendarTime === slot ? 'selected' : ''}`}
+                          onClick={() => setSelectedCalendarTime(slot)}
+                        >
+                          {slot}
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#666', padding: '1rem' }}>
+                        Please select a date on the calendar above.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {selectedCalendarDate && selectedCalendarTime && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+                    <button className="btn-submit" onClick={confirmCalendarSelection}>
+                      Confirm & Schedule meeting
+                    </button>
+                  </div>
+                )}
+
+                <div className="calendar-legend">
+                  <div className="legend-item">
+                    <span className="legend-color available"></span>
+                    <span>Available</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-color booked"></span>
+                    <span>Booked</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-color selected"></span>
+                    <span>Selected</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-color current"></span>
+                    <span>Today</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="contact" id="contact">
+        <div className="container">
+          <div className="section-title">
+            <h2>Get in Touch</h2>
+            <p>Have questions? We're here to help! Contact us for any information about our programs.</p>
+          </div>
+          <div className="contact-content">
+            <div className="contact-image-placeholder"></div>
+            <div className="contact-form">
+              {contactSuccess && (
+                <div className="success-message">
+                  Thank you for your message! We will get back to you within 24 hours.
+                </div>
+              )}
+              <h3>Send us a Message</h3>
+              <form onSubmit={handleContactSubmit}>
+                <div className="form-group">
+                  <label>Your Name *</label>
+                  <input 
+                    type="text" 
+                    name="contactName" 
+                    value={contactForm.contactName} 
+                    onChange={handleContactChange} 
+                    placeholder="Enter your full name" 
+                    required 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Your Email *</label>
+                  <input 
+                    type="email" 
+                    name="contactEmail" 
+                    value={contactForm.contactEmail} 
+                    onChange={handleContactChange} 
+                    placeholder="Enter your email address" 
+                    required 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Your Phone</label>
+                  <input 
+                    type="tel" 
+                    name="contactPhone" 
+                    value={contactForm.contactPhone} 
+                    onChange={handleContactChange} 
+                    placeholder="Enter your phone number" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Subject</label>
+                  <select 
+                    name="contactSubject" 
+                    value={contactForm.contactSubject} 
+                    onChange={handleContactChange}
+                  >
+                    <option value="">Select a topic</option>
+                    <option value="enrollment">Enrollment Information</option>
+                    <option value="programs">Program Details</option>
+                    <option value="scheduling">Scheduling Questions</option>
+                    <option value="fees">Fees & Pricing</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Your Message *</label>
+                  <textarea 
+                    name="contactMessage" 
+                    value={contactForm.contactMessage} 
+                    onChange={handleContactChange} 
+                    rows={4} 
+                    placeholder="Tell us how we can help you..." 
+                    required
+                  ></textarea>
+                </div>
+                <div className="step-buttons">
+                  <div></div>
+                  <button type="submit" className="btn-submit">Send Message</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
