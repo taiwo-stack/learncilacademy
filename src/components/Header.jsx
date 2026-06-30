@@ -46,7 +46,7 @@ export default function Header({ currentUser, onLogout }) {
           <img src="/images/logo_icon.png" alt="Foundaxia Icon" style={{ height: '56px', objectFit: 'contain' }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '240px' }}>
             <img src="/images/logo_text.png" alt="Foundaxia Brand" style={{ height: '28px', objectFit: 'contain', marginBottom: '2px' }} />
-            <span className="logo-tagline">committed to building Excellent foundation</span>
+            <span className="logo-tagline">commited to building foundation for  excellence</span>
           </div>
         </div>
 
