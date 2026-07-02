@@ -35,8 +35,7 @@ body {
   font-family: var(--font-body);
   line-height: 1.6;
   color: var(--text-dark);
-  background: url('/images/tutor1.jpg') no-repeat center center fixed;
-  background-size: cover;
+  background: #081730;
   position: relative;
   overflow-x: hidden;
   min-height: 100vh;

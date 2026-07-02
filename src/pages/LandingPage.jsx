@@ -148,6 +148,16 @@ export default function LandingPage() {
   const [quizSuccess, setQuizSuccess] = useState(false);
   const [faqSearchQuery, setFaqSearchQuery] = useState('');
   const [showStickyBtn, setShowStickyBtn] = useState(false);
+  const [bgIndex, setBgIndex] = useState(0);
+
+  // Background Image Slideshow Changer (toggles every 6s)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBgIndex(prev => (prev === 0 ? 1 : 0));
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   // Dynamic Scroll Monitor & SEO JSON-LD injection
   useEffect(() => {
@@ -577,6 +587,40 @@ export default function LandingPage() {
 
   return (
     <>
+      {/* ── Dynamic Crossfading Backgrounds ── */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: "url('/images/tutor1.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          zIndex: -3,
+          opacity: bgIndex === 0 ? 1 : 0,
+          transition: 'opacity 2.5s ease-in-out',
+          pointerEvents: 'none'
+        }}
+      />
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: "url('/images/bacground_2.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          zIndex: -3,
+          opacity: bgIndex === 1 ? 1 : 0,
+          transition: 'opacity 2.5s ease-in-out',
+          pointerEvents: 'none'
+        }}
+      />
+
       {/* ── Sticky Floating CTA (outside .fade-in to avoid transform stacking context breaking position:fixed) ── */}
       {showStickyBtn && (
         <div
