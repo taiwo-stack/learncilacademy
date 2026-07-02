@@ -7,14 +7,15 @@ import {
   getTopics, saveTopic, deleteTopic, updateTopic,
   getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile,
   getCourseTutors, assignTutorToCourse, removeTutorFromCourse,
-  getStudentCourses, enrollStudentInCourse, unenrollStudentFromCourse,
+  getStudentCourses, enrollStudentInCourse, unenrollStudentFromCourse, updateStudentEnrollment,
   getTasks, saveTask, deleteTask,
-  getSchedules, saveSchedule, deleteSchedule
+  getSchedules, saveSchedule, deleteSchedule,
+  getChatMessages
 } from '../services/dataService';
 import { 
   Users, Calendar, UserCheck, Mail, Plus, Trash2, AlertCircle, Layers, X,
   BookOpen, FolderMinus, Link2, BookOpenCheck, Settings, Eye, Paperclip, Clock,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Edit, MessageSquare
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
@@ -37,11 +38,21 @@ export default function AdminDashboard() {
   const [tasks, setTasks] = useState([]);
   const [schedules, setSchedules] = useState([]);
 
+  // Chat Monitor State
+  const [allChatMessages, setAllChatMessages] = useState([]);
+  const [chatMonitorTutor, setChatMonitorTutor] = useState('');
+  const [chatMonitorStudent, setChatMonitorStudent] = useState('');
+
   // Add Tutor Modal state
   const [showTutorModal, setShowTutorModal] = useState(false);
   const [newTutor, setNewTutor] = useState({
-    email: '', password: '', full_name: '', subject: '', experience: '', bio: '', avatar_url: ''
+    email: '', password: '', full_name: '', subject: '', experience: '', bio: '', avatar_url: '', rating: '5.0'
   });
+
+  // Edit Tutor State
+  const [showEditTutorModal, setShowEditTutorModal] = useState(false);
+  const [editingTutor, setEditingTutor] = useState(null);
+  const [tutorEditPassword, setTutorEditPassword] = useState('');
 
   // Add Student Modal state
   const [showStudentModal, setShowStudentModal] = useState(false);
@@ -61,6 +72,34 @@ export default function AdminDashboard() {
     gender: 'male', grade_level: 'Grade 1', special_needs: '', program: 'regular',
     schedule: 'morning', start_date: '', additional_comments: '', avatar_url: ''
   });
+
+  // Course, Topic, Task Edit states
+  const [showEditCourseModal, setShowEditCourseModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+
+  const [showEditTopicModal, setShowEditTopicModal] = useState(false);
+  const [editingTopic, setEditingTopic] = useState(null);
+
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  
+  // Compiler state for editing a quiz
+  const [editQText, setEditQText] = useState('');
+  const [editQType, setEditQType] = useState('multiple');
+  const [editQOptions, setEditQOptions] = useState(['', '', '']);
+  const [editQCorrect, setEditQCorrect] = useState(0);
+  // Enrollment Edit State
+  const [showEditEnrollmentModal, setShowEditEnrollmentModal] = useState(false);
+  const [editingEnrollment, setEditingEnrollment] = useState(null);
+  const [editEnrollmentCourseId, setEditEnrollmentCourseId] = useState('');
+  const [editEnrollmentTutorId, setEditEnrollmentTutorId] = useState('');
+
+  // Course Creation Modal State
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
+
+  // Enrollments Modal States
+  const [showAssignTutorModal, setShowAssignTutorModal] = useState(false);
+  const [showEnrollStudentModal, setShowEnrollStudentModal] = useState(false);
 
   // LMS State Inputs
   const [newCourse, setNewCourse] = useState({ title: '', description: '', course_type: 'regular' });
@@ -83,6 +122,7 @@ export default function AdminDashboard() {
   // Quiz Question builder state
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [newQText, setNewQText] = useState('');
+  const [newQType, setNewQType] = useState('multiple');
   const [newQOptions, setNewQOptions] = useState(['', '', '']);
   const [newQCorrect, setNewQCorrect] = useState(0);
 
@@ -117,7 +157,7 @@ export default function AdminDashboard() {
     };
 
     try {
-      const [bData, sData, tData, mData, cData, tpData, matData, ctData, scData, tkData, schData] = await Promise.all([
+      const [bData, sData, tData, mData, cData, tpData, matData, ctData, scData, tkData, schData, chatData] = await Promise.all([
         safeLoad(getBookings()),
         safeLoad(getStudents()),
         safeLoad(getTutors()),
@@ -128,7 +168,8 @@ export default function AdminDashboard() {
         safeLoad(getCourseTutors()),
         safeLoad(getStudentCourses()),
         safeLoad(getTasks()),
-        safeLoad(getSchedules())
+        safeLoad(getSchedules()),
+        safeLoad(getChatMessages())
       ]);
 
       setBookings(bData);
@@ -142,6 +183,7 @@ export default function AdminDashboard() {
       setStudentCourses(scData);
       setTasks(tkData);
       setSchedules(schData);
+      setAllChatMessages(chatData);
 
       if (cData.length > 0) setSelectedCourseId(cData[0].id);
     } catch (err) {
@@ -233,15 +275,61 @@ export default function AdminDashboard() {
         subject: newTutor.subject,
         experience: newTutor.experience,
         bio: newTutor.bio,
-        avatar_url: newTutor.avatar_url || '/images/logo.png'
+        avatar_url: newTutor.avatar_url || '/images/logo.png',
+        rating: parseFloat(newTutor.rating) || 5.0
       };
       const saved = await createTutorAccount(newTutor.email, newTutor.password, tutorData);
-      setTutors(prev => [...prev, saved]);
+      setTutors(prev => {
+        const exists = prev.some(t => t.id === saved.id);
+        if (exists) {
+          return prev.map(t => t.id === saved.id ? saved : t);
+        }
+        return [...prev, saved];
+      });
       setShowTutorModal(false);
-      setNewTutor({ email: '', password: '', full_name: '', subject: '', experience: '', bio: '', avatar_url: '' });
+      setNewTutor({ email: '', password: '', full_name: '', subject: '', experience: '', bio: '', avatar_url: '', rating: '5.0' });
       alert('Tutor added successfully with login credentials!');
     } catch (err) {
       alert('Error adding tutor: ' + err.message);
+    }
+  };
+
+  const handleEditTutorClick = (tutor) => {
+    setEditingTutor({
+      ...tutor,
+      password: ''
+    });
+    setTutorEditPassword('');
+    setShowEditTutorModal(true);
+  };
+
+  const handleEditTutorSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const id = editingTutor.id;
+      const updates = {
+        full_name: editingTutor.full_name,
+        subject: editingTutor.subject,
+        experience: editingTutor.experience,
+        bio: editingTutor.bio,
+        avatar_url: editingTutor.avatar_url,
+        rating: parseFloat(editingTutor.rating) || 5.0
+      };
+
+      if (tutorEditPassword.trim() !== '') {
+        await resetUserPassword(id, tutorEditPassword.trim());
+      }
+
+      const updated = await updateTutor(id, updates);
+      setTutors(prev => prev.map(t => t.id === id ? { ...t, ...updated } : t));
+      setShowEditTutorModal(false);
+      setEditingTutor(null);
+      alert('Tutor profile updated successfully!');
+    } catch (err) {
+      alert('Error updating tutor: ' + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -262,7 +350,13 @@ export default function AdminDashboard() {
         avatar_url: newStudent.avatar_url || ''
       };
       const saved = await createStudentAccount(newStudent.email, newStudent.password, studentData);
-      setStudents(prev => [...prev, saved]);
+      setStudents(prev => {
+        const exists = prev.some(s => s.id === saved.id);
+        if (exists) {
+          return prev.map(s => s.id === saved.id ? saved : s);
+        }
+        return [...prev, saved];
+      });
       setShowStudentModal(false);
       setNewStudent({
         email: '', password: '', full_name: '', phone: '', date_of_birth: '',
@@ -464,7 +558,16 @@ export default function AdminDashboard() {
 
   const handleAddQuizQuestion = () => {
     if (!newQText) return alert('Enter question text.');
-    const qObj = { question: newQText, options: newQOptions, correct: Number(newQCorrect) };
+    let options = [];
+    if (newQType === 'boolean') {
+      options = ['True', 'False'];
+    } else {
+      if (newQOptions.some(opt => opt.trim() === '')) {
+        return alert('Please fill in all multiple choice options.');
+      }
+      options = [...newQOptions];
+    }
+    const qObj = { question: newQText, options, correct: Number(newQCorrect) };
     setQuizQuestions(prev => [...prev, qObj]);
     setNewQText('');
     setNewQOptions(['', '', '']);
@@ -475,14 +578,19 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!selectedCourseId) return alert('Select a course.');
     try {
+      const actualType = taskType === 'true_false' ? 'quiz' : taskType;
+      const actualQuestions = taskType === 'true_false' 
+        ? [{ question: taskTitle, options: ['True', 'False'], correct: Number(newQCorrect) }]
+        : (taskType === 'quiz' ? quizQuestions : null);
+
       const saved = await saveTask({
         course_id: selectedCourseId,
         topic_id: selectedTopicId || null,
         title: taskTitle,
         description: taskDesc,
-        task_type: taskType,
+        task_type: actualType,
         max_points: maxPoints,
-        quiz_questions: taskType === 'quiz' ? quizQuestions : null
+        quiz_questions: actualQuestions
       });
       setTasks(prev => [...prev, saved]);
       setTaskTitle('');
@@ -504,12 +612,115 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleEditCourseClick = (course) => {
+    setEditingCourse({ ...course });
+    setShowEditCourseModal(true);
+  };
+
+  const handleEditCourseSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const updated = await saveCourse(editingCourse);
+      setCourses(prev => prev.map(c => c.id === editingCourse.id ? updated : c));
+      setShowEditCourseModal(false);
+      setEditingCourse(null);
+      alert('Course updated successfully!');
+    } catch (err) {
+      alert('Error updating course: ' + err.message);
+    }
+  };
+
+  const handleEditTopicClick = (topic) => {
+    setEditingTopic({ ...topic });
+    setShowEditTopicModal(true);
+  };
+
+  const handleEditTopicSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const updated = await updateTopic(editingTopic.id, {
+        title: editingTopic.title,
+        description: editingTopic.description,
+        sort_order: Number(editingTopic.sort_order)
+      });
+      setTopics(prev => prev.map(t => t.id === editingTopic.id ? updated : t));
+      setShowEditTopicModal(false);
+      setEditingTopic(null);
+      alert('Lesson updated successfully!');
+    } catch (err) {
+      alert('Error updating lesson: ' + err.message);
+    }
+  };
+
+  const handleEditTaskClick = (task) => {
+    const isTrueFalse = task.task_type === 'quiz' && 
+                        task.quiz_questions && 
+                        task.quiz_questions.length === 1 && 
+                        JSON.stringify(task.quiz_questions[0].options) === JSON.stringify(['True', 'False']);
+                        
+    setEditingTask({ 
+      ...task,
+      task_type: isTrueFalse ? 'true_false' : task.task_type
+    });
+    setEditQText('');
+    setEditQOptions(['', '', '']);
+    setEditQCorrect(isTrueFalse ? task.quiz_questions[0].correct : 0);
+    setEditQType(isTrueFalse ? 'boolean' : 'multiple');
+    setShowEditTaskModal(true);
+  };
+
+  const handleEditTaskSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const actualType = editingTask.task_type === 'true_false' ? 'quiz' : editingTask.task_type;
+      const actualQuestions = editingTask.task_type === 'true_false'
+        ? [{ question: editingTask.title, options: ['True', 'False'], correct: Number(editQCorrect) }]
+        : (editingTask.task_type === 'quiz' ? editingTask.quiz_questions : null);
+
+      const updated = await saveTask({
+        ...editingTask,
+        task_type: actualType,
+        quiz_questions: actualQuestions
+      });
+      setTasks(prev => prev.map(tk => tk.id === editingTask.id ? updated : tk));
+      setShowEditTaskModal(false);
+      setEditingTask(null);
+      alert('Task updated successfully!');
+    } catch (err) {
+      alert('Error updating task: ' + err.message);
+    }
+  };
+
+  const handleAddEditQuizQuestion = () => {
+    if (!editQText) return alert('Enter question text.');
+    let options = [];
+    if (editQType === 'boolean') {
+      options = ['True', 'False'];
+    } else {
+      if (editQOptions.some(opt => opt.trim() === '')) {
+        return alert('Please fill in all multiple choice options.');
+      }
+      options = [...editQOptions];
+    }
+    const qObj = { question: editQText, options, correct: Number(editQCorrect) };
+    setEditingTask(prev => ({
+      ...prev,
+      quiz_questions: [...(prev.quiz_questions || []), qObj]
+    }));
+    setEditQText('');
+    setEditQOptions(['', '', '']);
+    setEditQCorrect(0);
+  };
+
   const handleMapTutor = async (e) => {
     e.preventDefault();
     if (!mapCourseId || !mapTutorId) return alert('Select course and tutor.');
     try {
       await assignTutorToCourse(mapCourseId, mapTutorId);
       setCourseTutors(prev => [...prev, { course_id: mapCourseId, tutor_id: mapTutorId }]);
+      setMapCourseId('');
+      setMapTutorId('');
+      setShowAssignTutorModal(false);
       alert('Tutor assigned to teach this course!');
     } catch (err) {
       alert('Error: ' + err.message);
@@ -532,6 +743,10 @@ export default function AdminDashboard() {
     try {
       const saved = await enrollStudentInCourse(enrollStudentId, enrollCourseId, enrollTutorId);
       setStudentCourses(prev => [...prev, saved]);
+      setEnrollStudentId('');
+      setEnrollCourseId('');
+      setEnrollTutorId('');
+      setShowEnrollStudentModal(false);
       alert('Student enrolled successfully!');
     } catch (err) {
       alert('Error: ' + err.message);
@@ -545,6 +760,40 @@ export default function AdminDashboard() {
       setStudentCourses(prev => prev.filter(x => !(x.student_id === studentId && x.course_id === courseId)));
     } catch (err) {
       alert('Error: ' + err.message);
+    }
+  };
+
+  const handleEditEnrollmentClick = (enrollment) => {
+    setEditingEnrollment({ ...enrollment });
+    setEditEnrollmentCourseId(enrollment.course_id);
+    setEditEnrollmentTutorId(enrollment.tutor_id);
+    setShowEditEnrollmentModal(true);
+  };
+
+  const handleEditEnrollmentSubmit = async (e) => {
+    e.preventDefault();
+    if (!editEnrollmentCourseId || !editEnrollmentTutorId) return alert('Select course and tutor.');
+    try {
+      const updated = await updateStudentEnrollment(
+        editingEnrollment.student_id,
+        editingEnrollment.course_id,
+        editEnrollmentCourseId,
+        editEnrollmentTutorId
+      );
+      
+      setStudentCourses(prev => {
+        if (editingEnrollment.course_id !== editEnrollmentCourseId) {
+          return [...prev.filter(x => !(x.student_id === editingEnrollment.student_id && x.course_id === editingEnrollment.course_id)), updated];
+        } else {
+          return prev.map(x => (x.student_id === editingEnrollment.student_id && x.course_id === editingEnrollment.course_id) ? updated : x);
+        }
+      });
+      
+      setShowEditEnrollmentModal(false);
+      setEditingEnrollment(null);
+      alert('Student enrollment updated successfully!');
+    } catch (err) {
+      alert('Error updating enrollment: ' + err.message);
     }
   };
 
@@ -627,6 +876,9 @@ export default function AdminDashboard() {
           </li>
           <li className={`sidebar-item ${activeTab === 'inquiries' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('inquiries')}><Mail size={18} /> Inquiries</button>
+          </li>
+          <li className={`sidebar-item ${activeTab === 'chatmonitor' ? 'active' : ''}`}>
+            <button onClick={() => setActiveTab('chatmonitor')}><MessageSquare size={18} /> Chat Monitor</button>
           </li>
         </ul>
       </aside>
@@ -828,6 +1080,44 @@ export default function AdminDashboard() {
                                   Approved
                                 </span>
                               )}
+                              {/* Enrolled classes list */}
+                              {(() => {
+                                const enrolls = studentCourses.filter(sc => sc.student_id === s.id);
+                                if (enrolls.length > 0) {
+                                  return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.4rem', borderTop: '1px solid #edf2f7', paddingTop: '0.4rem' }}>
+                                      <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>Classes & Instructors:</span>
+                                      {enrolls.map((sc, scIdx) => {
+                                        const cTitle = courses.find(c => c.id === sc.course_id)?.title || 'Course';
+                                        const tName = tutors.find(t => t.id === sc.tutor_id)?.full_name || 'Tutor';
+                                        return (
+                                          <div key={scIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.68rem', background: '#f7fafc', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid #e2e8f0', width: 'fit-content' }}>
+                                            <span style={{ fontWeight: '500' }}>{cTitle}</span>
+                                            <span style={{ color: '#718096' }}>({tName})</span>
+                                            <button 
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); handleEditEnrollmentClick(sc); }}
+                                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-color)', padding: 0 }}
+                                              title="Edit Class/Tutor"
+                                            >
+                                              <Edit size={10} />
+                                            </button>
+                                            <button 
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); handleUnenrollStudent(sc.student_id, sc.course_id); }}
+                                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53e3e', padding: 0 }}
+                                              title="Unenroll Student"
+                                            >
+                                              <Trash2 size={10} />
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           </td>
                           <td>{s.grade_level}</td>
@@ -913,7 +1203,10 @@ export default function AdminDashboard() {
                           <td>⭐ {t.rating}</td>
                           <td style={{ fontSize: '0.85rem' }}>{t.experience}</td>
                           <td style={{ fontSize: '0.8rem', maxWidth: '250px' }}>{t.bio || 'No bio provided'}</td>
-                          <td><button className="btn-action delete" onClick={() => handleDeleteTutor(t.id)}>Remove</button></td>
+                          <td>
+                            <button className="btn-action edit" onClick={() => handleEditTutorClick(t)} style={{ marginRight: '0.5rem' }}>Edit</button>
+                            <button className="btn-action delete" onClick={() => handleDeleteTutor(t.id)}>Remove</button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -934,93 +1227,82 @@ export default function AdminDashboard() {
               {/* Left Column: Create Course & Selection */}
               <div className="course-builder-left">
                 
-                {/* Course Creation Card */}
-                <div className="dashboard-card">
-                  <h3><Plus size={16} /> New Course</h3>
-                  <form onSubmit={handleCreateCourse} className="login-form" style={{ gap: '0.8rem' }}>
-                    <div className="form-group">
-                      <label>Course Title *</label>
-                      <input 
-                        type="text" 
-                        value={newCourse.title} 
-                        onChange={(e) => setNewCourse(prev => ({ ...prev, title: e.target.value }))}
-                        placeholder="e.g. Frontend Development"
-                        required 
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Course Description</label>
-                      <textarea 
-                        value={newCourse.description} 
-                        onChange={(e) => setNewCourse(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Short overview..."
-                        rows={3}
-                      ></textarea>
-                    </div>
-                    <div className="form-group">
-                      <label>Course Category *</label>
-                      <select
-                        value={newCourse.course_type || 'regular'}
-                        onChange={(e) => setNewCourse(prev => ({ ...prev, course_type: e.target.value }))}
-                        required
-                        style={{ padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e0', fontSize: '0.85rem' }}
-                      >
-                        <option value="regular">Regular Course (e.g. Class I-VI)</option>
-                        <option value="special">Special Class (e.g. Programming, AI)</option>
-                      </select>
-                    </div>
-                    <button type="submit" className="btn-primary" style={{ padding: '0.7rem' }}>Create Course</button>
-                  </form>
-                </div>
+                <button 
+                  className="btn-primary" 
+                  style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: '10px', fontWeight: 'bold' }} 
+                  onClick={() => setShowCreateCourseModal(true)}
+                >
+                  <Plus size={16} /> Create New Course
+                </button>
 
                 {/* Course Registry List */}
-                <div className="dashboard-card course-builder-left-list" style={{ padding: '1.25rem', marginBottom: 0 }}>
-                  <h3><BookOpen size={16} /> Course Registry</h3>
+                <div className="dashboard-card course-builder-left-list" style={{ padding: '1.25rem', marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ marginBottom: '1rem' }}><BookOpen size={16} /> Course Registry</h3>
                   {courses.length === 0 ? (
                     <div style={{ padding: '1rem', color: '#a0aec0', fontSize: '0.85rem' }}>No courses.</div>
                   ) : (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {courses.map(c => (
-                        <li 
-                          key={c.id} 
-                          style={{ 
-                            padding: '0.75rem', 
-                            borderRadius: '10px', 
-                            background: selectedCourseId === c.id ? '#edf2f7' : '#f7fafc',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            border: selectedCourseId === c.id ? '1px solid var(--primary-color)' : '1px solid transparent'
-                          }}
-                          onClick={() => setSelectedCourseId(c.id)}
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                            <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--primary-color)' }}>{c.title}</span>
-                            <span style={{ fontSize: '0.72rem', color: '#718096', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              ID: {c.id}
-                              <span style={{ 
-                                background: c.course_type === 'special' ? 'rgba(242, 122, 36, 0.1)' : 'rgba(15, 44, 89, 0.1)', 
-                                color: c.course_type === 'special' ? 'var(--accent-color)' : 'var(--primary-color)',
-                                padding: '0.1rem 0.4rem',
-                                borderRadius: '4px',
-                                fontSize: '0.65rem',
-                                fontWeight: 'bold',
-                                textTransform: 'capitalize'
-                              }}>
-                                {c.course_type || 'regular'}
-                              </span>
-                            </span>
-                          </div>
-                          <button 
-                            className="btn-action delete" 
-                            style={{ padding: '0.2rem 0.4rem' }}
-                            onClick={(e) => { e.stopPropagation(); handleDeleteCourse(c.id); }}
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem', overflowY: 'auto' }}>
+                      {courses.map(c => {
+                        const isSelected = selectedCourseId === c.id;
+                        return (
+                          <li 
+                            key={c.id} 
+                            style={{ 
+                              padding: '0.8rem 1rem', 
+                              borderRadius: '10px', 
+                              background: isSelected ? 'var(--primary-color)' : '#f7fafc',
+                              color: isSelected ? 'white' : 'var(--primary-color)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              boxShadow: isSelected ? '0 4px 12px rgba(15, 44, 89, 0.15)' : 'none',
+                              border: isSelected ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
+                              transform: isSelected ? 'translateY(-1px)' : 'none',
+                              transition: 'all 0.2s ease-in-out'
+                            }}
+                            onClick={() => setSelectedCourseId(c.id)}
                           >
-                            <Trash2 size={12} />
-                          </button>
-                        </li>
-                      ))}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: isSelected ? 'white' : 'var(--primary-color)' }}>{c.title}</span>
+                                <span style={{ 
+                                  background: isSelected ? 'rgba(255, 255, 255, 0.2)' : (c.course_type === 'special' ? 'rgba(242, 122, 36, 0.1)' : 'rgba(15, 44, 89, 0.1)'), 
+                                  color: isSelected ? 'white' : (c.course_type === 'special' ? 'var(--accent-color)' : 'var(--primary-color)'),
+                                  padding: '0.1rem 0.4rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 'bold',
+                                  textTransform: 'capitalize'
+                                }}>
+                                  {c.course_type || 'regular'}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.72rem', color: isSelected ? '#cbd5e0' : '#718096' }}>
+                                ID: {c.id}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.3rem' }}>
+                              <button 
+                                className="btn-action edit" 
+                                style={{ padding: '0.2rem 0.4rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : 'var(--primary-color)' }}
+                                onClick={(e) => { e.stopPropagation(); handleEditCourseClick(c); }}
+                                title="Edit Course"
+                              >
+                                <Edit size={12} />
+                              </button>
+                              <button 
+                                className="btn-action delete" 
+                                style={{ padding: '0.2rem 0.4rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : '#e53e3e' }}
+                                onClick={(e) => { e.stopPropagation(); handleDeleteCourse(c.id); }}
+                                title="Delete Course"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
@@ -1062,15 +1344,16 @@ export default function AdminDashboard() {
                         No topics added to this syllabus yet. Use the form above to add lessons.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'white' }}>
                         {topics.filter(t => t.course_id === selectedCourseId).map((t, idx) => {
                           const topicMats = materials.filter(m => m.topic_id === t.id);
                           const topicTasks = tasks.filter(tk => tk.topic_id === t.id);
                           const showMaterialForm = activeTopicMaterialId === t.id;
                           const showTaskForm = activeTopicTaskId === t.id;
+                          const isLast = idx === topics.filter(x => x.course_id === selectedCourseId).length - 1;
 
                           return (
-                            <div key={t.id} className="dashboard-card" style={{ border: '1px solid #edf2f7', borderRadius: '15px', position: 'relative' }}>
+                            <div key={t.id} style={{ padding: '1.5rem', borderBottom: isLast ? 'none' : '1px solid #e2e8f0', position: 'relative', background: idx % 2 === 0 ? 'white' : '#fcfdfe' }}>
                               
                               {/* Topic Header */}
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f7fafc', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
@@ -1093,6 +1376,9 @@ export default function AdminDashboard() {
                                   </button>
                                   <button className="btn-action edit" style={{ padding: '0.3rem' }} onClick={() => handleMoveTopic(t.id, 'down')} title="Move Lesson Down">
                                     <ArrowDown size={14} />
+                                  </button>
+                                  <button className="btn-action edit" style={{ padding: '0.3rem' }} onClick={() => handleEditTopicClick(t)} title="Edit Lesson Details">
+                                    <Edit size={14} />
                                   </button>
                                   <button className="btn-action delete" style={{ padding: '0.3rem', color: 'red' }} onClick={() => handleDeleteTopic(t.id)} title="Delete Lesson">
                                     <Trash2 size={14} />
@@ -1188,9 +1474,15 @@ export default function AdminDashboard() {
                                   {showTaskForm && (
                                     <form onSubmit={handleAddTask} style={{ background: '#f7fafc', padding: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.8rem' }}>
                                       <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.5rem' }}>
-                                        <select value={taskType} onChange={(e) => setTaskType(e.target.value)} required style={{ padding: '0.35rem', borderRadius: '6px', fontSize: '0.8rem' }}>
+                                        <select value={taskType} onChange={(e) => {
+                                          setTaskType(e.target.value);
+                                          if (e.target.value === 'true_false') {
+                                            setNewQCorrect(0);
+                                          }
+                                        }} required style={{ padding: '0.35rem', borderRadius: '6px', fontSize: '0.8rem' }}>
                                           <option value="assignment">Assignment</option>
                                           <option value="quiz">Interactive Quiz</option>
+                                          <option value="true_false">True / False Question</option>
                                           <option value="instruction">Instructional Text</option>
                                         </select>
                                         <input type="number" value={maxPoints} onChange={(e) => setMaxPoints(Number(e.target.value))} placeholder="Max Pts" required style={{ padding: '0.35rem', fontSize: '0.8rem' }} />
@@ -1199,35 +1491,70 @@ export default function AdminDashboard() {
                                       <input type="text" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Task Title" required style={{ padding: '0.35rem', fontSize: '0.8rem' }} />
                                       <textarea value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} placeholder="Instructions..." rows={2} style={{ padding: '0.35rem', fontSize: '0.8rem' }}></textarea>
 
+                                      {taskType === 'true_false' && (
+                                        <div style={{ background: 'white', padding: '0.6rem', borderRadius: '8px', borderLeft: '3px solid var(--accent-color)', fontSize: '0.8rem' }}>
+                                          <div className="form-group" style={{ margin: 0 }}>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: '600', display: 'block', marginBottom: '0.2rem' }}>Correct Answer *</label>
+                                            <select value={newQCorrect} onChange={(e) => setNewQCorrect(Number(e.target.value))} style={{ padding: '0.25rem', fontSize: '0.75rem', width: '100%', borderRadius: '4px', border: '1px solid #cbd5e0' }}>
+                                              <option value={0}>True</option>
+                                              <option value={1}>False</option>
+                                            </select>
+                                          </div>
+                                        </div>
+                                      )}
+
                                       {/* Inline Quiz Question Compiler */}
                                       {taskType === 'quiz' && (
                                         <div style={{ background: 'white', padding: '0.6rem', borderRadius: '8px', borderLeft: '3px solid var(--accent-color)', fontSize: '0.8rem' }}>
                                           <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.4rem', color: 'var(--primary-color)' }}>Questions Config</span>
                                           
-                                          <input type="text" value={newQText} onChange={(e) => setNewQText(e.target.value)} placeholder="Question Prompt" style={{ padding: '0.3rem', fontSize: '0.75rem', width: '100%', marginBottom: '0.4rem' }} />
-                                          
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.4rem' }}>
-                                            {newQOptions.map((opt, oIdx) => (
-                                              <input 
-                                                key={oIdx}
-                                                type="text" 
-                                                value={opt} 
-                                                onChange={(e) => {
-                                                  const cpy = [...newQOptions];
-                                                  cpy[oIdx] = e.target.value;
-                                                  setNewQOptions(cpy);
-                                                }}
-                                                placeholder={`Choice ${oIdx + 1}`}
-                                                style={{ padding: '0.25rem', fontSize: '0.7rem' }}
-                                              />
-                                            ))}
+                                          <div className="form-group" style={{ marginBottom: '0.4rem', margin: 0 }}>
+                                            <select value={newQType} onChange={(e) => { setNewQType(e.target.value); setNewQCorrect(0); }} style={{ padding: '0.25rem', fontSize: '0.75rem', width: '100%', borderRadius: '4px', border: '1px solid #cbd5e0' }}>
+                                              <option value="multiple">Multiple Choice (3 options)</option>
+                                              <option value="boolean">True / False</option>
+                                            </select>
                                           </div>
+
+                                          <input type="text" value={newQText} onChange={(e) => setNewQText(e.target.value)} placeholder="Question Prompt" style={{ padding: '0.3rem', fontSize: '0.75rem', width: '100%', marginBottom: '0.4rem', marginTop: '0.4rem' }} />
+                                          
+                                          {newQType === 'multiple' ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.4rem' }}>
+                                              {newQOptions.map((opt, oIdx) => (
+                                                <input 
+                                                  key={oIdx}
+                                                  type="text" 
+                                                  value={opt} 
+                                                  onChange={(e) => {
+                                                    const cpy = [...newQOptions];
+                                                    cpy[oIdx] = e.target.value;
+                                                    setNewQOptions(cpy);
+                                                  }}
+                                                  placeholder={`Choice ${oIdx + 1}`}
+                                                  style={{ padding: '0.25rem', fontSize: '0.7rem' }}
+                                                />
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <div style={{ padding: '0.3rem 0.5rem', background: '#f7fafc', borderRadius: '6px', fontSize: '0.72rem', color: '#4a5568', marginBottom: '0.4rem', display: 'flex', gap: '1rem' }}>
+                                              <span>1. True</span>
+                                              <span>2. False</span>
+                                            </div>
+                                          )}
 
                                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <select value={newQCorrect} onChange={(e) => setNewQCorrect(Number(e.target.value))} style={{ padding: '0.2rem', fontSize: '0.7rem' }}>
-                                              <option value={0}>Ans: Opt 1</option>
-                                              <option value={1}>Ans: Opt 2</option>
-                                              <option value={2}>Ans: Opt 3</option>
+                                              {newQType === 'multiple' ? (
+                                                <>
+                                                  <option value={0}>Ans: Opt 1</option>
+                                                  <option value={1}>Ans: Opt 2</option>
+                                                  <option value={2}>Ans: Opt 3</option>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <option value={0}>Ans: True</option>
+                                                  <option value={1}>Ans: False</option>
+                                                </>
+                                              )}
                                             </select>
                                             <button type="button" className="btn-action approve" style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={handleAddQuizQuestion}>+ Add Q</button>
                                           </div>
@@ -1265,7 +1592,10 @@ export default function AdminDashboard() {
                                             <span style={{ fontWeight: 'bold' }}>{tk.title}</span>
                                             <span style={{ fontSize: '0.7rem', color: '#718096' }}>({tk.max_points} pts)</span>
                                           </div>
-                                          <button style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer' }} onClick={() => handleDeleteTask(tk.id)}><Trash2 size={12} /></button>
+                                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                            <button style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer' }} onClick={() => handleEditTaskClick(tk)} title="Edit Task"><Edit size={12} /></button>
+                                            <button style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer' }} onClick={() => handleDeleteTask(tk.id)} title="Delete Task"><Trash2 size={12} /></button>
+                                          </div>
                                         </li>
                                       ))}
                                     </ul>
@@ -1294,35 +1624,23 @@ export default function AdminDashboard() {
         {/* Tab 5: Enrollments mapping */}
         {activeTab === 'enrollments' && (
           <div>
-
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'start' }}>
               
-              {/* Tutor-to-Course Mapper */}
-              <div className="dashboard-card">
-                <h3><UserCheck size={18} /> Assign Tutors to Course</h3>
-                <form onSubmit={handleMapTutor} className="login-form" style={{ gap: '1rem', marginBottom: '2rem' }}>
-                  <div className="form-group">
-                    <label>Select Course *</label>
-                    <select value={mapCourseId} onChange={(e) => setMapCourseId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Course --</option>
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Select Instructor *</label>
-                    <select value={mapTutorId} onChange={(e) => setMapTutorId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Tutor --</option>
-                      {tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
-                    </select>
-                  </div>
-                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem' }}>Assign Instructor</button>
-                </form>
+              {/* Left Column: Assigned Teaching Staff */}
+              <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #edf2f7', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)' }}><UserCheck size={18} /> Assigned Teaching Staff</h3>
+                  <button 
+                    className="btn-primary" 
+                    style={{ padding: '0.5rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', borderRadius: '8px', fontWeight: 'bold' }}
+                    onClick={() => setShowAssignTutorModal(true)}
+                  >
+                    <Plus size={14} /> Assign Tutor
+                  </button>
+                </div>
 
-                {/* Course Tutor Assignment Log */}
-                <h4>Assigned Teaching Staff</h4>
                 {courseTutors.length === 0 ? (
-                  <div style={{ fontSize: '0.85rem', color: '#a0aec0', padding: '1rem' }}>No mapping assignments.</div>
+                  <div style={{ fontSize: '0.85rem', color: '#a0aec0', padding: '2rem', textAlign: 'center' }}>No mapping assignments.</div>
                 ) : (
                   <div className="table-container">
                     <table className="dashboard-table">
@@ -1341,7 +1659,7 @@ export default function AdminDashboard() {
                             <tr key={i}>
                               <td style={{ fontWeight: 'bold' }}>{cTitle}</td>
                               <td>{tName}</td>
-                              <td><button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleUnmapTutor(ct.course_id, ct.tutor_id)}><Trash2 size={12} /></button></td>
+                              <td><button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleUnmapTutor(ct.course_id, ct.tutor_id)} title="Remove Tutor"><Trash2 size={12} /></button></td>
                             </tr>
                           );
                         })}
@@ -1351,42 +1669,21 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* Student Course Enrollment Mapper */}
-              <div className="dashboard-card">
-                <h3><BookOpenCheck size={18} /> Enroll Student in Course</h3>
-                <form onSubmit={handleEnrollStudent} className="login-form" style={{ gap: '1rem', marginBottom: '2rem' }}>
-                  <div className="form-group">
-                    <label>Select Student *</label>
-                    <select value={enrollStudentId} onChange={(e) => setEnrollStudentId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Student --</option>
-                      {students.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Select Course *</label>
-                    <select value={enrollCourseId} onChange={(e) => setEnrollCourseId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Course --</option>
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Select Assigned Tutor *</label>
-                    <select value={enrollTutorId} onChange={(e) => setEnrollTutorId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Instructor --</option>
-                      {courseTutors.filter(ct => ct.course_id === enrollCourseId).map(ct => {
-                        const t = tutors.find(tu => tu.id === ct.tutor_id);
-                        return t ? <option key={t.id} value={t.id}>{t.full_name}</option> : null;
-                      })}
-                      {courseTutors.filter(ct => ct.course_id === enrollCourseId).length === 0 && tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
-                    </select>
-                  </div>
-                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem' }}>Enroll Student</button>
-                </form>
+              {/* Right Column: Student Enrollment Registry */}
+              <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #edf2f7', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)' }}><BookOpenCheck size={18} /> Student Registry</h3>
+                  <button 
+                    className="btn-primary" 
+                    style={{ padding: '0.5rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', borderRadius: '8px', fontWeight: 'bold' }}
+                    onClick={() => setShowEnrollStudentModal(true)}
+                  >
+                    <Plus size={14} /> Enroll Student
+                  </button>
+                </div>
 
-                {/* Enrollment Log */}
-                <h4>Student Enrollment Registry</h4>
                 {studentCourses.length === 0 ? (
-                  <div style={{ fontSize: '0.85rem', color: '#a0aec0', padding: '1rem' }}>No student enrolments.</div>
+                  <div style={{ fontSize: '0.85rem', color: '#a0aec0', padding: '2rem', textAlign: 'center' }}>No student enrolments.</div>
                 ) : (
                   <div className="table-container">
                     <table className="dashboard-table">
@@ -1408,7 +1705,7 @@ export default function AdminDashboard() {
                               <td style={{ fontWeight: 'bold' }}>{sName}</td>
                               <td>{cTitle}</td>
                               <td>{tName}</td>
-                              <td><button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleUnenrollStudent(sc.student_id, sc.course_id)}><Trash2 size={12} /></button></td>
+                              <td><button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleUnenrollStudent(sc.student_id, sc.course_id)} title="Unenroll Student"><Trash2 size={12} /></button></td>
                             </tr>
                           );
                         })}
@@ -1427,104 +1724,47 @@ export default function AdminDashboard() {
           <div>
 
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'start' }}>
-              
-              {/* Left Column: Create Schedule */}
-              <div className="dashboard-card">
-                <h3><Calendar size={18} /> Schedule Virtual Class</h3>
-                <form onSubmit={handleCreateSchedule} className="login-form" style={{ gap: '0.8rem' }}>
-                  <div className="form-group">
-                    <label>Select Student *</label>
-                    <select value={schStudentId} onChange={(e) => setSchStudentId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Student --</option>
-                      {students.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Select Course *</label>
-                    <select value={schCourseId} onChange={(e) => setSchCourseId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Course --</option>
-                      {studentCourses.filter(sc => sc.student_id === schStudentId).map(sc => {
-                        const c = courses.find(co => co.id === sc.course_id);
-                        return c ? <option key={c.id} value={c.id}>{c.title}</option> : null;
+            {/* Scheduled Lectures Registry Audit panel */}
+            <div className="dashboard-card" style={{ marginBottom: 0 }}>
+              <h3><Clock size={18} /> Scheduled Lectures Registry</h3>
+              {schedules.length === 0 ? (
+                <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center' }}>No scheduled classes.</div>
+              ) : (
+                <div className="table-container">
+                  <table className="dashboard-table">
+                    <thead>
+                      <tr>
+                        <th>Lecture</th>
+                        <th>Student</th>
+                        <th>Tutor</th>
+                        <th>Date / Time</th>
+                        <th>Link</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedules.map(s => {
+                        const sName = students.find(st => st.id === s.student_id)?.full_name || 'Student';
+                        const tName = tutors.find(tu => tu.id === s.tutor_id)?.full_name || 'Tutor';
+                        return (
+                          <tr key={s.id}>
+                            <td style={{ fontWeight: 'bold' }}>{s.title}</td>
+                            <td>{sName}</td>
+                            <td>{tName}</td>
+                            <td style={{ fontSize: '0.8rem' }}>
+                              {new Date(s.start_time).toLocaleString()} - {new Date(s.end_time).toLocaleTimeString()}
+                            </td>
+                            <td>
+                              {s.meeting_link ? <a href={s.meeting_link} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline', fontSize: '0.8rem' }}>Join Class</a> : <span style={{ color: '#cbd5e0' }}>None</span>}
+                            </td>
+                            <td><button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleDeleteSchedule(s.id)}><Trash2 size={12} /></button></td>
+                          </tr>
+                        );
                       })}
-                      {studentCourses.filter(sc => sc.student_id === schStudentId).length === 0 && courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Select Tutor *</label>
-                    <select value={schTutorId} onChange={(e) => setSchTutorId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                      <option value="">-- Choose Instructor --</option>
-                      {studentCourses.filter(sc => sc.student_id === schStudentId && sc.course_id === schCourseId).map(sc => {
-                        const t = tutors.find(tu => tu.id === sc.tutor_id);
-                        return t ? <option key={t.id} value={t.id}>{t.full_name}</option> : null;
-                      })}
-                      {studentCourses.filter(sc => sc.student_id === schStudentId && sc.course_id === schCourseId).length === 0 && tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Lecture Title *</label>
-                    <input type="text" value={schTitle} onChange={(e) => setSchTitle(e.target.value)} placeholder="e.g. HTML Intro Live Session" required />
-                  </div>
-                  <div className="form-group">
-                    <label>Start Time *</label>
-                    <input type="datetime-local" value={schStart} onChange={(e) => setSchStart(e.target.value)} required />
-                  </div>
-                  <div className="form-group">
-                    <label>End Time *</label>
-                    <input type="datetime-local" value={schEnd} onChange={(e) => setSchEnd(e.target.value)} required />
-                  </div>
-                  <div className="form-group">
-                    <label>Meeting Join Link (e.g. Zoom/Teams)</label>
-                    <input type="url" value={schLink} onChange={(e) => setSchLink(e.target.value)} placeholder="https://zoom.us/j/123456" />
-                  </div>
-                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem' }}>Schedule Lecture</button>
-                </form>
-              </div>
-
-              {/* Right Column: Timetable Grid */}
-              <div className="dashboard-card">
-                <h3><Clock size={18} /> Scheduled Lectures Registry</h3>
-                {schedules.length === 0 ? (
-                  <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center' }}>No scheduled classes.</div>
-                ) : (
-                  <div className="table-container">
-                    <table className="dashboard-table">
-                      <thead>
-                        <tr>
-                          <th>Lecture</th>
-                          <th>Student</th>
-                          <th>Tutor</th>
-                          <th>Date / Time</th>
-                          <th>Link</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {schedules.map(s => {
-                          const sName = students.find(st => st.id === s.student_id)?.full_name || 'Student';
-                          const tName = tutors.find(tu => tu.id === s.tutor_id)?.full_name || 'Tutor';
-                          return (
-                            <tr key={s.id}>
-                              <td style={{ fontWeight: 'bold' }}>{s.title}</td>
-                              <td>{sName}</td>
-                              <td>{tName}</td>
-                              <td style={{ fontSize: '0.8rem' }}>
-                                {new Date(s.start_time).toLocaleString()} - {new Date(s.end_time).toLocaleTimeString()}
-                              </td>
-                              <td>
-                                {s.meeting_link ? <a href={s.meeting_link} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline', fontSize: '0.8rem' }}>Join Class</a> : <span style={{ color: '#cbd5e0' }}>None</span>}
-                              </td>
-                              <td><button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleDeleteSchedule(s.id)}><Trash2 size={12} /></button></td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1569,6 +1809,173 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* Chat Monitor Tab */}
+        {activeTab === 'chatmonitor' && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', height: '720px' }}>
+
+              {/* Left: Filters + Conversation List */}
+              <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', marginBottom: 0 }}>
+                {/* Header */}
+                <div style={{ padding: '1rem 1.25rem', background: 'var(--primary-color)', color: 'white' }}>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MessageSquare size={16} /> All Conversations</h3>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '0.2rem' }}>{allChatMessages.length} total messages</div>
+                </div>
+
+                {/* Filters */}
+                <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #edf2f7', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <select
+                    value={chatMonitorTutor}
+                    onChange={(e) => { setChatMonitorTutor(e.target.value); setChatMonitorStudent(''); }}
+                    style={{ padding: '0.5rem', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '0.82rem', width: '100%' }}
+                  >
+                    <option value="">All Tutors</option>
+                    {tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                  </select>
+                  <select
+                    value={chatMonitorStudent}
+                    onChange={(e) => setChatMonitorStudent(e.target.value)}
+                    style={{ padding: '0.5rem', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '0.82rem', width: '100%' }}
+                  >
+                    <option value="">All Students</option>
+                    {students.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                  </select>
+                </div>
+
+                {/* Unique pairs list */}
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  {(() => {
+                    // Build unique sender-receiver pairs
+                    const pairs = [];
+                    const seen = new Set();
+                    allChatMessages.forEach(m => {
+                      const tutorParticipant = tutors.find(t => t.id === m.sender_id || t.id === m.receiver_id);
+                      const studentParticipant = students.find(s => (s.profile_id || s.id) === m.sender_id || (s.profile_id || s.id) === m.receiver_id);
+                      if (!tutorParticipant || !studentParticipant) return;
+                      const key = [tutorParticipant.id, studentParticipant.id].sort().join('-');
+                      if (!seen.has(key)) {
+                        seen.add(key);
+                        pairs.push({ tutor: tutorParticipant, student: studentParticipant, key });
+                      }
+                    });
+
+                    const filtered = pairs.filter(p =>
+                      (!chatMonitorTutor || p.tutor.id === chatMonitorTutor) &&
+                      (!chatMonitorStudent || (p.student.id === chatMonitorStudent || p.student.profile_id === chatMonitorStudent))
+                    );
+
+                    if (filtered.length === 0) {
+                      return <div style={{ padding: '2rem', textAlign: 'center', color: '#a0aec0', fontSize: '0.85rem' }}>No conversations found.</div>;
+                    }
+
+                    return filtered.map(pair => {
+                      const thread = allChatMessages.filter(m =>
+                        (m.sender_id === pair.tutor.id && (m.receiver_id === (pair.student.profile_id || pair.student.id))) ||
+                        (m.sender_id === (pair.student.profile_id || pair.student.id) && m.receiver_id === pair.tutor.id)
+                      );
+                      const lastMsg = thread[thread.length - 1];
+                      const isSelected = chatMonitorTutor === pair.tutor.id && chatMonitorStudent === (pair.student.profile_id || pair.student.id);
+                      return (
+                        <div
+                          key={pair.key}
+                          onClick={() => { setChatMonitorTutor(pair.tutor.id); setChatMonitorStudent(pair.student.profile_id || pair.student.id); }}
+                          style={{
+                            padding: '0.85rem 1.1rem',
+                            borderBottom: '1px solid #f0f4f8',
+                            cursor: 'pointer',
+                            background: isSelected ? 'rgba(15,44,89,0.06)' : 'white',
+                            borderLeft: isSelected ? '3px solid var(--primary-color)' : '3px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--primary-color)' }}>{pair.student.full_name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#718096' }}>↔ {pair.tutor.full_name}</div>
+                          {lastMsg && <div style={{ fontSize: '0.73rem', color: '#a0aec0', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastMsg.message_text}</div>}
+                          <div style={{ fontSize: '0.68rem', color: '#cbd5e0', marginTop: '2px' }}>{thread.length} message{thread.length !== 1 ? 's' : ''}</div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Right: Read-only thread viewer */}
+              {(chatMonitorTutor && chatMonitorStudent) ? (() => {
+                const activeTutor = tutors.find(t => t.id === chatMonitorTutor);
+                const activeStudent = students.find(s => (s.profile_id || s.id) === chatMonitorStudent || s.id === chatMonitorStudent);
+                const thread = allChatMessages.filter(m =>
+                  (m.sender_id === chatMonitorTutor && m.receiver_id === chatMonitorStudent) ||
+                  (m.sender_id === chatMonitorStudent && m.receiver_id === chatMonitorTutor)
+                );
+                return (
+                  <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', marginBottom: 0 }}>
+                    {/* Thread header */}
+                    <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #edf2f7', background: '#f7fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '0.95rem' }}>
+                          {activeStudent?.full_name} ↔ {activeTutor?.full_name}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#718096' }}>
+                          {thread.length} message{thread.length !== 1 ? 's' : ''} · Read-only monitor view
+                        </div>
+                      </div>
+                      <div style={{ padding: '0.3rem 0.7rem', background: 'rgba(255, 165, 0, 0.12)', border: '1px solid rgba(255,165,0,0.3)', borderRadius: '6px', fontSize: '0.72rem', color: '#b7791f', fontWeight: '600' }}>
+                        👁 Admin Monitor
+                      </div>
+                    </div>
+
+                    {/* Messages */}
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.25rem' }}>
+                      {thread.length === 0 ? (
+                        <div style={{ textAlign: 'center', color: '#a0aec0', padding: '3rem', fontSize: '0.9rem' }}>
+                          <MessageSquare size={32} style={{ marginBottom: '0.5rem', opacity: 0.3 }} />
+                          <p>No messages in this conversation yet.</p>
+                        </div>
+                      ) : (
+                        thread.map(m => {
+                          const isTutor = m.sender_id === chatMonitorTutor;
+                          const senderLabel = isTutor ? `Tutor: ${activeTutor?.full_name}` : `Student: ${activeStudent?.full_name}`;
+                          return (
+                            <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isTutor ? 'flex-end' : 'flex-start' }}>
+                              <div style={{ fontSize: '0.7rem', color: '#a0aec0', marginBottom: '2px' }}>{senderLabel}</div>
+                              <div style={{
+                                background: isTutor ? 'var(--primary-color)' : '#edf2f7',
+                                color: isTutor ? 'white' : 'var(--text-dark)',
+                                padding: '0.7rem 1rem',
+                                borderRadius: isTutor ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                maxWidth: '70%',
+                                fontSize: '0.88rem',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                                lineHeight: '1.45'
+                              }}>
+                                <div>{m.message_text}</div>
+                                <div style={{ fontSize: '0.65rem', opacity: 0.65, textAlign: 'right', marginTop: '4px' }}>
+                                  {new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Admin notice footer */}
+                    <div style={{ borderTop: '1px solid #edf2f7', padding: '0.75rem 1.5rem', background: '#fffbeb', fontSize: '0.78rem', color: '#b7791f', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      🔒 Admins can view all conversations in read-only mode. Only tutors and students can send messages.
+                    </div>
+                  </div>
+                );
+              })() : (
+                <div className="dashboard-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', color: '#a0aec0', marginBottom: 0 }}>
+                  <MessageSquare size={48} style={{ opacity: 0.2 }} />
+                  <p style={{ fontSize: '1rem', fontWeight: '500' }}>Select a conversation to monitor</p>
+                  <p style={{ fontSize: '0.85rem', textAlign: 'center', maxWidth: '280px' }}>Use filters above to narrow by tutor or student, then click a conversation to view it.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Add Tutor Modal Overlay */}
@@ -1592,7 +1999,7 @@ export default function AdminDashboard() {
                 <label>Instructor Name *</label>
                 <input type="text" value={newTutor.full_name} onChange={(e) => setNewTutor(prev => ({ ...prev, full_name: e.target.value }))} placeholder="e.g. Chioma Okafor" required />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div className="form-group">
                   <label>Subject Focus *</label>
                   <input type="text" value={newTutor.subject} onChange={(e) => setNewTutor(prev => ({ ...prev, subject: e.target.value }))} placeholder="e.g. Mathematics, English" required />
@@ -1600,6 +2007,10 @@ export default function AdminDashboard() {
                 <div className="form-group">
                   <label>Experience / Credentials *</label>
                   <input type="text" value={newTutor.experience} onChange={(e) => setNewTutor(prev => ({ ...prev, experience: e.target.value }))} placeholder="e.g. B.Sc Chemistry, 5+ years" required />
+                </div>
+                <div className="form-group">
+                  <label>Rating (1.0 - 5.0) *</label>
+                  <input type="number" step="0.1" min="1.0" max="5.0" value={newTutor.rating} onChange={(e) => setNewTutor(prev => ({ ...prev, rating: e.target.value }))} placeholder="5.0" required />
                 </div>
               </div>
 
@@ -1902,6 +2313,431 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                 <button type="button" className="btn-prev" onClick={() => { setShowEditStudentModal(false); setEditingStudent(null); }}>Cancel</button>
                 <button type="submit" className="btn-submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Tutor Modal Overlay */}
+      {showEditTutorModal && editingTutor && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => { setShowEditTutorModal(false); setEditingTutor(null); }}><X size={20} /></button>
+            <h3 className="modal-title">Edit Instructor Profile</h3>
+            <form onSubmit={handleEditTutorSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label>Login Email (Read-Only)</label>
+                  <input type="email" value={editingTutor.email} disabled style={{ background: '#f7fafc', cursor: 'not-allowed' }} />
+                </div>
+                <div className="form-group">
+                  <label>Update Password (Optional)</label>
+                  <input type="password" value={tutorEditPassword} onChange={(e) => setTutorEditPassword(e.target.value)} placeholder="Leave blank to keep current" />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Instructor Name *</label>
+                <input type="text" value={editingTutor.full_name} onChange={(e) => setEditingTutor(prev => ({ ...prev, full_name: e.target.value }))} required />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label>Subject Focus *</label>
+                  <input type="text" value={editingTutor.subject} onChange={(e) => setEditingTutor(prev => ({ ...prev, subject: e.target.value }))} required />
+                </div>
+                <div className="form-group">
+                  <label>Experience / Credentials *</label>
+                  <input type="text" value={editingTutor.experience} onChange={(e) => setEditingTutor(prev => ({ ...prev, experience: e.target.value }))} required />
+                </div>
+                <div className="form-group">
+                  <label>Rating (1.0 - 5.0) *</label>
+                  <input type="number" step="0.1" min="1.0" max="5.0" value={editingTutor.rating} onChange={(e) => setEditingTutor(prev => ({ ...prev, rating: e.target.value }))} required />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Instructor Avatar Photo</label>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <input type="file" accept="image/*" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    setUploading(true);
+                    try {
+                      const publicUrl = await uploadAvatar('edit_tutor_' + Date.now(), file);
+                      setEditingTutor(prev => ({ ...prev, avatar_url: publicUrl }));
+                    } catch (err) {
+                      alert('Failed to upload picture: ' + err.message);
+                    } finally {
+                      setUploading(false);
+                    }
+                  }} disabled={uploading} style={{ flex: '1', border: 'none', background: 'transparent', padding: '0.5rem 0' }} />
+                  <input type="text" value={editingTutor.avatar_url || ''} onChange={(e) => setEditingTutor(prev => ({ ...prev, avatar_url: e.target.value }))} placeholder="Avatar URL" style={{ flex: '2' }} />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Instructor Short Bio Details</label>
+                <textarea value={editingTutor.bio || ''} onChange={(e) => setEditingTutor(prev => ({ ...prev, bio: e.target.value }))} rows={3}></textarea>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => { setShowEditTutorModal(false); setEditingTutor(null); }}>Cancel</button>
+                <button type="submit" className="btn-submit" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Course Modal Overlay */}
+      {showEditCourseModal && editingCourse && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => { setShowEditCourseModal(false); setEditingCourse(null); }}><X size={20} /></button>
+            <h3 className="modal-title">Edit Course Settings</h3>
+            <form onSubmit={handleEditCourseSubmit}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Title *</label>
+                <input type="text" value={editingCourse.title} onChange={(e) => setEditingCourse(prev => ({ ...prev, title: e.target.value }))} required />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Description</label>
+                <textarea value={editingCourse.description || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev, description: e.target.value }))} rows={3}></textarea>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Course Category *</label>
+                <select value={editingCourse.course_type || 'regular'} onChange={(e) => setEditingCourse(prev => ({ ...prev, course_type: e.target.value }))} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  <option value="regular">Regular Course (e.g. Class I-VI)</option>
+                  <option value="special">Special Class (e.g. Programming, AI)</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => { setShowEditCourseModal(false); setEditingCourse(null); }}>Cancel</button>
+                <button type="submit" className="btn-submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Topic (Lesson) Modal Overlay */}
+      {showEditTopicModal && editingTopic && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => { setShowEditTopicModal(false); setEditingTopic(null); }}><X size={20} /></button>
+            <h3 className="modal-title">Edit Lesson Settings</h3>
+            <form onSubmit={handleEditTopicSubmit}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Lesson Title *</label>
+                <input type="text" value={editingTopic.title} onChange={(e) => setEditingTopic(prev => ({ ...prev, title: e.target.value }))} required />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Lesson Description Summary</label>
+                <input type="text" value={editingTopic.description || ''} onChange={(e) => setEditingTopic(prev => ({ ...prev, description: e.target.value }))} />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Sort Order / Lesson Position *</label>
+                <input type="number" value={editingTopic.sort_order} onChange={(e) => setEditingTopic(prev => ({ ...prev, sort_order: Number(e.target.value) }))} required />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => { setShowEditTopicModal(false); setEditingTopic(null); }}>Cancel</button>
+                <button type="submit" className="btn-submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal Overlay */}
+      {showEditTaskModal && editingTask && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <button className="modal-close" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}><X size={20} /></button>
+            <h3 className="modal-title">Edit Homework / Quiz Settings</h3>
+            <form onSubmit={handleEditTaskSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label>Task Type *</label>
+                  <select value={editingTask.task_type} onChange={(e) => setEditingTask(prev => ({ ...prev, task_type: e.target.value }))} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                    <option value="assignment">Assignment</option>
+                    <option value="quiz">Interactive Quiz</option>
+                    <option value="true_false">True / False Question</option>
+                    <option value="instruction">Instructional Text</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Max Points *</label>
+                  <input type="number" value={editingTask.max_points} onChange={(e) => setEditingTask(prev => ({ ...prev, max_points: Number(e.target.value) }))} required />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Task Title *</label>
+                <input type="text" value={editingTask.title} onChange={(e) => setEditingTask(prev => ({ ...prev, title: e.target.value }))} required />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Instructions Details</label>
+                <textarea value={editingTask.description || ''} onChange={(e) => setEditingTask(prev => ({ ...prev, description: e.target.value }))} rows={3}></textarea>
+              </div>
+
+              {editingTask.task_type === 'true_false' && (
+                <div style={{ background: '#f7fafc', padding: '1rem', borderRadius: '10px', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>True / False Config</span>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Correct Answer *</label>
+                    <select value={editQCorrect} onChange={(e) => setEditQCorrect(Number(e.target.value))} style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                      <option value={0}>True</option>
+                      <option value={1}>False</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Inline Quiz Question Editor inside Task Modal */}
+              {editingTask.task_type === 'quiz' && (
+                <div style={{ background: '#f7fafc', padding: '1rem', borderRadius: '10px', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-color)' }}>
+                  <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem', color: 'var(--primary-color)' }}>Interactive Questions List</span>
+                  
+                  {/* Add New Question Config */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.8rem', background: 'white', padding: '0.6rem', borderRadius: '8px' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.7rem', fontWeight: '600' }}>Question Type</label>
+                      <select value={editQType} onChange={(e) => { setEditQType(e.target.value); setEditQCorrect(0); }} style={{ padding: '0.25rem', fontSize: '0.75rem', width: '100%', borderRadius: '4px', border: '1px solid #cbd5e0' }}>
+                        <option value="multiple">Multiple Choice (3 options)</option>
+                        <option value="boolean">True / False</option>
+                      </select>
+                    </div>
+
+                    <input type="text" value={editQText} onChange={(e) => setEditQText(e.target.value)} placeholder="New Question prompt..." style={{ padding: '0.4rem', fontSize: '0.8rem', marginTop: '0.3rem' }} />
+                    
+                    {editQType === 'multiple' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        {editQOptions.map((opt, oIdx) => (
+                          <input 
+                            key={oIdx}
+                            type="text" 
+                            value={opt} 
+                            onChange={(e) => {
+                              const cpy = [...editQOptions];
+                              cpy[oIdx] = e.target.value;
+                              setEditQOptions(cpy);
+                            }}
+                            placeholder={`Choice option ${oIdx + 1}`}
+                            style={{ padding: '0.3rem', fontSize: '0.75rem' }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '0.3rem 0.5rem', background: '#f7fafc', borderRadius: '6px', fontSize: '0.72rem', color: '#4a5568', display: 'flex', gap: '1rem' }}>
+                        <span>1. True</span>
+                        <span>2. False</span>
+                      </div>
+                    )}
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
+                      <select value={editQCorrect} onChange={(e) => setEditQCorrect(Number(e.target.value))} style={{ padding: '0.3rem', fontSize: '0.75rem' }}>
+                        {editQType === 'multiple' ? (
+                          <>
+                            <option value={0}>Ans: Option 1</option>
+                            <option value={1}>Ans: Option 2</option>
+                            <option value={2}>Ans: Option 3</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value={0}>Ans: True</option>
+                            <option value={1}>Ans: False</option>
+                          </>
+                        )}
+                      </select>
+                      <button type="button" className="btn-action approve" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={handleAddEditQuizQuestion}>+ Add Q</button>
+                    </div>
+                  </div>
+
+                  {/* List of current questions */}
+                  {(!editingTask.quiz_questions || editingTask.quiz_questions.length === 0) ? (
+                    <span style={{ fontSize: '0.8rem', color: '#a0aec0', fontStyle: 'italic' }}>No questions configured.</span>
+                  ) : (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '150px', overflowY: 'auto' }}>
+                      {editingTask.quiz_questions.map((q, idx) => (
+                        <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', items: 'center', background: 'white', padding: '0.4rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem' }}>
+                          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '80%' }}>{idx + 1}. {q.question}</span>
+                          <button type="button" onClick={() => setEditingTask(prev => ({ ...prev, quiz_questions: prev.quiz_questions.filter((_, i) => i !== idx) }))} style={{ border: 'none', background: 'none', color: '#e53e3e', cursor: 'pointer', fontWeight: 'bold' }}>Remove</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => { setShowEditTaskModal(false); setEditingTask(null); }}>Cancel</button>
+                <button type="submit" className="btn-submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Enrollment Modal Overlay */}
+      {showEditEnrollmentModal && editingEnrollment && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <button className="modal-close" onClick={() => { setShowEditEnrollmentModal(false); setEditingEnrollment(null); }}><X size={20} /></button>
+            <h3 className="modal-title">Edit Class Enrollment</h3>
+            <form onSubmit={handleEditEnrollmentSubmit}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Student Profile</label>
+                <input type="text" value={students.find(s => s.id === editingEnrollment.student_id)?.full_name || 'Student'} disabled style={{ background: '#f7fafc', cursor: 'not-allowed' }} />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Assigned Course *</label>
+                <select value={editEnrollmentCourseId} onChange={(e) => setEditEnrollmentCourseId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Assigned Instructor *</label>
+                <select value={editEnrollmentTutorId} onChange={(e) => setEditEnrollmentTutorId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  {tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => { setShowEditEnrollmentModal(false); setEditingEnrollment(null); }}>Cancel</button>
+                <button type="submit" className="btn-submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Course Modal Overlay */}
+      {showCreateCourseModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <button className="modal-close" onClick={() => setShowCreateCourseModal(false)}><X size={20} /></button>
+            <h3 className="modal-title"><BookOpen size={18} /> Create New Course</h3>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const saved = await saveCourse(newCourse);
+                setCourses(prev => [...prev, saved]);
+                setNewCourse({ title: '', description: '', course_type: 'regular' });
+                setSelectedCourseId(saved.id);
+                setShowCreateCourseModal(false);
+                alert('Course created successfully!');
+              } catch (err) {
+                alert('Error creating course: ' + err.message);
+              }
+            }}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Title *</label>
+                <input 
+                  type="text" 
+                  value={newCourse.title} 
+                  onChange={(e) => setNewCourse(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Frontend Development"
+                  required 
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Description</label>
+                <textarea 
+                  value={newCourse.description} 
+                  onChange={(e) => setNewCourse(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Short overview of the syllabus..."
+                  rows={3}
+                ></textarea>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Course Category *</label>
+                <select
+                  value={newCourse.course_type || 'regular'}
+                  onChange={(e) => setNewCourse(prev => ({ ...prev, course_type: e.target.value }))}
+                  required
+                  style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}
+                >
+                  <option value="regular">Regular Course (e.g. Class I-VI)</option>
+                  <option value="special">Special Class (e.g. Programming, AI)</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => setShowCreateCourseModal(false)}>Cancel</button>
+                <button type="submit" className="btn-submit">Create Course</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Tutor to Course Modal Overlay */}
+      {showAssignTutorModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <button className="modal-close" onClick={() => setShowAssignTutorModal(false)}><X size={20} /></button>
+            <h3 className="modal-title"><UserCheck size={18} /> Assign Tutor to Course</h3>
+            <form onSubmit={handleMapTutor}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Select Course *</label>
+                <select value={mapCourseId} onChange={(e) => setMapCourseId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  <option value="">-- Choose Course --</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Select Instructor *</label>
+                <select value={mapTutorId} onChange={(e) => setMapTutorId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  <option value="">-- Choose Tutor --</option>
+                  {tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => setShowAssignTutorModal(false)}>Cancel</button>
+                <button type="submit" className="btn-submit">Assign Tutor</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Enroll Student Modal Overlay */}
+      {showEnrollStudentModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <button className="modal-close" onClick={() => setShowEnrollStudentModal(false)}><X size={20} /></button>
+            <h3 className="modal-title"><BookOpenCheck size={18} /> Enroll Student in Course</h3>
+            <form onSubmit={handleEnrollStudent}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Select Student *</label>
+                <select value={enrollStudentId} onChange={(e) => setEnrollStudentId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  <option value="">-- Choose Student --</option>
+                  {students.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Select Course *</label>
+                <select value={enrollCourseId} onChange={(e) => {
+                  setEnrollCourseId(e.target.value);
+                  setEnrollTutorId(''); // Reset selected tutor
+                }} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  <option value="">-- Choose Course --</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Select Assigned Tutor *</label>
+                <select value={enrollTutorId} onChange={(e) => setEnrollTutorId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  <option value="">-- Choose Instructor --</option>
+                  {courseTutors.filter(ct => ct.course_id === enrollCourseId).map(ct => {
+                    const t = tutors.find(tu => tu.id === ct.tutor_id);
+                    return t ? <option key={t.id} value={t.id}>{t.full_name}</option> : null;
+                  })}
+                  {courseTutors.filter(ct => ct.course_id === enrollCourseId).length === 0 && tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => setShowEnrollStudentModal(false)}>Cancel</button>
+                <button type="submit" className="btn-submit">Enroll Student</button>
               </div>
             </form>
           </div>

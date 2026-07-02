@@ -353,13 +353,13 @@ footer {
   display: inline-block;
   letter-spacing: 0.3px;
   animation: 
-    typing 6s steps(42, end) infinite alternate,
+    typing 6s steps(40, end) infinite alternate,
     blink-caret 0.75s step-end infinite;
 }
 
 @keyframes typing {
   0% { width: 0; }
-  60%, 100% { width: 23ch; }
+  60%, 100% { width: 40ch; }
 }
 
 @keyframes blink-caret {

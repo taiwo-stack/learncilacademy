@@ -54,6 +54,70 @@ const getSpecialClassImage = (title, index) => {
   return images[index % images.length];
 };
 
+const allTimeZones = (() => {
+  try {
+    if (typeof Intl !== 'undefined' && Intl.supportedValuesOf) {
+      return Intl.supportedValuesOf('timeZone');
+    }
+  } catch (e) {
+    console.warn('Intl.supportedValuesOf not supported in this environment');
+  }
+  return [
+    'Africa/Lagos',
+    'Africa/Cairo',
+    'Africa/Johannesburg',
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Sao_Paulo',
+    'Asia/Dubai',
+    'Asia/Kolkata',
+    'Asia/Singapore',
+    'Asia/Tokyo',
+    'Australia/Sydney',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Moscow',
+    'UTC'
+  ];
+})();
+
+const tzOptions = allTimeZones.map(tz => {
+  try {
+    const date = new Date();
+    // Offset format: "GMT+1"
+    const offsetFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset',
+    });
+    const offsetParts = offsetFormatter.formatToParts(date);
+    const offsetVal = offsetParts.find(p => p.type === 'timeZoneName')?.value || '';
+
+    // Abbreviation format: "WAT"
+    const abbrFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    });
+    const abbrParts = abbrFormatter.formatToParts(date);
+    const abbrVal = abbrParts.find(p => p.type === 'timeZoneName')?.value || '';
+
+    let label = tz.replace(/_/g, ' ');
+    if (abbrVal && offsetVal) {
+      if (abbrVal !== offsetVal) {
+        label = `${label} (${abbrVal}, ${offsetVal})`;
+      } else {
+        label = `${label} (${offsetVal})`;
+      }
+    } else if (offsetVal) {
+      label = `${label} (${offsetVal})`;
+    }
+    return { value: tz, label };
+  } catch (e) {
+    return { value: tz, label: tz.replace(/_/g, ' ') };
+  }
+});
+
 export default function LandingPage() {
   const [tutors, setTutors] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -67,6 +131,7 @@ export default function LandingPage() {
 
   // Tab State: 'registration' | 'booking' | 'calendar'
   const [activeTab, setActiveTab] = useState('registration');
+  const [selectedTutor, setSelectedTutor] = useState(null);
 
   // Multi-step form state
   const [regStep, setRegStep] = useState(1);
@@ -91,16 +156,16 @@ export default function LandingPage() {
   });
 
   // Booking form state
-  const [selectedTutor, setSelectedTutor] = useState(null); // Tutor object
   const [bookingForm, setBookingForm] = useState({
     bookingStudentName: '',
     bookingParentName: '',
     bookingPhone: '',
     bookingEmail: '',
-    meetingType: '',
+    meetingType: 'virtual', // Default to virtual
     bookingDate: '',
     bookingTime: '',
-    bookingMessage: ''
+    bookingMessage: '',
+    bookingTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos'
   });
 
   // Contact form state
@@ -117,6 +182,22 @@ export default function LandingPage() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
   const [selectedCalendarTime, setSelectedCalendarTime] = useState('');
   const [bookedDates, setBookedDates] = useState({}); // Date-string -> boolean
+
+  // Timezone searchable dropdown state
+  const [tzSearch, setTzSearch] = useState('');
+  const [tzOpen, setTzOpen] = useState(false);
+  const tzDropdownRef = useRef(null);
+
+  // Close timezone dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (tzDropdownRef.current && !tzDropdownRef.current.contains(e.target)) {
+        setTzOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Scroll wrappers
   const teachersScrollRef = useRef(null);
@@ -231,14 +312,10 @@ export default function LandingPage() {
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedTutor) {
-      alert('Please select a tutor first.');
-      return;
-    }
     try {
       const bookingData = {
-        tutor_id: selectedTutor.id,
-        tutor_name: selectedTutor.full_name,
+        tutor_id: selectedTutor ? selectedTutor.id : null,
+        tutor_name: selectedTutor ? selectedTutor.full_name : 'Unassigned',
         student_name: bookingForm.bookingStudentName,
         parent_name: bookingForm.bookingParentName,
         phone: bookingForm.bookingPhone,
@@ -246,15 +323,23 @@ export default function LandingPage() {
         meeting_type: bookingForm.meetingType,
         booking_date: bookingForm.bookingDate,
         booking_time: bookingForm.bookingTime,
+        timezone: bookingForm.bookingTimezone,
         message: bookingForm.bookingMessage
       };
       await createBooking(bookingData);
       setBookingSuccess(true);
-      setBookingForm({
-        bookingStudentName: '', bookingParentName: '', bookingPhone: '', bookingEmail: '',
-        meetingType: '', bookingDate: '', bookingTime: '', bookingMessage: ''
-      });
       setSelectedTutor(null);
+      setBookingForm({
+        bookingStudentName: '', 
+        bookingParentName: '', 
+        bookingPhone: '', 
+        bookingEmail: '',
+        meetingType: 'virtual', 
+        bookingDate: '', 
+        bookingTime: '', 
+        bookingMessage: '',
+        bookingTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos'
+      });
       setTimeout(() => setBookingSuccess(false), 5000);
     } catch (err) {
       alert('Error scheduling booking: ' + err.message);
@@ -459,7 +544,7 @@ export default function LandingPage() {
               {activeTab === 'registration' && (
                 <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <p style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.75)', margin: '0 0 0.4rem 0', lineHeight: '1.4' }}>
-                    <strong>Quick Register:</strong> Enroll your child in our courses to setup their study account and choose grade programs.
+                    Enroll your child in our courses to setup their study account and choose grade programs.
                   </p>
                   {registerSuccess && (
                     <div style={{ padding: '0.5rem', background: 'rgba(40, 167, 69, 0.2)', border: '1px solid #28a745', borderRadius: '6px', fontSize: '0.75rem', textAlign: 'center', color: '#28a745', fontWeight: 'bold' }}>
@@ -537,29 +622,13 @@ export default function LandingPage() {
               {activeTab === 'booking' && (
                 <form onSubmit={handleBookingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <p style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.75)', margin: '0 0 0.4rem 0', lineHeight: '1.4' }}>
-                    <strong>Book Meeting:</strong> Schedule a 1-on-1 counseling call or academic consultation session with a tutor.
+                    Schedule a 1-on-1 counseling call or academic consultation session with a tutor.
                   </p>
                   {bookingSuccess && (
                     <div style={{ padding: '0.5rem', background: 'rgba(40, 167, 69, 0.2)', border: '1px solid #28a745', borderRadius: '6px', fontSize: '0.75rem', textAlign: 'center', color: '#28a745', fontWeight: 'bold' }}>
                       Meeting scheduled successfully!
                     </div>
                   )}
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label>Select a Tutor *</label>
-                    <select 
-                      value={selectedTutor ? selectedTutor.id : ''} 
-                      onChange={(e) => {
-                        const t = tutors.find(x => x.id === e.target.value);
-                        setSelectedTutor(t || null);
-                      }}
-                      required
-                    >
-                      <option value="">-- Choose Instructor --</option>
-                      {tutors.map(t => (
-                        <option key={t.id} value={t.id}>{t.full_name} ({t.subject})</option>
-                      ))}
-                    </select>
-                  </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label>Parent Name *</label>
                     <input 
@@ -615,6 +684,96 @@ export default function LandingPage() {
                         ))}
                       </select>
                     </div>
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Time Zone *</label>
+                    {/* Custom searchable timezone dropdown */}
+                    <div ref={tzDropdownRef} style={{ position: 'relative' }}>
+                      <div
+                        onClick={() => setTzOpen(o => !o)}
+                        style={{
+                          padding: '0.65rem', borderRadius: '8px',
+                          border: `1.5px solid ${tzOpen ? 'var(--primary-color)' : '#cbd5e0'}`,
+                          background: 'white', cursor: 'pointer',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          fontSize: '0.85rem', color: bookingForm.bookingTimezone ? 'var(--primary-color)' : '#a0aec0',
+                          userSelect: 'none'
+                        }}
+                      >
+                        <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                          {bookingForm.bookingTimezone
+                            ? (tzOptions.find(t => t.value === bookingForm.bookingTimezone)?.label || bookingForm.bookingTimezone)
+                            : '-- Choose Time Zone --'}
+                        </span>
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', flexShrink: 0 }}>{tzOpen ? '▲' : '▼'}</span>
+                      </div>
+                      {tzOpen && (
+                        <div style={{
+                          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                          background: 'white', border: '1.5px solid var(--primary-color)',
+                          borderRadius: '10px', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                          overflow: 'hidden'
+                        }}>
+                          {/* Search input */}
+                          <div style={{ padding: '0.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                            <input
+                              type="text"
+                              autoFocus
+                              value={tzSearch}
+                              onChange={e => setTzSearch(e.target.value)}
+                              placeholder="Search timezone or abbreviation..."
+                              style={{
+                                width: '100%', padding: '0.45rem 0.65rem', boxSizing: 'border-box',
+                                border: '1px solid #cbd5e0', borderRadius: '6px',
+                                fontSize: '0.82rem', outline: 'none'
+                              }}
+                            />
+                          </div>
+                          {/* Options list */}
+                          <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                            {tzOptions
+                              .filter(t => t.label.toLowerCase().includes(tzSearch.toLowerCase()))
+                              .map(t => (
+                                <div
+                                  key={t.value}
+                                  onClick={() => {
+                                    handleBookingChange({ target: { name: 'bookingTimezone', value: t.value } });
+                                    setTzOpen(false);
+                                    setTzSearch('');
+                                  }}
+                                  style={{
+                                    padding: '0.55rem 0.85rem', cursor: 'pointer', fontSize: '0.82rem',
+                                    background: bookingForm.bookingTimezone === t.value ? 'var(--primary-color)' : 'white',
+                                    color: bookingForm.bookingTimezone === t.value ? 'white' : 'var(--text-dark)',
+                                    transition: 'background 0.15s'
+                                  }}
+                                  onMouseEnter={e => { if (bookingForm.bookingTimezone !== t.value) e.target.style.background = '#f0f4ff'; }}
+                                  onMouseLeave={e => { if (bookingForm.bookingTimezone !== t.value) e.target.style.background = 'white'; }}
+                                >
+                                  {t.label}
+                                </div>
+                              ))
+                            }
+                            {tzOptions.filter(t => t.label.toLowerCase().includes(tzSearch.toLowerCase())).length === 0 && (
+                              <div style={{ padding: '0.75rem', textAlign: 'center', color: '#a0aec0', fontSize: '0.82rem' }}>No results found</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Hidden real input for form validation */}
+                    <input type="text" name="bookingTimezone" value={bookingForm.bookingTimezone} onChange={() => {}} required tabIndex={-1} style={{ position: 'absolute', opacity: 0, height: 0, width: 0 }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Write us a note (Optional)</label>
+                    <textarea 
+                      name="bookingMessage" 
+                      value={bookingForm.bookingMessage} 
+                      onChange={handleBookingChange} 
+                      placeholder="Tell us what you'd like to discuss or any questions you have..." 
+                      rows={3} 
+                      style={{ resize: 'vertical', width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e0', background: 'white', color: 'var(--primary-color)', fontSize: '0.85rem', fontFamily: 'inherit' }}
+                    />
                   </div>
                   <button type="submit" className="btn-primary" style={{ padding: '0.65rem', fontSize: '0.85rem', width: '100%', marginTop: '0.5rem', boxShadow: 'none' }}>
                     Book Consultation

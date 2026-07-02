@@ -78,16 +78,7 @@ export default function Login({ onLoginSuccess }) {
             </button>
           </form>
           
-          {!hasSupabaseConfig && (
-            <div className="mock-demo-credentials">
-              <h4>💡 Development Demo Credentials:</h4>
-              <ul>
-                <li><strong>Admin:</strong> <code>admin@foundaxia.com</code> (pw: <code>admin123</code>)</li>
-                <li><strong>Tutor:</strong> <code>tutor@foundaxia.com</code> (pw: <code>tutor123</code>)</li>
-                <li><strong>Student:</strong> <code>student@foundaxia.com</code> (pw: <code>student123</code>)</li>
-              </ul>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

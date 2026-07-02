@@ -326,11 +326,48 @@ export const getBookings = async () => {
 };
 
 export const createBooking = async (booking) => {
+  // Sanitize date fields — Postgres DATE column rejects empty strings and 'N/A'
+  const sanitizeDate = (val) => {
+    if (!val || val === '' || val === 'N/A' || val === 'null') return null;
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : val;
+  };
+
+  const cleanBooking = {
+    ...booking,
+    booking_date: sanitizeDate(booking.booking_date),
+  };
+
   let savedBooking;
   if (hasSupabaseConfig) {
-    const { data, error } = await supabase.from('bookings').insert([booking]).select();
-    if (error) throw error;
-    savedBooking = data[0];
+    const { data, error } = await supabase.from('bookings').insert([cleanBooking]).select();
+    if (error) {
+      // If the error is about missing columns (timezone/message not yet migrated),
+      // retry without those fields so the booking still saves.
+      const isMissingColumn = error.message && (
+        error.message.includes('column') ||
+        error.message.includes('does not exist') ||
+        error.code === '42703'
+      );
+      if (isMissingColumn) {
+        console.warn(
+          '[LearnCil] bookings table is missing timezone/message columns. ' +
+          'Run the migration in Supabase SQL Editor:\n' +
+          'ALTER TABLE public.bookings\n' +
+          '  ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT \'Africa/Lagos\',\n' +
+          '  ADD COLUMN IF NOT EXISTS message TEXT;\n' +
+          'Saving booking without those fields for now.'
+        );
+        const { timezone, message, ...coreBooking } = cleanBooking;
+        const { data: retryData, error: retryError } = await supabase.from('bookings').insert([coreBooking]).select();
+        if (retryError) throw retryError;
+        savedBooking = retryData[0];
+      } else {
+        throw error;
+      }
+    } else {
+      savedBooking = data[0];
+    }
   } else {
     initLocalStorage();
     const bookings = JSON.parse(localStorage.getItem('lc_bookings'));
@@ -343,7 +380,6 @@ export const createBooking = async (booking) => {
     bookings.push(savedBooking);
     localStorage.setItem('lc_bookings', JSON.stringify(bookings));
   }
-
 
   return savedBooking;
 };
@@ -494,15 +530,53 @@ export const createStudentAccount = async (email, password, studentData) => {
         await supabaseAdmin.from('students').delete().in('id', tempIds);
       }
 
-      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true
-      });
-      if (authError) throw authError;
-      authUserId = authUser.user.id;
+      let authUser = null;
+      let authError = null;
 
-      const { error: profileError } = await supabaseAdmin.from('profiles').insert([
+      try {
+        const { data, error } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
+        });
+        authUser = data?.user;
+        authError = error;
+      } catch (err) {
+        authError = err;
+      }
+
+      if (authError) {
+        if (authError.message && authError.message.toLowerCase().includes('already')) {
+          // Try to look up existing user ID from profiles table
+          const { data: profileRow } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email.toLowerCase())
+            .maybeSingle();
+
+          if (profileRow) {
+            authUserId = profileRow.id;
+          } else {
+            // Fallback to auth listUsers
+            const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+            if (!listError && userList && userList.users) {
+              const existingUser = userList.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+              if (existingUser) {
+                authUserId = existingUser.id;
+              }
+            }
+          }
+
+          if (authUserId) {
+            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password });
+          }
+        }
+        if (!authUserId) throw authError;
+      } else if (authUser) {
+        authUserId = authUser.id;
+      }
+
+      const { error: profileError } = await supabaseAdmin.from('profiles').upsert([
         {
           id: authUserId,
           email,
@@ -510,7 +584,7 @@ export const createStudentAccount = async (email, password, studentData) => {
           full_name: studentData.full_name
         }
       ]);
-      if (profileError) throw profileError;
+      if (profileError) throw new Error(profileError.message || JSON.stringify(profileError));
 
       const { profile_id, ...cleanStudentData } = studentData;
 
@@ -529,11 +603,11 @@ export const createStudentAccount = async (email, password, studentData) => {
           ...cleanStudentData
         }
       ]).select();
-      if (studentError) throw studentError;
+      if (studentError) throw new Error(studentError.message || JSON.stringify(studentError));
 
       return student[0];
     } catch (err) {
-      throw err;
+      throw new Error(err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err)));
     }
   } else {
     initLocalStorage();
@@ -586,15 +660,28 @@ export const activateStudentAccount = async (studentId, email, password) => {
 
       if (authError) {
         if (authError.message && authError.message.toLowerCase().includes('already')) {
-          // If already registered, fetch user by email to get user ID and update password
-          const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-          if (!listError && userList && userList.users) {
-            const existingUser = userList.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-            if (existingUser) {
-              authUserId = existingUser.id;
-              // Reset their password to what the admin entered
-              await supabaseAdmin.auth.admin.updateUserById(authUserId, { password });
+          // Try to look up existing user ID from profiles table
+          const { data: profileRow } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email.toLowerCase())
+            .maybeSingle();
+
+          if (profileRow) {
+            authUserId = profileRow.id;
+          } else {
+            // Fallback to auth listUsers
+            const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+            if (!listError && userList && userList.users) {
+              const existingUser = userList.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+              if (existingUser) {
+                authUserId = existingUser.id;
+              }
             }
+          }
+
+          if (authUserId) {
+            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password });
           }
         }
         if (!authUserId) throw authError;
@@ -619,14 +706,14 @@ export const activateStudentAccount = async (studentId, email, password) => {
           full_name: studentRow.full_name
         }
       ]);
-      if (profileError) throw profileError;
+      if (profileError) throw new Error(profileError.message || JSON.stringify(profileError));
 
       // Delete the temporary lead record
       const { error: deleteError } = await supabaseAdmin
         .from('students')
         .delete()
         .eq('id', studentId);
-      if (deleteError) throw deleteError;
+      if (deleteError) throw new Error(deleteError.message || JSON.stringify(deleteError));
 
       // Upsert student record linked to the authUserId
       const { profiles, ...studentWithoutRelations } = studentRow;
@@ -638,14 +725,14 @@ export const activateStudentAccount = async (studentId, email, password) => {
           status: 'approved'
         }
       ]).select();
-      if (studentInsertError) throw studentInsertError;
+      if (studentInsertError) throw new Error(studentInsertError.message || JSON.stringify(studentInsertError));
 
       return student[0];
     } catch (err) {
       if (authUserId) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
       }
-      throw err;
+      throw new Error(err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err)));
     }
   } else {
     initLocalStorage();
@@ -703,17 +790,57 @@ export const resetUserPassword = async (userId, newPassword) => {
 export const createTutorAccount = async (email, password, tutorData) => {
   if (hasSupabaseConfig) {
     let authUserId = null;
+    let isNewUser = false;
     try {
-      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true
-      });
-      if (authError) throw authError;
-      authUserId = authUser.user.id;
+      let authUser = null;
+      let authError = null;
 
-      // Insert into profiles table
-      const { error: profileError } = await supabaseAdmin.from('profiles').insert([
+      try {
+        const { data, error } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
+        });
+        authUser = data?.user;
+        authError = error;
+      } catch (err) {
+        authError = err;
+      }
+
+      if (authError) {
+        if (authError.message && authError.message.toLowerCase().includes('already')) {
+          // Try to look up existing user ID from profiles table
+          const { data: profileRow } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email.toLowerCase())
+            .maybeSingle();
+
+          if (profileRow) {
+            authUserId = profileRow.id;
+          } else {
+            // Fallback to auth listUsers
+            const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+            if (!listError && userList && userList.users) {
+              const existingUser = userList.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+              if (existingUser) {
+                authUserId = existingUser.id;
+              }
+            }
+          }
+
+          if (authUserId) {
+            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password });
+          }
+        }
+        if (!authUserId) throw authError;
+      } else if (authUser) {
+        authUserId = authUser.id;
+        isNewUser = true;
+      }
+
+      // Upsert into profiles table to prevent constraint failures
+      const { error: profileError } = await supabaseAdmin.from('profiles').upsert([
         {
           id: authUserId,
           email,
@@ -721,28 +848,28 @@ export const createTutorAccount = async (email, password, tutorData) => {
           full_name: tutorData.full_name
         }
       ]);
-      if (profileError) throw profileError;
+      if (profileError) throw new Error(profileError.message || JSON.stringify(profileError));
 
       // Strip any client-only or non-existent DB columns before inserting
       const { profile_id, ...cleanTutorData } = tutorData;
 
-      const { data: tutor, error: tutorError } = await supabaseAdmin.from('tutors').insert([
+      // Upsert into tutors table
+      const { data: tutor, error: tutorError } = await supabaseAdmin.from('tutors').upsert([
         {
           id: authUserId,
-          email,
           rating: 5.0,
           ...cleanTutorData
         }
       ]).select();
-      if (tutorError) throw tutorError;
+      if (tutorError) throw new Error(tutorError.message || JSON.stringify(tutorError));
 
       return tutor[0];
     } catch (err) {
-      // Rollback: delete the auth user so the email can be re-used
-      if (authUserId) {
+      // Rollback only if the user was newly created in this run
+      if (authUserId && isNewUser) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
       }
-      throw err;
+      throw new Error(err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err)));
     }
   } else {
     initLocalStorage();
@@ -823,18 +950,35 @@ export const getCourses = async () => {
 };
 
 export const saveCourse = async (course) => {
-  const courseId = 'c_' + Date.now();
   if (hasSupabaseConfig) {
-    const { data, error } = await supabase.from('courses').insert([{ id: courseId, ...course }]).select();
-    if (error) throw error;
-    return data[0];
+    if (course.id) {
+      const { data, error } = await supabase.from('courses').update(course).eq('id', course.id).select();
+      if (error) throw error;
+      return data[0];
+    } else {
+      const courseId = 'c_' + Date.now();
+      const { data, error } = await supabase.from('courses').insert([{ id: courseId, ...course }]).select();
+      if (error) throw error;
+      return data[0];
+    }
   } else {
     initLocalStorage();
     const courses = JSON.parse(localStorage.getItem('lc_courses'));
-    const newCourse = { id: courseId, ...course };
-    courses.push(newCourse);
-    localStorage.setItem('lc_courses', JSON.stringify(courses));
-    return newCourse;
+    if (course.id) {
+      const idx = courses.findIndex(c => c.id === course.id);
+      if (idx !== -1) {
+        courses[idx] = { ...courses[idx], ...course };
+        localStorage.setItem('lc_courses', JSON.stringify(courses));
+        return courses[idx];
+      }
+      throw new Error('Course not found');
+    } else {
+      const courseId = 'c_' + Date.now();
+      const newCourse = { id: courseId, ...course };
+      courses.push(newCourse);
+      localStorage.setItem('lc_courses', JSON.stringify(courses));
+      return newCourse;
+    }
   }
 };
 
@@ -1067,6 +1211,53 @@ export const unenrollStudentFromCourse = async (studentId, courseId) => {
   }
 };
 
+export const updateStudentEnrollment = async (studentId, oldCourseId, newCourseId, newTutorId) => {
+  if (hasSupabaseConfig) {
+    if (oldCourseId !== newCourseId) {
+      const { error: delErr } = await supabase
+        .from('student_courses')
+        .delete()
+        .eq('student_id', studentId)
+        .eq('course_id', oldCourseId);
+      if (delErr) throw delErr;
+
+      const { data, error: insErr } = await supabase
+        .from('student_courses')
+        .insert([{ student_id: studentId, course_id: newCourseId, tutor_id: newTutorId }])
+        .select();
+      if (insErr) throw insErr;
+      return data[0];
+    } else {
+      const { data, error } = await supabase
+        .from('student_courses')
+        .update({ tutor_id: newTutorId })
+        .eq('student_id', studentId)
+        .eq('course_id', oldCourseId)
+        .select();
+      if (error) throw error;
+      return data[0];
+    }
+  } else {
+    initLocalStorage();
+    const enrollments = JSON.parse(localStorage.getItem('lc_student_courses'));
+    const idx = enrollments.findIndex(x => x.student_id === studentId && x.course_id === oldCourseId);
+    if (idx !== -1) {
+      if (oldCourseId !== newCourseId) {
+        enrollments.splice(idx, 1);
+        const item = { student_id: studentId, course_id: newCourseId, tutor_id: newTutorId, assigned_at: new Date().toISOString() };
+        enrollments.push(item);
+        localStorage.setItem('lc_student_courses', JSON.stringify(enrollments));
+        return item;
+      } else {
+        enrollments[idx].tutor_id = newTutorId;
+        localStorage.setItem('lc_student_courses', JSON.stringify(enrollments));
+        return enrollments[idx];
+      }
+    }
+    throw new Error('Enrollment not found.');
+  }
+};
+
 // 6. Tasks CRUD (Assignments & Quizzes)
 export const getTasks = async () => {
   if (hasSupabaseConfig) {
@@ -1080,18 +1271,35 @@ export const getTasks = async () => {
 };
 
 export const saveTask = async (task) => {
-  const taskId = 'tk_' + Date.now();
   if (hasSupabaseConfig) {
-    const { data, error } = await supabase.from('tasks').insert([{ id: taskId, ...task }]).select();
-    if (error) throw error;
-    return data[0];
+    if (task.id) {
+      const { data, error } = await supabase.from('tasks').update(task).eq('id', task.id).select();
+      if (error) throw error;
+      return data[0];
+    } else {
+      const taskId = 'tk_' + Date.now();
+      const { data, error } = await supabase.from('tasks').insert([{ id: taskId, ...task }]).select();
+      if (error) throw error;
+      return data[0];
+    }
   } else {
     initLocalStorage();
     const tasks = JSON.parse(localStorage.getItem('lc_tasks'));
-    const newTask = { id: taskId, ...task };
-    tasks.push(newTask);
-    localStorage.setItem('lc_tasks', JSON.stringify(tasks));
-    return newTask;
+    if (task.id) {
+      const idx = tasks.findIndex(tk => tk.id === task.id);
+      if (idx !== -1) {
+        tasks[idx] = { ...tasks[idx], ...task };
+        localStorage.setItem('lc_tasks', JSON.stringify(tasks));
+        return tasks[idx];
+      }
+      throw new Error('Task not found');
+    } else {
+      const taskId = 'tk_' + Date.now();
+      const newTask = { id: taskId, ...task };
+      tasks.push(newTask);
+      localStorage.setItem('lc_tasks', JSON.stringify(tasks));
+      return newTask;
+    }
   }
 };
 
