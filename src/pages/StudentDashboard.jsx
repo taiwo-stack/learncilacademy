@@ -391,31 +391,88 @@ export default function StudentDashboard({ user }) {
                                 <h4 style={{ color: 'var(--primary-color)', fontSize: '1rem', fontWeight: 'bold', margin: '0 0 0.3rem 0' }}>Lesson {idx + 1}: {t.title}</h4>
                                 <p style={{ color: '#718096', fontSize: '0.85rem', margin: '0 0 0.8rem 0' }}>{t.description}</p>
                                 
-                                {/* Downloads */}
+                                {/* Downloads / View Files */}
                                 {topicMats.length > 0 && (
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                    {topicMats.map(m => (
-                                      <a 
-                                        key={m.id} 
-                                        href={m.file_url} 
-                                        target="_blank" 
-                                        rel="noreferrer" 
-                                        style={{ 
-                                          display: 'inline-flex', 
-                                          alignItems: 'center', 
-                                          gap: '0.3rem', 
-                                          fontSize: '0.8rem', 
-                                          padding: '0.3rem 0.6rem', 
-                                          borderRadius: '6px', 
-                                          background: '#f0fdf4', 
-                                          color: '#166534',
-                                          border: '1px solid #bbf7d0'
-                                        }}
-                                      >
-                                        <FileText size={12} />
-                                        {m.title}
-                                      </a>
-                                    ))}
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#4a5568', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      <FileText size={13} /> Attached Files
+                                    </div>
+                                    {topicMats.map(m => {
+                                      const type = (m.file_type || '').toLowerCase();
+                                      const isImage = type === 'image' || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(m.file_url || '');
+                                      const isPdf   = type === 'pdf'   || /\.pdf$/i.test(m.file_url || '');
+                                      const isVideo = type === 'video' || /\.(mp4|webm|mov|avi)$/i.test(m.file_url || '');
+                                      const isDoc   = type === 'doc' || type === 'docx' || /\.(doc|docx)$/i.test(m.file_url || '');
+
+                                      const fileIcon = isImage ? '🖼️' : isPdf ? '📄' : isVideo ? '🎬' : isDoc ? '📝' : '📎';
+                                      const typeLabel = isImage ? 'Image' : isPdf ? 'PDF' : isVideo ? 'Video' : isDoc ? 'Document' : 'File';
+
+                                      return (
+                                        <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.65rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                          {/* File info */}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                                            <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{fileIcon}</span>
+                                            <div>
+                                              <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--primary-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>
+                                                {m.title}
+                                              </div>
+                                              <div style={{ fontSize: '0.7rem', color: '#a0aec0', textTransform: 'uppercase', fontWeight: '600' }}>{typeLabel}</div>
+                                            </div>
+                                          </div>
+
+                                          {/* Action buttons */}
+                                          <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                                            {/* View button — opens in new tab */}
+                                            <a
+                                              href={m.file_url}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                                                padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.78rem',
+                                                fontWeight: '600', textDecoration: 'none',
+                                                background: 'var(--primary-color)', color: 'white',
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.12)', transition: 'opacity 0.15s'
+                                              }}
+                                              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                            >
+                                              👁 View
+                                            </a>
+
+                                            {/* Download button — forces download */}
+                                            <a
+                                              href={m.file_url}
+                                              download={m.title || 'file'}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                                                padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.78rem',
+                                                fontWeight: '600', textDecoration: 'none',
+                                                background: '#e6f4ff', color: '#0369a1',
+                                                border: '1px solid #bae0fd', transition: 'opacity 0.15s'
+                                              }}
+                                              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                                              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                            >
+                                              ⬇ Download
+                                            </a>
+                                          </div>
+
+                                          {/* Inline image preview */}
+                                          {isImage && (
+                                            <div style={{ width: '100%', marginTop: '0.5rem', borderRadius: '8px', overflow: 'hidden', maxHeight: '180px' }}>
+                                              <img
+                                                src={m.file_url}
+                                                alt={m.title}
+                                                style={{ width: '100%', maxHeight: '180px', objectFit: 'contain', background: '#f0f4f8', display: 'block' }}
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 )}
 

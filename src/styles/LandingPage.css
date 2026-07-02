@@ -87,22 +87,22 @@ section {
 .btn-primary {
   display: inline-block;
   padding: 0.9rem 2.2rem;
-  background: var(--accent-gradient);
+  background: var(--accent-color);
   color: white;
   text-decoration: none;
   font-weight: 600;
   border-radius: 30px;
   transition: all 0.3s ease;
-  box-shadow: 0 8px 25px rgba(242, 122, 36, 0.4);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
   border: none;
   cursor: pointer;
   font-family: var(--font-body);
 }
 
 .btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(242, 122, 36, 0.6);
-  background: var(--accent-hover-gradient);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background: var(--accent-dark);
 }
 
 .hero-image-placeholder {
@@ -692,21 +692,21 @@ section {
 
 .btn-next, .btn-submit {
   padding: 0.8rem 2rem;
-  background: var(--accent-gradient);
+  background: var(--accent-color);
   color: white;
   border: none;
   border-radius: 25px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(242, 122, 36, 0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
   font-family: var(--font-body);
 }
 
 .btn-next:hover, .btn-submit:hover {
-  background: var(--accent-hover-gradient);
+  background: var(--accent-dark);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(242, 122, 36, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Success Messages */

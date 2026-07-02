@@ -489,15 +489,72 @@ export default function LandingPage() {
                 We provide personalized learning experiences and innovative educational programs 
                 that nurture every student's potential, helping them learn, grow, and succeed.
               </p>
-              <div className="hero-buttons">
+              <div className="hero-buttons" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1.5rem' }}>
                 <button 
                   className="btn-primary" 
+                  style={{
+                    display: 'inline-flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    padding: '0.8rem 1.6rem',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                    textAlign: 'left',
+                    background: 'var(--accent-color)'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dark)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-color)'}
                   onClick={() => {
                     const el = document.getElementById('register');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
                 >
-                  Register Now
+                  <span style={{ fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+                    ✨ Give Your Child an Edge
+                  </span>
+                  <span style={{ fontSize: '0.72rem', opacity: 0.9, fontWeight: 'normal', marginTop: '2px', color: 'white' }}>
+                    Start 1-on-1 Personalized Tutoring
+                  </span>
+                </button>
+
+                <button 
+                  className="btn-next" 
+                  style={{
+                    display: 'inline-flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    padding: '0.8rem 1.6rem',
+                    borderRadius: '12px',
+                    border: '2px solid rgba(255, 255, 255, 0.4)',
+                    background: 'transparent',
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s, border-color 0.2s',
+                    textAlign: 'left',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                    e.currentTarget.style.borderColor = 'white';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+                  }}
+                  onClick={() => {
+                    const el = document.getElementById('courses');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <span style={{ fontSize: '1.05rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    📚 Explore Study Programs
+                  </span>
+                  <span style={{ fontSize: '0.72rem', opacity: 0.8, fontWeight: 'normal', marginTop: '2px' }}>
+                    See our standard & custom courses
+                  </span>
                 </button>
               </div>
             </div>
