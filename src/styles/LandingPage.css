@@ -252,7 +252,7 @@ section {
   font-family: var(--font-heading);
   font-size: 2.2rem;
   margin-bottom: 1.5rem;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .why-choose-text p {
@@ -371,11 +371,13 @@ section {
   overflow-x: auto;
   scroll-behavior: smooth;
   padding: 2rem 0;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .teachers-scroll-wrapper::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  display: none;
+  /* Safari and Chrome */
 }
 
 .teachers-grid {
@@ -538,7 +540,9 @@ section {
 }
 
 /* Forms Styling */
-.registration-form-container, .booking-container, .calendar-container {
+.registration-form-container,
+.booking-container,
+.calendar-container {
   background: rgba(255, 255, 255, 0.98);
   border-radius: 25px;
   padding: 2.5rem;
@@ -605,8 +609,15 @@ section {
 }
 
 @keyframes slideFormIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .form-step h3 {
@@ -690,7 +701,8 @@ section {
   color: var(--text-dark);
 }
 
-.btn-next, .btn-submit {
+.btn-next,
+.btn-submit {
   padding: 0.8rem 2rem;
   background: var(--accent-color);
   color: white;
@@ -703,7 +715,8 @@ section {
   font-family: var(--font-body);
 }
 
-.btn-next:hover, .btn-submit:hover {
+.btn-next:hover,
+.btn-submit:hover {
   background: var(--accent-dark);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -1025,25 +1038,28 @@ section {
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {
-  .hero-content, .why-choose-content, .contact-content {
+
+  .hero-content,
+  .why-choose-content,
+  .contact-content {
     grid-template-columns: 1fr;
     gap: 3rem;
     text-align: center;
   }
-  
+
   .hero-text h1 {
     font-size: 2.7rem;
   }
-  
+
   .hero-buttons {
     justify-content: center;
   }
-  
+
   .checkmark-list {
     display: inline-block;
     text-align: left;
   }
-  
+
   .teachers-nav {
     display: none;
   }
@@ -1053,28 +1069,31 @@ section {
   section {
     padding: 3.5rem 0;
   }
-  
+
   .hero-text h1 {
     font-size: 2.1rem;
   }
-  
+
   .registration-tabs {
     flex-direction: column;
     border-radius: 15px;
   }
-  
+
   .tab-btn {
     border-radius: 10px;
   }
-  
-  .registration-form-container, .booking-container, .calendar-container, .contact-form {
+
+  .registration-form-container,
+  .booking-container,
+  .calendar-container,
+  .contact-form {
     padding: 1.5rem;
   }
-  
+
   .form-progress {
     margin-bottom: 1.5rem;
   }
-  
+
   .progress-line {
     width: 40px;
   }
@@ -1139,6 +1158,7 @@ section {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
