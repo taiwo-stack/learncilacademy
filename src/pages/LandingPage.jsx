@@ -132,6 +132,7 @@ export default function LandingPage() {
   // Tab State: 'registration' | 'booking' | 'calendar'
   const [activeTab, setActiveTab] = useState('registration');
   const [selectedTutor, setSelectedTutor] = useState(null);
+  const [faqOpenIndex, setFaqOpenIndex] = useState(null);
 
   // Multi-step form state
   const [regStep, setRegStep] = useState(1);
@@ -558,7 +559,7 @@ export default function LandingPage() {
                 </button>
               </div>
             </div>
-            <div className="hero-form-card">
+            <div className="hero-form-card" id="register">
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.75rem' }}>
                 <button 
                   type="button" 
@@ -989,516 +990,132 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Registration & Booking Section */}
-      <section className="registration-booking" id="register">
+      {/* ─────────────── TRUST STATS BAR ─────────────── */}
+      <section style={{ background: 'var(--primary-color)', padding: '3rem 0' }}>
         <div className="container">
-          <div className="section-title">
-            <h2>Register Your Child & Schedule a Meeting</h2>
-            <p>Complete your child's registration and book a consultation with our expert tutors</p>
-          </div>
-          
-          <div className="registration-tabs">
-            <button 
-              className={`tab-btn ${activeTab === 'registration' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('registration')}
-            >
-              Registration
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'booking' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('booking')}
-            >
-              Book Meeting
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('calendar')}
-            >
-              Available Slots
-            </button>
-          </div>
-
-          <div className="registration-content">
-            {/* Registration Form Tab */}
-            {activeTab === 'registration' && (
-              <div className="registration-form-container">
-                {registerSuccess && (
-                  <div className="success-message">
-                    Registration completed successfully! We will contact you within 24 hours.
-                  </div>
-                )}
-                
-                <div className="form-progress">
-                  <div className={`progress-step ${regStep >= 1 ? 'active' : ''} ${regStep > 1 ? 'completed' : ''}`}>1</div>
-                  <div className={`progress-line ${regStep > 1 ? 'completed' : ''}`}></div>
-                  <div className={`progress-step ${regStep >= 2 ? 'active' : ''} ${regStep > 2 ? 'completed' : ''}`}>2</div>
-                  <div className={`progress-line ${regStep > 2 ? 'completed' : ''}`}></div>
-                  <div className={`progress-step ${regStep === 3 ? 'active' : ''}`}>3</div>
-                </div>
-                
-                <form onSubmit={handleRegisterSubmit}>
-                  {/* Step 1: Student Information */}
-                  {regStep === 1 && (
-                    <div className="form-step active">
-                      <h3>Student Information</h3>
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label>Student's Full Name *</label>
-                          <input 
-                            type="text" 
-                            name="studentName" 
-                            value={studentForm.studentName} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Date of Birth *</label>
-                          <input 
-                            type="date" 
-                            name="dateOfBirth" 
-                            value={studentForm.dateOfBirth} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Gender *</label>
-                          <select 
-                            name="gender" 
-                            value={studentForm.gender} 
-                            onChange={handleRegChange} 
-                            required
-                          >
-                            <option value="">Select Gender</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label>Grade/Class Level *</label>
-                          <select 
-                            name="gradeLevel" 
-                            value={studentForm.gradeLevel} 
-                            onChange={handleRegChange} 
-                            required
-                          >
-                            <option value="">Select Grade</option>
-                            <option value="Pre-K">Pre-K</option>
-                            <option value="Kindergarten">Kindergarten</option>
-                            <option value="Grade 1">Grade 1</option>
-                            <option value="Grade 2">Grade 2</option>
-                            <option value="Grade 3">Grade 3</option>
-                            <option value="Grade 4">Grade 4</option>
-                            <option value="Grade 5">Grade 5</option>
-                            <option value="Grade 6">Grade 6</option>
-                            <option value="Grade 7">Grade 7</option>
-                            <option value="Grade 8">Grade 8</option>
-                            <option value="Grade 9">Grade 9</option>
-                            <option value="Grade 10">Grade 10</option>
-                          </select>
-                        </div>
-                        <div className="form-group full-width">
-                          <label>Previous School (if applicable)</label>
-                          <input 
-                            type="text" 
-                            name="previousSchool" 
-                            value={studentForm.previousSchool} 
-                            onChange={handleRegChange} 
-                          />
-                        </div>
-                        <div className="form-group full-width">
-                          <label>Special Learning Requirements</label>
-                          <textarea 
-                            name="specialNeeds" 
-                            value={studentForm.specialNeeds} 
-                            onChange={handleRegChange} 
-                            rows={2} 
-                            placeholder="Any special requirements or learning needs"
-                          ></textarea>
-                        </div>
-                      </div>
-                      <div className="step-buttons">
-                        <div></div>
-                        <button type="button" className="btn-next" onClick={handleNextStep}>Next Step</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 2: Parent/Guardian Information */}
-                  {regStep === 2 && (
-                    <div className="form-step active">
-                      <h3>Parent/Guardian Information</h3>
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label>Parent/Guardian Name *</label>
-                          <input 
-                            type="text" 
-                            name="parentName" 
-                            value={studentForm.parentName} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Relationship to Student *</label>
-                          <select 
-                            name="relationship" 
-                            value={studentForm.relationship} 
-                            onChange={handleRegChange} 
-                            required
-                          >
-                            <option value="">Select Relationship</option>
-                            <option value="mother">Mother</option>
-                            <option value="father">Father</option>
-                            <option value="guardian">Guardian</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label>Primary Phone *</label>
-                          <input 
-                            type="tel" 
-                            name="primaryPhone" 
-                            value={studentForm.primaryPhone} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Email Address *</label>
-                          <input 
-                            type="email" 
-                            name="email" 
-                            value={studentForm.email} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                        <div className="form-group full-width">
-                          <label>Home Address *</label>
-                          <textarea 
-                            name="address" 
-                            value={studentForm.address} 
-                            onChange={handleRegChange} 
-                            rows={2} 
-                            required
-                          ></textarea>
-                        </div>
-                        <div className="form-group">
-                          <label>Emergency Contact Name *</label>
-                          <input 
-                            type="text" 
-                            name="emergencyName" 
-                            value={studentForm.emergencyName} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Emergency Contact Phone *</label>
-                          <input 
-                            type="tel" 
-                            name="emergencyPhone" 
-                            value={studentForm.emergencyPhone} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                      </div>
-                      <div className="step-buttons">
-                        <button type="button" className="btn-prev" onClick={handlePrevStep}>Previous</button>
-                        <button type="button" className="btn-next" onClick={handleNextStep}>Next Step</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 3: Program Selection */}
-                  {regStep === 3 && (
-                    <div className="form-step active">
-                      <h3>Program Selection</h3>
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label>Preferred Program *</label>
-                          <select 
-                            name="program" 
-                            value={studentForm.program} 
-                            onChange={handleRegChange} 
-                            required
-                          >
-                            <option value="">Select Program</option>
-                            <option value="regular">Regular Classes</option>
-                            <option value="tutoring">One-on-One Tutoring</option>
-                            <option value="group">Group Sessions</option>
-                            <option value="special">Special Programs</option>
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label>Preferred Schedule *</label>
-                          <select 
-                            name="schedule" 
-                            value={studentForm.schedule} 
-                            onChange={handleRegChange} 
-                            required
-                          >
-                            <option value="">Select Schedule</option>
-                            <option value="morning">Morning (8AM - 12PM)</option>
-                            <option value="afternoon">Afternoon (1PM - 5PM)</option>
-                            <option value="evening">Evening (5PM - 8PM)</option>
-                            <option value="flexible">Flexible</option>
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label>Start Date *</label>
-                          <input 
-                            type="date" 
-                            name="startDate" 
-                            value={studentForm.startDate} 
-                            onChange={handleRegChange} 
-                            required 
-                          />
-                        </div>
-                        <div className="form-group full-width">
-                          <label>Additional Comments</label>
-                          <textarea 
-                            name="comments" 
-                            value={studentForm.comments} 
-                            onChange={handleRegChange} 
-                            rows={3} 
-                            placeholder="Any additional information or requirements"
-                          ></textarea>
-                        </div>
-                      </div>
-                      <div className="step-buttons">
-                        <button type="button" className="btn-prev" onClick={handlePrevStep}>Previous</button>
-                        <button type="submit" className="btn-submit">Complete Registration</button>
-                      </div>
-                    </div>
-                  )}
-                </form>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '2rem', textAlign: 'center' }}>
+            {[
+              { value: '500+', label: 'Students Enrolled', icon: '🎓' },
+              { value: '98%', label: 'Parent Satisfaction', icon: '❤️' },
+              { value: '40+', label: 'Expert Tutors', icon: '👨‍🏫' },
+              { value: '15+', label: 'Subjects Covered', icon: '📚' },
+              { value: '3×', label: 'Faster Grade Progress', icon: '📈' },
+              { value: '24/7', label: 'Learning Support', icon: '⏰' },
+            ].map((stat, i) => (
+              <div key={i} style={{ color: 'white' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>{stat.icon}</div>
+                <div style={{ fontSize: '2rem', fontWeight: '800', lineHeight: 1, color: 'var(--accent-color)' }}>{stat.value}</div>
+                <div style={{ fontSize: '0.82rem', opacity: 0.8, marginTop: '0.3rem', fontWeight: '500' }}>{stat.label}</div>
               </div>
-            )}
-
-            {/* Booking Form Tab */}
-            {activeTab === 'booking' && (
-              <div className="booking-container">
-                {bookingSuccess && (
-                  <div className="success-message">
-                    Appointment scheduled successfully! We will send you a confirmation shortly.
-                  </div>
-                )}
-                
-                <div className="tutor-selection">
-                  <h3>Select a Tutor *</h3>
-                  <div className="tutors-grid-selection">
-                    {loadingTutors ? (
-                      <div>Loading tutors...</div>
-                    ) : (
-                      tutors.map((t) => (
-                        <div 
-                          className={`tutor-selection-card ${selectedTutor?.id === t.id ? 'selected' : ''}`}
-                          key={t.id}
-                          onClick={() => setSelectedTutor(t)}
-                        >
-                          <h4>{t.full_name}</h4>
-                          <p>{t.subject}</p>
-                          <div className="rating-badge">⭐ {t.rating}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <form onSubmit={handleBookingSubmit}>
-                  <div className="booking-details">
-                    <h3>Appointment Details</h3>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label>Selected Tutor</label>
-                        <input 
-                          type="text" 
-                          readOnly 
-                          value={selectedTutor ? selectedTutor.full_name : ''} 
-                          placeholder="Please select a tutor above" 
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Student Name *</label>
-                        <input 
-                          type="text" 
-                          name="bookingStudentName" 
-                          value={bookingForm.bookingStudentName} 
-                          onChange={handleBookingChange} 
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Parent Name *</label>
-                        <input 
-                          type="text" 
-                          name="bookingParentName" 
-                          value={bookingForm.bookingParentName} 
-                          onChange={handleBookingChange} 
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Contact Phone *</label>
-                        <input 
-                          type="tel" 
-                          name="bookingPhone" 
-                          value={bookingForm.bookingPhone} 
-                          onChange={handleBookingChange} 
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Email *</label>
-                        <input 
-                          type="email" 
-                          name="bookingEmail" 
-                          value={bookingForm.bookingEmail} 
-                          onChange={handleBookingChange} 
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Meeting Type *</label>
-                        <select 
-                          name="meetingType" 
-                          value={bookingForm.meetingType} 
-                          onChange={handleBookingChange} 
-                          required
-                        >
-                          <option value="">Select Type</option>
-                          <option value="initial consultation">Initial Consultation</option>
-                          <option value="academic assessment">Academic Assessment</option>
-                          <option value="trial session">Trial Session</option>
-                          <option value="parent meeting">Parent Meeting</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Preferred Date *</label>
-                        <input 
-                          type="date" 
-                          name="bookingDate" 
-                          value={bookingForm.bookingDate} 
-                          onChange={handleBookingChange} 
-                          required 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Preferred Time *</label>
-                        <select 
-                          name="bookingTime" 
-                          value={bookingForm.bookingTime} 
-                          onChange={handleBookingChange} 
-                          required
-                        >
-                          <option value="">Select Time</option>
-                          <option value="9:00 AM">9:00 AM</option>
-                          <option value="10:00 AM">10:00 AM</option>
-                          <option value="11:00 AM">11:00 AM</option>
-                          <option value="12:00 PM">12:00 PM</option>
-                          <option value="2:00 PM">2:00 PM</option>
-                          <option value="3:00 PM">3:00 PM</option>
-                          <option value="4:00 PM">4:00 PM</option>
-                          <option value="5:00 PM">5:00 PM</option>
-                        </select>
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Message/Notes</label>
-                        <textarea 
-                          name="bookingMessage" 
-                          value={bookingForm.bookingMessage} 
-                          onChange={handleBookingChange} 
-                          rows={3} 
-                          placeholder="What would you like to discuss?"
-                        ></textarea>
-                      </div>
-                    </div>
-                    <div className="step-buttons">
-                      <div></div>
-                      <button type="submit" className="btn-submit">Schedule Appointment</button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* Calendar Tab */}
-            {activeTab === 'calendar' && (
-              <div className="calendar-container">
-                <div className="calendar-header">
-                  <h3>Available Time Slots</h3>
-                  <div className="calendar-nav">
-                    <button onClick={() => changeMonth(-1)}>‹</button>
-                    <span>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
-                    <button onClick={() => changeMonth(1)}>›</button>
-                  </div>
-                </div>
-
-                <div className="calendar-grid">
-                  {calendarData.daysOfWeek.map((day) => (
-                    <div key={`header-${day}`} className="calendar-day header">{day}</div>
-                  ))}
-                  {calendarData.calendarCells}
-                </div>
-
-                <div className="time-slots">
-                  <h4>Available Times for {selectedCalendarDate ? selectedCalendarDate.toDateString() : 'Select a Date'}</h4>
-                  <div className="slots-container">
-                    {selectedCalendarDate ? (
-                      mockTimeSlots.map((slot) => (
-                        <div 
-                          key={slot} 
-                          className={`time-slot ${selectedCalendarTime === slot ? 'selected' : ''}`}
-                          onClick={() => setSelectedCalendarTime(slot)}
-                        >
-                          {slot}
-                        </div>
-                      ))
-                    ) : (
-                      <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#666', padding: '1rem' }}>
-                        Please select a date on the calendar above.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {selectedCalendarDate && selectedCalendarTime && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-                    <button className="btn-submit" onClick={confirmCalendarSelection}>
-                      Confirm & Schedule meeting
-                    </button>
-                  </div>
-                )}
-
-                <div className="calendar-legend">
-                  <div className="legend-item">
-                    <span className="legend-color available"></span>
-                    <span>Available</span>
-                  </div>
-                  <div className="legend-item">
-                    <span className="legend-color booked"></span>
-                    <span>Booked</span>
-                  </div>
-                  <div className="legend-item">
-                    <span className="legend-color selected"></span>
-                    <span>Selected</span>
-                  </div>
-                  <div className="legend-item">
-                    <span className="legend-color current"></span>
-                    <span>Today</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            ))}
           </div>
         </div>
       </section>
+
+      {/* ─────────────── FAQ SECTION ─────────────── */}
+      <section style={{ background: '#f8fafc', padding: '5rem 0' }} id="faq">
+        <div className="container">
+          <div className="section-title" style={{ marginBottom: '3rem' }}>
+            <h2>Frequently Asked Questions</h2>
+            <p>Everything parents need to know before enrolling their child</p>
+          </div>
+
+          <div style={{ maxWidth: '780px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {[
+              {
+                q: 'How does 1-on-1 tutoring work at Learncil?',
+                a: 'Each student is matched with a dedicated tutor based on their grade level, subject needs, and learning style. Sessions are conducted online via live video and your child gets undivided personal attention — no distractions, no large classrooms.'
+              },
+              {
+                q: 'What age groups and grades do you cover?',
+                a: 'We support students from Primary 1 through Secondary 6 (SS3), covering core subjects like Mathematics, English, Sciences, and more. We also offer specialised programs for exam prep including WAEC, NECO, and JAMB.'
+              },
+              {
+                q: 'How do I enroll my child?',
+                a: 'Simply fill in the Quick Register form at the top of this page. After your registration, our admin team will review your information, assign your child to a suitable tutor, and set up their learning account within 24 hours.'
+              },
+              {
+                q: 'Can I choose a specific tutor for my child?',
+                a: 'Yes! You can browse our tutors and request a preferred one during booking. Our admin team does the final pairing to ensure the best learning fit, but we always consider your preference.'
+              },
+              {
+                q: 'How are classes scheduled?',
+                a: 'Once enrolled, your child\'s assigned tutor schedules live class sessions and sends a meeting link directly. All scheduled classes appear in your child\'s Student Dashboard with date, time, and the meeting link.'
+              },
+              {
+                q: 'What happens if my child misses a class?',
+                a: 'You can contact your tutor to reschedule missed sessions. Tutors mark attendance, and the admin team monitors session consistency to make sure every child stays on track.'
+              },
+              {
+                q: 'Is there homework and assignments?',
+                a: 'Yes. Tutors create assignments and quizzes through the platform and students can submit directly from their dashboard. Tutors then review and provide personalised feedback and grades.'
+              },
+              {
+                q: 'How do I track my child\'s progress?',
+                a: 'Your child has a dedicated Student Dashboard showing all enrolled courses, scheduled classes, assignments, grades, and class materials — everything in one place so you can stay informed at all times.'
+              },
+            ].map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  background: 'white',
+                  borderRadius: '12px',
+                  border: `1px solid ${faqOpenIndex === i ? 'var(--primary-color)' : '#e2e8f0'}`,
+                  overflow: 'hidden',
+                  boxShadow: faqOpenIndex === i ? '0 2px 8px rgba(15,44,89,0.1)' : '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'box-shadow 0.2s, border-color 0.2s'
+                }}
+              >
+                <button
+                  onClick={() => setFaqOpenIndex(faqOpenIndex === i ? null : i)}
+                  style={{
+                    width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '1.1rem 1.4rem', background: 'none', border: 'none', cursor: 'pointer',
+                    textAlign: 'left', gap: '1rem'
+                  }}
+                >
+                  <span style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--primary-color)', lineHeight: 1.4 }}>
+                    {item.q}
+                  </span>
+                  <span style={{
+                    flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%',
+                    background: faqOpenIndex === i ? 'var(--primary-color)' : '#edf2f7',
+                    color: faqOpenIndex === i ? 'white' : 'var(--primary-color)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', fontWeight: 'bold', transition: 'all 0.2s'
+                  }}>
+                    {faqOpenIndex === i ? '−' : '+'}
+                  </span>
+                </button>
+                {faqOpenIndex === i && (
+                  <div style={{ padding: '0 1.4rem 1.2rem 1.4rem', color: '#4a5568', fontSize: '0.9rem', lineHeight: '1.7', borderTop: '1px solid #edf2f7' }}>
+                    <p style={{ marginTop: '0.9rem' }}>{item.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA strip under FAQ */}
+          <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+            <p style={{ color: '#718096', fontSize: '0.95rem', marginBottom: '1rem' }}>
+              Still have questions? Our team is happy to help.
+            </p>
+            <button
+              className="btn-primary"
+              style={{ padding: '0.8rem 2.2rem', borderRadius: '10px', fontSize: '0.95rem', boxShadow: '0 2px 4px rgba(0,0,0,0.12)' }}
+              onClick={() => {
+                const el = document.getElementById('contact');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              💬 Contact Us
+            </button>
+          </div>
+        </div>
+      </section>
+
+
 
       {/* Contact Section */}
       <section className="contact" id="contact">
