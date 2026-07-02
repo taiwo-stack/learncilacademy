@@ -990,34 +990,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─────────────── TRUST STATS BAR ─────────────── */}
-      <section style={{ background: 'var(--primary-color)', padding: '3rem 0' }}>
-        <div className="container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '2rem', textAlign: 'center' }}>
-            {[
-              { value: '500+', label: 'Students Enrolled', icon: '🎓' },
-              { value: '98%', label: 'Parent Satisfaction', icon: '❤️' },
-              { value: '40+', label: 'Expert Tutors', icon: '👨‍🏫' },
-              { value: '15+', label: 'Subjects Covered', icon: '📚' },
-              { value: '3×', label: 'Faster Grade Progress', icon: '📈' },
-              { value: '24/7', label: 'Learning Support', icon: '⏰' },
-            ].map((stat, i) => (
-              <div key={i} style={{ color: 'white' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>{stat.icon}</div>
-                <div style={{ fontSize: '2rem', fontWeight: '800', lineHeight: 1, color: 'var(--accent-color)' }}>{stat.value}</div>
-                <div style={{ fontSize: '0.82rem', opacity: 0.8, marginTop: '0.3rem', fontWeight: '500' }}>{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ─────────────── FAQ SECTION ─────────────── */}
-      <section style={{ background: '#f8fafc', padding: '5rem 0' }} id="faq">
+      <section 
+        style={{ 
+          background: "linear-gradient(rgba(15, 44, 89, 0.92), rgba(15, 44, 89, 0.92)), url('/images/book1.jpg') no-repeat center center", 
+          backgroundSize: 'cover',
+          backgroundAttachment: 'fixed',
+          padding: '5rem 0',
+          position: 'relative'
+        }} 
+        id="faq"
+      >
         <div className="container">
-          <div className="section-title" style={{ marginBottom: '3rem' }}>
-            <h2>Frequently Asked Questions</h2>
-            <p>Everything parents need to know before enrolling their child</p>
+          <div className="section-title" style={{ marginBottom: '3rem', textAlign: 'center' }}>
+            <h2 style={{ color: 'white' }}>Frequently Asked Questions</h2>
+            <p style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Everything parents need to know before enrolling their child</p>
           </div>
 
           <div style={{ maxWidth: '780px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1098,7 +1086,7 @@ export default function LandingPage() {
 
           {/* CTA strip under FAQ */}
           <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-            <p style={{ color: '#718096', fontSize: '0.95rem', marginBottom: '1rem' }}>
+            <p style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.95rem', marginBottom: '1rem' }}>
               Still have questions? Our team is happy to help.
             </p>
             <button
