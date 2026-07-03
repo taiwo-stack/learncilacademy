@@ -52,11 +52,11 @@ export default function Header({ currentUser, onLogout }) {
   return (
     <header>
       <nav>
-        <div className="logo" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', minWidth: '310px' }} onClick={() => navigate('/')}>
-          <img src="/images/logo_icon.png" alt="Foundaxia Icon" style={{ height: '56px', objectFit: 'contain' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '240px' }}>
-            <img src="/images/logo_text.png" alt="Foundaxia Brand" style={{ height: '28px', objectFit: 'contain', marginBottom: '2px' }} />
-            <span className="logo-tagline" style={{ textTransform: 'capitalize', fontSize: '0.72rem', letterSpacing: '0.3px', opacity: 0.85 }}>Committed to Building Excellent Foundations</span>
+        <div className="logo" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }} onClick={() => navigate('/')}>
+          <img src="/images/logo_icon.png" alt="Foundaxia Icon" style={{ height: '48px', objectFit: 'contain', flexShrink: 0 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }} className="logo-text-block">
+            <img src="/images/logo_text.png" alt="Foundaxia Brand" style={{ height: '26px', objectFit: 'contain', marginBottom: '2px', maxWidth: '180px' }} />
+            <span className="logo-tagline" style={{ textTransform: 'capitalize', fontSize: '0.68rem', letterSpacing: '0.3px', opacity: 0.85 }}>Committed to Building Excellent Foundations</span>
           </div>
         </div>
 
@@ -140,18 +140,19 @@ export default function Header({ currentUser, onLogout }) {
                 Login
               </button>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-dark)', fontWeight: '600' }}>
-                  👤 {currentUser.full_name || currentUser.email}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-dark)', fontWeight: '600', whiteSpace: 'nowrap', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {currentUser.full_name ? currentUser.full_name.split(' ')[0] : currentUser.email}
                 </span>
                 <button 
                   onClick={handleSignOut}
                   className="btn-next"
                   style={{ 
-                    padding: '0.45rem 1.1rem', 
-                    fontSize: '0.85rem', 
+                    padding: '0.4rem 0.9rem', 
+                    fontSize: '0.82rem', 
                     background: 'var(--danger)', 
-                    boxShadow: '0 4px 10px rgba(220, 53, 69, 0.25)' 
+                    boxShadow: '0 4px 10px rgba(220, 53, 69, 0.25)',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   Log Out

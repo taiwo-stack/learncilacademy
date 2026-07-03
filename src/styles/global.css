@@ -437,3 +437,49 @@ footer {
   }
 }
 
+/* Subjects page card grid - single column on small phones */
+@media (max-width: 560px) {
+  .subjects-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .subject-detail-card {
+    padding: 1.5rem !important;
+  }
+}
+
+/* Nav mobile: hide dropdown chevrons and make items tap-friendly */
+@media (max-width: 900px) {
+  .nav-links li {
+    padding: 0.25rem 0;
+  }
+
+  .nav-links a {
+    font-size: 1rem;
+    padding: 0.5rem 1.5rem;
+    display: block;
+  }
+
+  .dropdown-menu {
+    position: static !important;
+    transform: none !important;
+    box-shadow: none;
+    border: none;
+    padding: 0 1rem 0 2rem;
+    background: transparent;
+    min-width: auto;
+  }
+
+  .nav-links li:hover .dropdown-menu {
+    display: none;
+  }
+
+  /* Login / portal buttons in mobile nav */
+  .nav-links .btn-primary {
+    margin: 0.5rem 1.5rem;
+    display: block;
+    text-align: center;
+    border-radius: 20px;
+  }
+}
+
