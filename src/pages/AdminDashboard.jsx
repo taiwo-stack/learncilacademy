@@ -102,7 +102,7 @@ export default function AdminDashboard() {
   const [showEnrollStudentModal, setShowEnrollStudentModal] = useState(false);
 
   // LMS State Inputs
-  const [newCourse, setNewCourse] = useState({ title: '', description: '', course_type: 'regular' });
+  const [newCourse, setNewCourse] = useState({ title: '', description: '', course_type: 'regular', image_url: '' });
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [newTopic, setNewTopic] = useState({ title: '', description: '', sort_order: 1 });
   const [activeTopicMaterialId, setActiveTopicMaterialId] = useState('');
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
     try {
       const saved = await saveCourse(newCourse);
       setCourses(prev => [...prev, saved]);
-      setNewCourse({ title: '', description: '', course_type: 'regular' });
+      setNewCourse({ title: '', description: '', course_type: 'regular', image_url: '' });
       setSelectedCourseId(saved.id);
       alert('Course created successfully!');
     } catch (err) {
@@ -2406,6 +2406,15 @@ export default function AdminDashboard() {
                 <label>Course Description</label>
                 <textarea value={editingCourse.description || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev, description: e.target.value }))} rows={3}></textarea>
               </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Image URL</label>
+                <input 
+                  type="text" 
+                  value={editingCourse.image_url || ''} 
+                  onChange={(e) => setEditingCourse(prev => ({ ...prev, image_url: e.target.value }))} 
+                  placeholder="e.g. /images/book1.jpg or external url" 
+                />
+              </div>
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <label>Course Category *</label>
                 <select value={editingCourse.course_type || 'regular'} onChange={(e) => setEditingCourse(prev => ({ ...prev, course_type: e.target.value }))} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
@@ -2622,7 +2631,7 @@ export default function AdminDashboard() {
               try {
                 const saved = await saveCourse(newCourse);
                 setCourses(prev => [...prev, saved]);
-                setNewCourse({ title: '', description: '', course_type: 'regular' });
+                setNewCourse({ title: '', description: '', course_type: 'regular', image_url: '' });
                 setSelectedCourseId(saved.id);
                 setShowCreateCourseModal(false);
                 alert('Course created successfully!');
@@ -2648,6 +2657,15 @@ export default function AdminDashboard() {
                   placeholder="Short overview of the syllabus..."
                   rows={3}
                 ></textarea>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Image URL</label>
+                <input 
+                  type="text" 
+                  value={newCourse.image_url || ''} 
+                  onChange={(e) => setNewCourse(prev => ({ ...prev, image_url: e.target.value }))}
+                  placeholder="e.g. /images/book1.jpg or external url" 
+                />
               </div>
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <label>Course Category *</label>

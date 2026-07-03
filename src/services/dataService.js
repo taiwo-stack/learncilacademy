@@ -21,14 +21,14 @@ const initialMessages = [
 ];
 
 const initialCourses = [
-  { id: 'c1', title: 'React Frontend Development', description: 'Comprehensive guide to HTML, CSS, JavaScript, and React component architectures.', course_type: 'regular' },
-  { id: 'c2', title: 'Creative Writing & Composition', description: 'Advanced comprehension analysis, spelling accuracy, and storytelling structure.', course_type: 'regular' },
-  { id: 'c3', title: 'Programming Class', description: 'Learn logic, algorithms, coding structures, and basic software engineering principles.', course_type: 'special' },
-  { id: 'c4', title: 'Generative Artificial Intelligence', description: 'Explore prompt engineering, neural network concepts, and creative AI generation tools.', course_type: 'special' },
-  { id: 'c5', title: 'Data Science for Teens', description: 'An introduction to databases, data parsing, charts, and predictive analysis.', course_type: 'special' },
-  { id: 'c6', title: 'Microsoft Excel and Word', description: 'Master spreadsheet tables, document structures, and formatting essentials.', course_type: 'special' },
-  { id: 'c7', title: 'Website Design Basics', description: 'Design modern layout templates with clean CSS layouts and visual assets.', course_type: 'special' },
-  { id: 'c8', title: 'Creative Writing', description: 'Drafting stories, building fictional worlds, and refining voice and tone.', course_type: 'special' }
+  { id: 'c1', title: 'React Frontend Development', description: 'Comprehensive guide to HTML, CSS, JavaScript, and React component architectures.', course_type: 'regular', image_url: '/images/child online.jpg' },
+  { id: 'c2', title: 'Creative Writing & Composition', description: 'Advanced comprehension analysis, spelling accuracy, and storytelling structure.', course_type: 'regular', image_url: '/images/book1.jpg' },
+  { id: 'c3', title: 'Programming Class', description: 'Learn logic, algorithms, coding structures, and basic software engineering principles.', course_type: 'special', image_url: '/images/boylearning.jpg' },
+  { id: 'c4', title: 'Generative Artificial Intelligence', description: 'Explore prompt engineering, neural network concepts, and creative AI generation tools.', course_type: 'special', image_url: '/images/ai.jpg' },
+  { id: 'c5', title: 'Data Science for Teens', description: 'An introduction to databases, data parsing, charts, and predictive analysis.', course_type: 'special', image_url: '/images/student.jpg' },
+  { id: 'c6', title: 'Microsoft Excel and Word', description: 'Master spreadsheet tables, document structures, and formatting essentials.', course_type: 'special', image_url: '/images/book2.jpg' },
+  { id: 'c7', title: 'Website Design Basics', description: 'Design modern layout templates with clean CSS layouts and visual assets.', course_type: 'special', image_url: '/images/whyus.jpg' },
+  { id: 'c8', title: 'Creative Writing', description: 'Drafting stories, building fictional worlds, and refining voice and tone.', course_type: 'special', image_url: '/images/book3.jpg' }
 ];
 
 const initialTopics = [

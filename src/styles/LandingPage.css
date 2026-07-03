@@ -1164,3 +1164,75 @@ section {
     transform: translateY(0);
   }
 }
+
+/* Redesigned Learning Approach Split Layout */
+.learning-approach-split {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 3.5rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+.mock-dashboard-panel {
+  background: rgba(10, 25, 47, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  padding: 2.5rem;
+  box-shadow: 0 25px 50px rgba(10, 25, 47, 0.35);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 420px;
+  color: white;
+  transition: all 0.4s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.timeline-step-card {
+  background: white;
+  border: 1.5px solid #edf2f7;
+  border-radius: 20px;
+  padding: 1.5rem 1.8rem;
+  margin-bottom: 1.25rem;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  position: relative;
+}
+
+.timeline-step-card.active {
+  border-color: var(--accent-color);
+  box-shadow: 0 12px 30px rgba(242, 122, 36, 0.08);
+  transform: translateY(-3px);
+}
+
+.timeline-step-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 8px 20px rgba(242, 122, 36, 0.05);
+  transform: translateY(-2px);
+}
+
+.step-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 991px) {
+  .learning-approach-split {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+}

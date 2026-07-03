@@ -46,7 +46,7 @@ export default function Header({ currentUser, onLogout }) {
           <img src="/images/logo_icon.png" alt="Foundaxia Icon" style={{ height: '56px', objectFit: 'contain' }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '240px' }}>
             <img src="/images/logo_text.png" alt="Foundaxia Brand" style={{ height: '28px', objectFit: 'contain', marginBottom: '2px' }} />
-            <span className="logo-tagline">comiited to builfing Exellent foundation</span>
+            <span className="logo-tagline" style={{ textTransform: 'capitalize', fontSize: '0.72rem', letterSpacing: '0.3px', opacity: 0.85 }}>Committed to Building Excellent Foundations</span>
           </div>
         </div>
 
@@ -54,12 +54,38 @@ export default function Header({ currentUser, onLogout }) {
         <ul className={`nav-links ${mobileOpen ? 'show' : ''}`}>
           {!isDashboard ? (
             <>
-              <li><a onClick={() => handleNavClick('home')}>Home</a></li>
-              <li><a onClick={() => handleNavClick('about')}>About</a></li>
-              <li><a onClick={() => handleNavClick('courses')}>Courses</a></li>
-              <li><a onClick={() => handleNavClick('teachers')}>Teachers</a></li>
-              <li><a onClick={() => handleNavClick('register')}>Register</a></li>
-              <li><a onClick={() => handleNavClick('contact')}>Contact</a></li>
+              {/* Grades Dropdown */}
+              <li className="dropdown">
+                <a style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  Grades <span style={{ fontSize: '0.62rem', opacity: 0.8 }}>▼</span>
+                </a>
+                <ul className="dropdown-menu">
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>Early Learners (K–5)</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>Middle School</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>High School</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>Homeschool Support</a></li>
+                </ul>
+              </li>
+
+              {/* Subjects Dropdown */}
+              <li className="dropdown">
+                <a style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  Subjects <span style={{ fontSize: '0.62rem', opacity: 0.8 }}>▼</span>
+                </a>
+                <ul className="dropdown-menu">
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Math</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Reading &amp; English</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Science</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Test Prep</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>World Languages</a></li>
+                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Coding</a></li>
+                </ul>
+              </li>
+
+              <li><a onClick={() => handleNavClick('how-it-works')}>How It Works</a></li>
+              <li><a onClick={() => handleNavClick('why-us')}>Why FoundaXia</a></li>
+              <li><a onClick={() => handleNavClick('courses')}>Pricing</a></li>
+              <li><a onClick={() => { setMobileOpen(false); alert('FoundaXia Blog and parent resources coming soon!'); }}>Resources / Blog</a></li>
               
               {/* Add direct Dashboard link if already logged in */}
               {currentUser && currentUser.role !== 'guest' && (
@@ -101,7 +127,7 @@ export default function Header({ currentUser, onLogout }) {
                 className="btn-next"
                 style={{ padding: '0.45rem 1.4rem', fontSize: '0.85rem' }}
               >
-                Sign In
+                Login
               </button>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
