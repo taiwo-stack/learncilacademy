@@ -114,7 +114,7 @@ export default function Header({ currentUser, onLogout }) {
             </>
           ) : (
             <>
-              {currentUser.role === 'student' && (
+              {currentUser.role === 'student' && !location.pathname.startsWith('/student') && (
                 <li><a className="active" onClick={() => { setMobileOpen(false); navigate('/student'); }}>Student Dashboard</a></li>
               )}
               {currentUser.role === 'tutor' && (
@@ -123,7 +123,7 @@ export default function Header({ currentUser, onLogout }) {
               {currentUser.role === 'admin' && (
                 <li><a className="active" onClick={() => { setMobileOpen(false); navigate('/admin'); }}>Admin Control Panel</a></li>
               )}
-              {currentUser.role !== 'admin' && currentUser.role !== 'tutor' && (
+              {currentUser.role !== 'admin' && currentUser.role !== 'tutor' && !location.pathname.startsWith('/student') && (
                 <li><a onClick={() => { setMobileOpen(false); navigate('/'); }}>Public Site</a></li>
               )}
             </>

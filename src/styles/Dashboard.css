@@ -401,37 +401,92 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Hide mobile menu toggle button by default on desktop */
+.sidebar-toggle-btn {
+  display: none;
+}
+
 /* Responsive Dashboards */
 @media (max-width: 800px) {
+  .sidebar-toggle-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1d3557 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 6px 20px rgba(29, 53, 87, 0.35);
+    z-index: 1900;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  
+  .sidebar-toggle-btn:active {
+    transform: scale(0.9);
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 44, 89, 0.35);
+    backdrop-filter: blur(3px);
+    z-index: 1750;
+    animation: fadeIn 0.2s ease-out;
+  }
+
   .dashboard-container {
     flex-direction: column;
   }
   
   .dashboard-sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid rgba(15, 44, 89, 0.08);
-    padding: 1.25rem;
-    gap: 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    background: white;
+    z-index: 1800;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 8px 0 25px rgba(15, 44, 89, 0.15);
+    padding: 6.5rem 1.5rem 2rem 1.5rem; /* space for page top header */
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    border-right: 1px solid rgba(15, 44, 89, 0.08);
+  }
+  
+  .dashboard-sidebar.open {
+    transform: translateX(0);
   }
   
   .sidebar-brand {
-    text-align: center;
+    text-align: left;
+    font-size: 1.15rem;
   }
   
   .sidebar-menu {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
+    gap: 0.5rem;
   }
   
   .sidebar-item button {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
   }
   
   .dashboard-main {
-    padding: 1.5rem;
+    padding: 1.25rem 1rem;
+    width: 100%;
   }
 }
 

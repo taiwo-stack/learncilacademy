@@ -10,7 +10,7 @@ import {
 } from '../services/dataService';
 import { 
   Calendar, User, BookOpen, Clock, AlertCircle, Save, 
-  MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play, LayoutDashboard
+  MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play, LayoutDashboard, Menu
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
@@ -21,6 +21,7 @@ export default function StudentDashboard({ user }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // LMS Student state variables
   const [enrollments, setEnrollments] = useState([]);
@@ -230,6 +231,20 @@ export default function StudentDashboard({ user }) {
   const totalClasses = attendedCount + missedCount;
   const attendanceRate = totalClasses > 0 ? Math.round((attendedCount / totalClasses) * 100) : 100;
 
+  // Next Incoming & Today's classes
+  const now = new Date();
+  const todayStr = now.toDateString();
+
+  // Today's classes (all scheduled classes for today)
+  const todayClasses = schedules.filter(sch => {
+    return new Date(sch.start_time).toDateString() === todayStr;
+  });
+
+  // Next incoming class (future class, sorted by start_time ascending)
+  const nextClass = schedules
+    .filter(sch => new Date(sch.start_time) > now)
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))[0] || null;
+
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -240,30 +255,46 @@ export default function StudentDashboard({ user }) {
 
   return (
     <div className="dashboard-container">
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar Toggle FAB Button */}
+      <button 
+        className="sidebar-toggle-btn"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
       {/* Sidebar */}
-      <aside className="dashboard-sidebar">
+      <aside className={`dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">Student Portal</div>
         <ul className="sidebar-menu">
           <li className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('overview')}><LayoutDashboard size={18} /> Dashboard</button>
+            <button onClick={() => { setActiveTab('overview'); setSidebarOpen(false); }}><LayoutDashboard size={18} /> Dashboard</button>
           </li>
           <li className={`sidebar-item ${activeTab === 'courses' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('courses')}><BookOpen size={18} /> My Courses</button>
+            <button onClick={() => { setActiveTab('courses'); setSidebarOpen(false); }}><BookOpen size={18} /> My Courses</button>
           </li>
           <li className={`sidebar-item ${activeTab === 'timetable' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('timetable')}><Clock size={18} /> Timetable</button>
+            <button onClick={() => { setActiveTab('timetable'); setSidebarOpen(false); }}><Clock size={18} /> Timetable</button>
           </li>
           <li className={`sidebar-item ${activeTab === 'chat' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('chat')}><MessageSquare size={18} /> Tutor Chat</button>
+            <button onClick={() => { setActiveTab('chat'); setSidebarOpen(false); }}><MessageSquare size={18} /> Tutor Chat</button>
           </li>
           <li className={`sidebar-item ${activeTab === 'homework' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('homework')}><CheckSquare size={18} /> Tasks & Grades</button>
+            <button onClick={() => { setActiveTab('homework'); setSidebarOpen(false); }}><CheckSquare size={18} /> Tasks & Grades</button>
           </li>
           <li className={`sidebar-item ${activeTab === 'bookings' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('bookings')}><Calendar size={18} /> Consultations</button>
+            <button onClick={() => { setActiveTab('bookings'); setSidebarOpen(false); }}><Calendar size={18} /> Consultations</button>
           </li>
           <li className={`sidebar-item ${activeTab === 'profile' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('profile')}><User size={18} /> Personal Info</button>
+            <button onClick={() => { setActiveTab('profile'); setSidebarOpen(false); }}><User size={18} /> Personal Info</button>
           </li>
         </ul>
       </aside>
@@ -343,63 +374,177 @@ export default function StudentDashboard({ user }) {
               ))}
             </div>
 
-            {/* Quick Actions */}
-            <div className="dashboard-card">
-              <h3 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <LayoutDashboard size={18} color="var(--primary-color)" /> Quick Actions
-              </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                {[
-                  { label: '📖 Open My Courses', tab: 'courses' },
-                  { label: '🗓️ View Timetable', tab: 'timetable' },
-                  { label: '✏️ Tasks & Grades', tab: 'homework' },
-                  { label: '💬 Message Tutor', tab: 'chat' },
-                  { label: '📞 Book Consultation', tab: 'bookings' },
-                  { label: '👤 Edit Profile', tab: 'profile' },
-                ].map(action => (
-                  <button
-                    key={action.tab}
-                    onClick={() => setActiveTab(action.tab)}
-                    style={{
-                      padding: '0.55rem 1.25rem',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      background: 'var(--primary-color)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'opacity 0.15s'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Two-Column Dashboard Content Layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
+              
+              {/* Left Column: Schedules (Today's & Next Incoming) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                
+                {/* Section: Next Incoming Class */}
+                <div className="dashboard-card" style={{ margin: 0, borderTop: '4px solid #10b981' }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--primary-color)' }}>
+                    <Clock size={19} /> Next Incoming Class
+                  </h3>
+                  {nextClass ? (() => {
+                    const cTitle = courses.find(c => c.id === nextClass.course_id)?.title || 'Course';
+                    const tName = tutors.find(t => t.id === nextClass.tutor_id)?.full_name || 'Tutor';
+                    const classTime = new Date(nextClass.start_time);
+                    
+                    return (
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-dark)', marginBottom: '0.25rem' }}>
+                          {nextClass.title}
+                        </div>
+                        <div style={{ fontSize: '0.88rem', color: '#4a5568', marginBottom: '0.75rem' }}>
+                          Subject: <strong style={{ color: 'var(--primary-color)' }}>{cTitle}</strong> &bull; Tutor: <strong>{tName}</strong>
+                        </div>
+                        
+                        <div style={{ 
+                          background: '#f0fdf4', 
+                          border: '1px solid #bbf7d0', 
+                          borderRadius: '10px', 
+                          padding: '0.75rem 1rem', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          marginBottom: '1rem'
+                        }}>
+                          <div>
+                            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#166534', fontWeight: 700, display: 'block' }}>Starts At</span>
+                            <strong style={{ fontSize: '0.95rem', color: '#14532d' }}>
+                              {classTime.toLocaleDateString([], { month: 'short', day: 'numeric' })} &bull; {classTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </strong>
+                          </div>
+                          {nextClass.meeting_link && (
+                            <a 
+                              href={nextClass.meeting_link} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="btn-action approve"
+                              style={{ 
+                                textDecoration: 'none', 
+                                padding: '0.5rem 1rem', 
+                                fontSize: '0.85rem',
+                                fontWeight: 700,
+                                background: '#10b981',
+                                color: 'white',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                              }}
+                            >
+                              Join Now
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ color: '#718096', fontSize: '0.88rem', padding: '0.5rem 0' }}>
+                      No future classes scheduled.
+                    </div>
+                  )}
+                </div>
 
-            {/* Recent Announcements */}
-            {announcements.length > 0 && (
-              <div className="dashboard-card" style={{ marginTop: '1.5rem' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Megaphone size={18} color="var(--primary-color)" /> Recent Announcements
-                </h3>
-                {announcements.slice(0, 3).map(ann => (
-                  <div key={ann.id} style={{
-                    padding: '0.85rem 1rem',
-                    background: '#f7fafc',
-                    borderRadius: '8px',
-                    marginBottom: '0.75rem',
-                    borderLeft: '3px solid var(--primary-color)'
-                  }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: '0.25rem' }}>{ann.title}</div>
-                    <div style={{ fontSize: '0.82rem', color: '#4a5568' }}>{ann.message}</div>
-                  </div>
-                ))}
+                {/* Section: Today's Classes */}
+                <div className="dashboard-card" style={{ margin: 0 }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--primary-color)' }}>
+                    <Calendar size={19} /> Today's Classes
+                  </h3>
+                  {todayClasses.length === 0 ? (
+                    <div style={{ color: '#718096', fontSize: '0.88rem', padding: '0.5rem 0' }}>
+                      No classes scheduled for today. Enjoy your day!
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      {todayClasses.map(sch => {
+                        const cTitle = courses.find(c => c.id === sch.course_id)?.title || 'Course';
+                        const tName = tutors.find(t => t.id === sch.tutor_id)?.full_name || 'Tutor';
+                        const classTime = new Date(sch.start_time);
+                        const isPast = classTime < now;
+                        
+                        return (
+                          <div key={sch.id} style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.85rem 1rem',
+                            background: '#f7fafc',
+                            border: '1px solid #edf2f7',
+                            borderRadius: '10px',
+                            opacity: isPast ? 0.75 : 1
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-dark)' }}>
+                                {sch.title} {isPast && <span style={{ fontSize: '0.75rem', color: '#718096', fontWeight: 'normal' }}>(Ended)</span>}
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: '#4a5568', marginTop: '0.15rem' }}>
+                                {cTitle} &bull; {tName}
+                              </div>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-color)', marginTop: '0.25rem' }}>
+                                ⏰ {classTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            {!isPast && sch.meeting_link && (
+                              <a 
+                                href={sch.meeting_link} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="btn-action approve"
+                                style={{ 
+                                  textDecoration: 'none', 
+                                  padding: '0.4rem 0.8rem', 
+                                  fontSize: '0.8rem',
+                                  borderRadius: '6px'
+                                }}
+                              >
+                                Join
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
               </div>
-            )}
+
+              {/* Right Column: Announcements */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                
+                {/* Recent Announcements */}
+                {announcements.length > 0 ? (
+                  <div className="dashboard-card" style={{ margin: 0 }}>
+                    <h3 style={{ marginTop: 0, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)' }}>
+                      <Megaphone size={18} /> Recent Announcements
+                    </h3>
+                    {announcements.slice(0, 3).map(ann => (
+                      <div key={ann.id} style={{
+                        padding: '0.85rem 1rem',
+                        background: '#f7fafc',
+                        borderRadius: '8px',
+                        marginBottom: '0.75rem',
+                        borderLeft: '3px solid var(--primary-color)'
+                      }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: '0.25rem' }}>{ann.title}</div>
+                        <div style={{ fontSize: '0.82rem', color: '#4a5568' }}>{ann.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="dashboard-card" style={{ margin: 0 }}>
+                    <h3 style={{ marginTop: 0, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)' }}>
+                      <Megaphone size={18} /> Announcements
+                    </h3>
+                    <div style={{ color: '#718096', fontSize: '0.88rem', padding: '0.5rem 0' }}>
+                      No announcements at this time.
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+            </div>
           </div>
         )}
 

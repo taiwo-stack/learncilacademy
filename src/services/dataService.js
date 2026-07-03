@@ -110,7 +110,38 @@ const initialStudentTasks = [
   { id: 'st1', task_id: 'tk1', student_id: 's1', submission_text: 'Completed Quiz. Score: 100%', grade: 100, feedback: 'Excellent structural understanding!', submitted_at: new Date(Date.now() - 36000000).toISOString(), graded_at: new Date().toISOString(), graded_by: null }
 ];
 
-const initialSchedules = [];
+const initialSchedules = [
+  {
+    id: 'sch1',
+    student_id: 's1',
+    course_id: 'c1',
+    tutor_id: 'tutor_mock_id',
+    title: 'HTML & CSS Foundations Class',
+    start_time: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
+    meeting_link: 'https://meet.google.com/abc-defg-hij',
+    scheduled_date: new Date().toISOString().split('T')[0]
+  },
+  {
+    id: 'sch2',
+    student_id: 's1',
+    course_id: 'c1',
+    tutor_id: 'tutor_mock_id',
+    title: 'CSS Grid & Flexbox Deep Dive',
+    start_time: new Date(Date.now() + 26 * 3600 * 1000).toISOString(),
+    meeting_link: 'https://meet.google.com/abc-defg-hij',
+    scheduled_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString().split('T')[0]
+  },
+  {
+    id: 'sch3',
+    student_id: 's1',
+    course_id: 'c2',
+    tutor_id: 'tutor_mock_id',
+    title: 'Javascript Functions & Scope',
+    start_time: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    meeting_link: 'https://meet.google.com/abc-defg-hij',
+    scheduled_date: new Date().toISOString().split('T')[0]
+  }
+];
 const initialAttendance = [];
 const initialAnnouncements = [];
 const initialChatMessages = [];
@@ -511,14 +542,25 @@ export const signIn = async (email, password) => {
     let profileRecordId = authData.user.id;
 
     if (profile.role === 'student') {
-      const { data: student } = await supabase
+      // Try matching by id first (students.id = auth user id), then profile_id
+      const { data: studentById } = await supabase
         .from('students')
         .select('id, full_name')
-        .eq('profile_id', authData.user.id)
+        .eq('id', authData.user.id)
         .single();
-      if (student) {
-        fullName = student.full_name || fullName;
-        profileRecordId = student.id;
+      if (studentById) {
+        fullName = studentById.full_name || fullName;
+        profileRecordId = studentById.id;
+      } else {
+        const { data: studentByProfile } = await supabase
+          .from('students')
+          .select('id, full_name')
+          .eq('profile_id', authData.user.id)
+          .single();
+        if (studentByProfile) {
+          fullName = studentByProfile.full_name || fullName;
+          profileRecordId = studentByProfile.id;
+        }
       }
     } else if (profile.role === 'tutor') {
       // Try matching by id first (tutors.id = auth user id), then profile_id
