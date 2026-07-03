@@ -20,6 +20,7 @@ import {
   Phone,
   MapPin
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/LandingPage.css';
 
 const getSpecialClassImage = (title, index) => {
@@ -119,10 +120,26 @@ const tzOptions = allTimeZones.map(tz => {
 });
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [tutors, setTutors] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loadingTutors, setLoadingTutors] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
+
+  // Handle redirection and pre-selection from subjects filter page
+  useEffect(() => {
+    if (location.state && location.state.openBooking) {
+      setActiveTab('booking');
+      const el = document.getElementById('register');
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }, 150);
+      }
+    }
+  }, [location.state]);
 
   // Forms success states
   const [registerSuccess, setRegisterSuccess] = useState(false);
@@ -150,14 +167,13 @@ export default function LandingPage() {
   const [showStickyBtn, setShowStickyBtn] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
   const [activeApproachStep, setActiveApproachStep] = useState(0);
-  const [activeSubjectTab, setActiveSubjectTab] = useState('Math');
+  const [activeSubjectTab, setActiveSubjectTab] = useState('All');
 
   const subjectCategories = {
     'Math': ['Elementary Math', 'Pre-Algebra', 'Algebra I & II', 'Geometry', 'Trigonometry', 'Calculus'],
     'English & Reading': ['Phonics', 'Reading Comprehension', 'Creative Writing', 'Essay Writing', 'Literature'],
     'Science': ['Life Science', 'Biology', 'Chemistry', 'Physics', 'Earth Science'],
-    'Test Prep': ['SAT', 'ACT', 'State Assessments'],
-    'World Languages': ['Spanish', 'French'],
+    'Test Prep': ['JAMB Prep', 'WAEC Prep', 'NECO Prep', 'Post-UTME Prep', 'SAT Prep', 'ACT Prep', 'State Assessments'],
     'Coding & Tech': ['Intro to Coding', 'Computer Science Fundamentals']
   };
 
@@ -370,12 +386,14 @@ export default function LandingPage() {
         program: studentForm.program,
         schedule: studentForm.schedule,
         start_date: studentForm.startDate,
-        additional_comments: studentForm.comments,
-        // parent info will map to profiles / metadata
+        additional_comments: location.state?.selectedSubject ? `[Requested Subject: ${location.state.selectedSubject}]\n${studentForm.comments}` : studentForm.comments,
         parentName: studentForm.parentName,
         relationship: studentForm.relationship,
         email: studentForm.email,
-        phone: studentForm.primaryPhone
+        phone: studentForm.primaryPhone,
+        address: studentForm.address,
+        emergencyName: studentForm.emergencyName,
+        emergencyPhone: studentForm.emergencyPhone
       };
       await registerStudent(dataToSave);
       setRegisterSuccess(true);
@@ -444,7 +462,7 @@ export default function LandingPage() {
         booking_date: bookingForm.bookingDate,
         booking_time: bookingForm.bookingTime,
         timezone: bookingForm.bookingTimezone,
-        message: bookingForm.bookingMessage
+        message: location.state?.selectedSubject ? `[Requested Subject: ${location.state.selectedSubject}]\n${bookingForm.bookingMessage}` : bookingForm.bookingMessage
       };
       await createBooking(bookingData);
       setBookingSuccess(true);
@@ -844,6 +862,31 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="hero-form-card" id="register">
+                {location.state?.selectedSubject && (
+                  <div style={{
+                    background: 'rgba(242, 122, 36, 0.15)',
+                    border: '1.5px solid var(--accent-color)',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1rem',
+                    fontSize: '0.82rem',
+                    color: 'white',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ textAlign: 'left' }}>Requesting tutor for: <strong style={{ color: 'var(--accent-color)' }}>{location.state.selectedSubject}</strong></span>
+                    <button 
+                      onClick={() => navigate(location.pathname, { replace: true, state: {} })}
+                      style={{ background: 'transparent', border: 'none', color: 'rgba(255, 255, 255, 0.6)', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', padding: 0 }}
+                      onMouseEnter={e => e.currentTarget.style.color = 'white'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.75rem' }}>
                   <button
                     type="button"
@@ -941,6 +984,17 @@ export default function LandingPage() {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                       <div className="form-group" style={{ margin: 0 }}>
+                        <label>Parent Email *</label>
+                        <input
+                          type="email"
+                          name="bookingEmail"
+                          value={bookingForm.bookingEmail}
+                          onChange={handleBookingChange}
+                          placeholder="parent@example.com"
+                          required
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
                         <label>Contact Phone *</label>
                         <input
                           type="tel"
@@ -951,17 +1005,17 @@ export default function LandingPage() {
                           required
                         />
                       </div>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label>Student Name *</label>
-                        <input
-                          type="text"
-                          name="bookingStudentName"
-                          value={bookingForm.bookingStudentName}
-                          onChange={handleBookingChange}
-                          placeholder="Child's Name"
-                          required
-                        />
-                      </div>
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Student's Full Name *</label>
+                      <input
+                        type="text"
+                        name="bookingStudentName"
+                        value={bookingForm.bookingStudentName}
+                        onChange={handleBookingChange}
+                        placeholder="Child's Name"
+                        required
+                      />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                       <div className="form-group" style={{ margin: 0 }}>
@@ -1004,6 +1058,29 @@ export default function LandingPage() {
                         </div>
                       </div>
                     </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Add Message (Optional)</label>
+                      <textarea
+                        name="bookingMessage"
+                        value={bookingForm.bookingMessage}
+                        onChange={handleBookingChange}
+                        placeholder="Tell us about your child's learning goals, grade level, or areas of struggle..."
+                        rows={2}
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #cbd5e0',
+                          background: 'white',
+                          color: '#2d3748',
+                          fontFamily: 'inherit',
+                          fontSize: '0.85rem'
+                        }}
+                      />
+                    </div>
+                    <button type="submit" className="btn-primary" style={{ padding: '0.65rem', fontSize: '0.85rem', width: '100%', marginTop: '0.5rem', boxShadow: 'none' }}>
+                      Book Session
+                    </button>
                   </form>
                 )}
               </div>
@@ -1013,35 +1090,38 @@ export default function LandingPage() {
 
       {/* Trust / Stats Bar */}
       <section style={{
-        background: 'rgba(11, 22, 44, 0.9)',
+        background: 'rgba(8, 23, 48, 0.65)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        padding: '2.5rem 0',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        padding: '1.25rem 0',
         backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         position: 'relative',
         zIndex: 5
       }}>
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem' }}>
+        <div className="container" style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '2.5rem',
-            textAlign: 'center'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1.5rem',
+            textAlign: 'center',
+            alignItems: 'center'
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)' }}>100%</div>
-              <div style={{ fontSize: '0.92rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600', letterSpacing: '0.5px' }}>Vetted, Qualified Tutors</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>100%</div>
+              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px' }}>Vetted, Qualified Tutors</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '1.5rem' }} className="stat-card">
-              <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)' }}>1:1</div>
-              <div style={{ fontSize: '0.92rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600', letterSpacing: '0.5px' }}>Truly Individual Sessions — No Group Filler</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', borderLeft: '1px solid rgba(255, 255, 255, 0.12)' }} className="landing-stat-item">
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>1:1</div>
+              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.5rem' }}>Truly Individual Sessions — No Group Filler</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '1.5rem' }} className="stat-card">
-              <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)' }}>4.9/5</div>
-              <div style={{ fontSize: '0.92rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600', letterSpacing: '0.5px' }}>Average Parent Rating</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', borderLeft: '1px solid rgba(255, 255, 255, 0.12)' }} className="landing-stat-item">
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>4.9/5</div>
+              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.5rem' }}>Average Parent Rating</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '1.5rem' }} className="stat-card">
-              <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)' }}>50+</div>
-              <div style={{ fontSize: '0.92rem', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600', letterSpacing: '0.5px' }}>Subjects Covered, K–12</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', borderLeft: '1px solid rgba(255, 255, 255, 0.12)' }} className="landing-stat-item">
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>50+</div>
+              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.5rem' }}>Subjects Covered, K–12</div>
             </div>
           </div>
         </div>
@@ -1503,7 +1583,7 @@ export default function LandingPage() {
             flexWrap: 'wrap',
             marginBottom: '3rem'
           }}>
-            {Object.keys(subjectCategories).map((cat) => {
+            {['All', ...Object.keys(subjectCategories)].map((cat) => {
               const isActive = activeSubjectTab === cat;
               return (
                 <button
@@ -1549,7 +1629,10 @@ export default function LandingPage() {
             maxWidth: '900px',
             margin: '0 auto 3rem'
           }}>
-            {subjectCategories[activeSubjectTab].map((subj) => (
+            {(activeSubjectTab === 'All' 
+              ? Object.values(subjectCategories).flat() 
+              : subjectCategories[activeSubjectTab]
+            ).map((subj) => (
               <div
                 key={subj}
                 style={{
@@ -1600,8 +1683,7 @@ export default function LandingPage() {
                 e.currentTarget.style.background = 'transparent';
               }}
               onClick={() => {
-                const el = document.getElementById('courses');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                navigate('/subjects');
               }}
             >
               View All Subjects →
@@ -1610,170 +1692,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Courses Section — loaded from DB */}
-      <section className="courses" id="courses">
-        <div className="container">
-          <div className="section-title">
-            <h2>Our Regular Courses</h2>
-            <p>Comprehensive educational programs designed for different age groups</p>
-          </div>
-          <div className="courses-grid">
-            {loadingCourses ? (
-              <div style={{ color: '#718096', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>Loading courses...</div>
-            ) : courses.filter(c => c.course_type !== 'special').length === 0 ? (
-              <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>
-                No courses available yet. Check back soon!
-              </div>
-            ) : (
-              courses.filter(c => c.course_type !== 'special').map((c) => {
-                let icon = '📖';
-                let badge = 'Core Program';
-                let fallbackImage = '/images/child online.jpg';
-                
-                const titleLower = c.title.toLowerCase();
-                if (titleLower.includes('primary') || titleLower.includes('foundation')) {
-                  icon = '🧸';
-                  badge = 'Primary School';
-                  fallbackImage = '/images/book1.jpg';
-                } else if (titleLower.includes('secondary') || titleLower.includes('exam')) {
-                  icon = '📝';
-                  badge = 'Exam Prep & Success';
-                  fallbackImage = '/images/book2.jpg';
-                } else if (titleLower.includes('math') || titleLower.includes('science')) {
-                  icon = '🔢';
-                  badge = 'STEM Focus';
-                  fallbackImage = '/images/boylearning.jpg';
-                }
 
-                return (
-                  <div 
-                    className="course-card" 
-                    key={c.id}
-                    style={{
-                      background: 'white',
-                      borderRadius: '24px',
-                      padding: '2.5rem 2rem',
-                      boxShadow: '0 10px 30px rgba(15, 44, 89, 0.05)',
-                      border: '1.5px solid #edf2f7',
-                      transition: 'all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                      position: 'relative',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      overflow: 'hidden',
-                      textAlign: 'left'
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-8px)';
-                      e.currentTarget.style.borderColor = 'rgba(242, 122, 36, 0.3)';
-                      e.currentTarget.style.boxShadow = '0 15px 40px rgba(15, 44, 89, 0.12)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.borderColor = '#edf2f7';
-                      e.currentTarget.style.boxShadow = '0 10px 30px rgba(15, 44, 89, 0.05)';
-                    }}
-                  >
-                    {/* Course Image Header */}
-                    <div style={{ width: '100%', height: '160px', borderRadius: '16px', overflow: 'hidden', marginBottom: '1.25rem' }}>
-                      <img 
-                        src={c.image_url || fallbackImage} 
-                        alt={c.title} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={e => { e.target.src = fallbackImage; }}
-                      />
-                    </div>
-
-                    <span style={{
-                      background: 'rgba(15, 44, 89, 0.05)',
-                      color: 'var(--primary-color)',
-                      padding: '0.3rem 0.8rem',
-                      borderRadius: '50px',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      marginBottom: '1.25rem',
-                      display: 'inline-block'
-                    }}>
-                      {badge}
-                    </span>
-
-                    <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', marginBottom: '1rem' }}>
-                      <span style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '10px',
-                        background: 'rgba(242, 122, 36, 0.08)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.3rem'
-                      }}>
-                        {icon}
-                      </span>
-                      <h3 style={{
-                        margin: 0,
-                        color: 'var(--primary-color)',
-                        fontSize: '1.25rem',
-                        fontWeight: '800',
-                        fontFamily: 'var(--font-heading)'
-                      }}>
-                        {c.title}
-                      </h3>
-                    </div>
-
-                    <p style={{
-                      color: 'var(--text-light)',
-                      fontSize: '0.88rem',
-                      lineHeight: '1.6',
-                      marginBottom: '1.5rem',
-                      flexGrow: 1
-                    }}>
-                      {c.description}
-                    </p>
-
-
-
-                    <button
-                      className="learn-more"
-                      onClick={() => {
-                        setActiveTab('registration');
-                        const el = document.getElementById('register');
-                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1.5px solid var(--primary-color)',
-                        background: 'transparent',
-                        color: 'var(--primary-color)',
-                        borderRadius: '12px',
-                        fontWeight: '700',
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        fontFamily: 'var(--font-body)',
-                        textAlign: 'center'
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.background = 'var(--primary-color)';
-                        e.currentTarget.style.color = 'white';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = 'var(--primary-color)';
-                      }}
-                    >
-                      Learn More &amp; Register
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* Why Choose Us Section */}
       <section 
@@ -1983,33 +1902,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Special Classes Section */}
-      <section className="special-classes">
-        <div className="container">
-          <div className="section-title">
-            <h2>Our Special Classes</h2>
-            <p>Specialized programs designed to enhance specific skills and talents</p>
-          </div>
-          <div className="classes-grid">
-            {loadingCourses ? (
-              <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>Loading special classes...</div>
-            ) : courses.filter(c => c.course_type === 'special').length === 0 ? (
-              <div style={{ color: '#a0aec0', padding: '2rem', textAlign: 'center', gridColumn: '1 / -1' }}>
-                No special classes available yet.
-              </div>
-            ) : (
-              courses.filter(c => c.course_type === 'special').map((c, idx) => (
-                <div className="class-card" key={c.id}>
-                  <div className="class-card-content" style={{ background: `url(${c.image_url || getSpecialClassImage(c.title, idx)}) center center`, backgroundSize: 'cover' }}></div>
-                  <div className="class-overlay">
-                    <h3>{c.title}</h3>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
+
 
       {/* Teachers Section */}
       <section className="teachers" id="teachers">

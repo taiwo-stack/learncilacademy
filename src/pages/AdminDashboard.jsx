@@ -4,6 +4,7 @@ import {
   updateBookingStatus, deleteBooking, deleteStudent, deleteTutor, updateStudent,
   createStudentAccount, createTutorAccount, uploadAvatar, activateStudentAccount, resetUserPassword,
   getCourses, saveCourse, deleteCourse,
+  getCourseCategories, saveCourseCategory, deleteCourseCategory,
   getTopics, saveTopic, deleteTopic, updateTopic,
   getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile,
   getCourseTutors, assignTutorToCourse, removeTutorFromCourse,
@@ -37,6 +38,11 @@ export default function AdminDashboard() {
   const [studentCourses, setStudentCourses] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
 
   // Chat Monitor State
   const [allChatMessages, setAllChatMessages] = useState([]);
@@ -102,7 +108,7 @@ export default function AdminDashboard() {
   const [showEnrollStudentModal, setShowEnrollStudentModal] = useState(false);
 
   // LMS State Inputs
-  const [newCourse, setNewCourse] = useState({ title: '', description: '', course_type: 'regular', image_url: '' });
+  const [newCourse, setNewCourse] = useState({ title: '', description: '', course_type: 'regular', category: '', image_url: '' });
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [newTopic, setNewTopic] = useState({ title: '', description: '', sort_order: 1 });
   const [activeTopicMaterialId, setActiveTopicMaterialId] = useState('');
@@ -157,7 +163,7 @@ export default function AdminDashboard() {
     };
 
     try {
-      const [bData, sData, tData, mData, cData, tpData, matData, ctData, scData, tkData, schData, chatData] = await Promise.all([
+      const [bData, sData, tData, mData, cData, tpData, matData, ctData, scData, tkData, schData, chatData, catData] = await Promise.all([
         safeLoad(getBookings()),
         safeLoad(getStudents()),
         safeLoad(getTutors()),
@@ -169,7 +175,8 @@ export default function AdminDashboard() {
         safeLoad(getStudentCourses()),
         safeLoad(getTasks()),
         safeLoad(getSchedules()),
-        safeLoad(getChatMessages())
+        safeLoad(getChatMessages()),
+        safeLoad(getCourseCategories())
       ]);
 
       setBookings(bData);
@@ -184,6 +191,7 @@ export default function AdminDashboard() {
       setTasks(tkData);
       setSchedules(schData);
       setAllChatMessages(chatData);
+      setCategories(catData);
 
       if (cData.length > 0) setSelectedCourseId(cData[0].id);
     } catch (err) {
@@ -1226,85 +1234,181 @@ export default function AdminDashboard() {
               
               {/* Left Column: Create Course & Selection */}
               <div className="course-builder-left">
-                
-                <button 
-                  className="btn-primary" 
-                  style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: '10px', fontWeight: 'bold' }} 
-                  onClick={() => setShowCreateCourseModal(true)}
-                >
-                  <Plus size={16} /> Create New Course
-                </button>
+                               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <button 
+                    className="btn-primary" 
+                    style={{ flex: 1, padding: '0.8rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', borderRadius: '10px', fontWeight: 'bold', fontSize: '0.82rem' }} 
+                    onClick={() => setShowCreateCourseModal(true)}
+                  >
+                    <Plus size={14} /> Course
+                  </button>
+                  <button 
+                    className="btn-prev" 
+                    style={{ flex: 1, padding: '0.8rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', borderRadius: '10px', fontWeight: 'bold', fontSize: '0.82rem', background: '#edf2f7', border: '1px solid #cbd5e0', color: 'var(--primary-color)' }} 
+                    onClick={() => setShowCreateCategoryModal(true)}
+                  >
+                    <Plus size={14} /> Category
+                  </button>
+                </div>
 
-                {/* Course Registry List */}
-                <div className="dashboard-card course-builder-left-list" style={{ padding: '1.25rem', marginBottom: 0, display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ marginBottom: '1rem' }}><BookOpen size={16} /> Course Registry</h3>
-                  {courses.length === 0 ? (
-                    <div style={{ padding: '1rem', color: '#a0aec0', fontSize: '0.85rem' }}>No courses.</div>
-                  ) : (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem', overflowY: 'auto' }}>
-                      {courses.map(c => {
-                        const isSelected = selectedCourseId === c.id;
-                        return (
-                          <li 
-                            key={c.id} 
-                            style={{ 
-                              padding: '0.8rem 1rem', 
-                              borderRadius: '10px', 
-                              background: isSelected ? 'var(--primary-color)' : '#f7fafc',
-                              color: isSelected ? 'white' : 'var(--primary-color)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              boxShadow: isSelected ? '0 4px 12px rgba(15, 44, 89, 0.15)' : 'none',
-                              border: isSelected ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
-                              transform: isSelected ? 'translateY(-1px)' : 'none',
-                              transition: 'all 0.2s ease-in-out'
-                            }}
-                            onClick={() => setSelectedCourseId(c.id)}
-                          >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: isSelected ? 'white' : 'var(--primary-color)' }}>{c.title}</span>
-                                <span style={{ 
-                                  background: isSelected ? 'rgba(255, 255, 255, 0.2)' : (c.course_type === 'special' ? 'rgba(242, 122, 36, 0.1)' : 'rgba(15, 44, 89, 0.1)'), 
-                                  color: isSelected ? 'white' : (c.course_type === 'special' ? 'var(--accent-color)' : 'var(--primary-color)'),
-                                  padding: '0.1rem 0.4rem',
-                                  borderRadius: '4px',
-                                  fontSize: '0.65rem',
-                                  fontWeight: 'bold',
-                                  textTransform: 'capitalize'
-                                }}>
-                                  {c.course_type || 'regular'}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '0.72rem', color: isSelected ? '#cbd5e0' : '#718096' }}>
-                                ID: {c.id}
+                {/* Course Registry List grouped by Category */}
+                <div className="dashboard-card course-builder-left-list" style={{ padding: '1.25rem', marginBottom: 0, display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto' }}>
+                  <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><BookOpen size={16} /> Category Builder</h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', overflowY: 'auto', flex: 1 }}>
+                    {/* Render Grouped Categories */}
+                    {categories.map(cat => {
+                      const catCourses = courses.filter(c => c.category === cat.name || c.category_id === cat.id);
+                      return (
+                        <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #edf2f7', paddingBottom: '0.3rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#4a5568' }}>{cat.name}</span>
+                              <span style={{ background: '#edf2f7', color: '#718096', padding: '0.1rem 0.35rem', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 'bold' }}>
+                                {catCourses.length}
                               </span>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.3rem' }}>
+                            <div style={{ display: 'flex', gap: '0.25rem' }}>
                               <button 
                                 className="btn-action edit" 
-                                style={{ padding: '0.2rem 0.4rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : 'var(--primary-color)' }}
-                                onClick={(e) => { e.stopPropagation(); handleEditCourseClick(c); }}
-                                title="Edit Course"
+                                style={{ padding: '0.15rem 0.3rem', background: '#edf2f7', color: '#4a5568', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
+                                onClick={() => { setEditingCategory(cat); setShowEditCategoryModal(true); }}
+                                title="Edit Category"
                               >
-                                <Edit size={12} />
+                                <Edit size={10} />
                               </button>
                               <button 
                                 className="btn-action delete" 
-                                style={{ padding: '0.2rem 0.4rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : '#e53e3e' }}
-                                onClick={(e) => { e.stopPropagation(); handleDeleteCourse(c.id); }}
-                                title="Delete Course"
+                                style={{ padding: '0.15rem 0.3rem', background: '#edf2f7', color: '#e53e3e', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
+                                onClick={async () => {
+                                  if (window.confirm(`Are you sure you want to delete category "${cat.name}"? Courses inside will become uncategorized.`)) {
+                                    try {
+                                      await deleteCourseCategory(cat.id);
+                                      setCategories(prev => prev.filter(c => c.id !== cat.id));
+                                    } catch (err) {
+                                      alert(err.message);
+                                    }
+                                  }
+                                }}
+                                title="Delete Category"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={10} />
                               </button>
                             </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                          </div>
+                          
+                          {catCourses.length === 0 ? (
+                            <div style={{ padding: '0.5rem 0.8rem', color: '#cbd5e0', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                              No courses in this category.
+                            </div>
+                          ) : (
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              {catCourses.map(c => {
+                                const isSelected = selectedCourseId === c.id;
+                                return (
+                                  <li 
+                                    key={c.id} 
+                                    style={{ 
+                                      padding: '0.6rem 0.8rem', 
+                                      borderRadius: '8px', 
+                                      background: isSelected ? 'var(--primary-color)' : '#f7fafc',
+                                      color: isSelected ? 'white' : 'var(--primary-color)',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      boxShadow: isSelected ? '0 4px 10px rgba(15, 44, 89, 0.12)' : 'none',
+                                      border: isSelected ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
+                                      transform: isSelected ? 'translateY(-1px)' : 'none',
+                                      transition: 'all 0.15s ease-in-out'
+                                    }}
+                                    onClick={() => setSelectedCourseId(c.id)}
+                                  >
+                                    <span style={{ fontWeight: '600', fontSize: '0.82rem', color: isSelected ? 'white' : '#2d3748' }}>{c.title}</span>
+                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                      <button 
+                                        className="btn-action edit" 
+                                        style={{ padding: '0.15rem 0.3rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : 'var(--primary-color)', display: 'flex', alignItems: 'center' }}
+                                        onClick={(e) => { e.stopPropagation(); handleEditCourseClick(c); }}
+                                        title="Edit Course"
+                                      >
+                                        <Edit size={10} />
+                                      </button>
+                                      <button 
+                                        className="btn-action delete" 
+                                        style={{ padding: '0.15rem 0.3rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : '#e53e3e', display: 'flex', alignItems: 'center' }}
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteCourse(c.id); }}
+                                        title="Delete Course"
+                                      >
+                                        <Trash2 size={10} />
+                                      </button>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Render Uncategorized Courses */}
+                    {courses.filter(c => !c.category && !c.category_id).length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #edf2f7', paddingBottom: '0.3rem' }}>
+                          <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#718096', fontStyle: 'italic' }}>Uncategorized</span>
+                          <span style={{ background: '#edf2f7', color: '#718096', padding: '0.1rem 0.35rem', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 'bold' }}>
+                            {courses.filter(c => !c.category && !c.category_id).length}
+                          </span>
+                        </div>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                          {courses.filter(c => !c.category && !c.category_id).map(c => {
+                            const isSelected = selectedCourseId === c.id;
+                            return (
+                              <li 
+                                key={c.id} 
+                                style={{ 
+                                  padding: '0.6rem 0.8rem', 
+                                  borderRadius: '8px', 
+                                  background: isSelected ? 'var(--primary-color)' : '#f7fafc',
+                                  color: isSelected ? 'white' : 'var(--primary-color)',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  boxShadow: isSelected ? '0 4px 10px rgba(15, 44, 89, 0.12)' : 'none',
+                                  border: isSelected ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
+                                  transform: isSelected ? 'translateY(-1px)' : 'none',
+                                  transition: 'all 0.15s ease-in-out'
+                                }}
+                                onClick={() => setSelectedCourseId(c.id)}
+                              >
+                                <span style={{ fontWeight: '600', fontSize: '0.82rem', color: isSelected ? 'white' : '#2d3748' }}>{c.title}</span>
+                                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                  <button 
+                                    className="btn-action edit" 
+                                    style={{ padding: '0.15rem 0.3rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : 'var(--primary-color)', display: 'flex', alignItems: 'center' }}
+                                    onClick={(e) => { e.stopPropagation(); handleEditCourseClick(c); }}
+                                    title="Edit Course"
+                                  >
+                                    <Edit size={10} />
+                                  </button>
+                                  <button 
+                                    className="btn-action delete" 
+                                    style={{ padding: '0.15rem 0.3rem', background: isSelected ? 'rgba(255, 255, 255, 0.15)' : '#edf2f7', color: isSelected ? 'white' : '#e53e3e', display: 'flex', alignItems: 'center' }}
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteCourse(c.id); }}
+                                    title="Delete Course"
+                                  >
+                                    <Trash2 size={10} />
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2415,11 +2519,18 @@ export default function AdminDashboard() {
                   placeholder="e.g. /images/book1.jpg or external url" 
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label>Course Category *</label>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Type *</label>
                 <select value={editingCourse.course_type || 'regular'} onChange={(e) => setEditingCourse(prev => ({ ...prev, course_type: e.target.value }))} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
                   <option value="regular">Regular Course (e.g. Class I-VI)</option>
                   <option value="special">Special Class (e.g. Programming, AI)</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Subject Category *</label>
+                <select value={editingCourse.category || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev, category: e.target.value }))} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                  <option value="">-- Choose Category --</option>
+                  {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
@@ -2631,7 +2742,7 @@ export default function AdminDashboard() {
               try {
                 const saved = await saveCourse(newCourse);
                 setCourses(prev => [...prev, saved]);
-                setNewCourse({ title: '', description: '', course_type: 'regular', image_url: '' });
+                setNewCourse({ title: '', description: '', course_type: 'regular', category: '', image_url: '' });
                 setSelectedCourseId(saved.id);
                 setShowCreateCourseModal(false);
                 alert('Course created successfully!');
@@ -2667,8 +2778,8 @@ export default function AdminDashboard() {
                   placeholder="e.g. /images/book1.jpg or external url" 
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label>Course Category *</label>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Course Type *</label>
                 <select
                   value={newCourse.course_type || 'regular'}
                   onChange={(e) => setNewCourse(prev => ({ ...prev, course_type: e.target.value }))}
@@ -2677,6 +2788,18 @@ export default function AdminDashboard() {
                 >
                   <option value="regular">Regular Course (e.g. Class I-VI)</option>
                   <option value="special">Special Class (e.g. Programming, AI)</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Subject Category *</label>
+                <select
+                  value={newCourse.category || ''}
+                  onChange={(e) => setNewCourse(prev => ({ ...prev, category: e.target.value }))}
+                  required
+                  style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}
+                >
+                  <option value="">-- Choose Category --</option>
+                  {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
@@ -2750,12 +2873,103 @@ export default function AdminDashboard() {
                     const t = tutors.find(tu => tu.id === ct.tutor_id);
                     return t ? <option key={t.id} value={t.id}>{t.full_name}</option> : null;
                   })}
-                  {courseTutors.filter(ct => ct.course_id === enrollCourseId).length === 0 && tutors.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                 <button type="button" className="btn-prev" onClick={() => setShowEnrollStudentModal(false)}>Cancel</button>
                 <button type="submit" className="btn-submit">Enroll Student</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Category Modal Overlay */}
+      {showCreateCategoryModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <button className="modal-close" onClick={() => setShowCreateCategoryModal(false)}><X size={20} /></button>
+            <h3 className="modal-title"><Layers size={18} /> Create New Category</h3>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const saved = await saveCourseCategory(newCategory);
+                setCategories(prev => [...prev, saved]);
+                setNewCategory({ name: '', description: '' });
+                setShowCreateCategoryModal(false);
+                alert('Category created successfully!');
+              } catch (err) {
+                alert('Error creating category: ' + err.message);
+              }
+            }}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Category Name *</label>
+                <input 
+                  type="text" 
+                  value={newCategory.name} 
+                  onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Math, Coding & Tech"
+                  required 
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Description</label>
+                <textarea 
+                  value={newCategory.description} 
+                  onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Short overview of the category subject..."
+                  rows={3}
+                ></textarea>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => setShowCreateCategoryModal(false)}>Cancel</button>
+                <button type="submit" className="btn-submit">Create Category</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Category Modal Overlay */}
+      {showEditCategoryModal && editingCategory && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <button className="modal-close" onClick={() => { setShowEditCategoryModal(false); setEditingCategory(null); }}><X size={20} /></button>
+            <h3 className="modal-title"><Layers size={18} /> Edit Category</h3>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const saved = await saveCourseCategory(editingCategory);
+                setCategories(prev => prev.map(c => c.id === saved.id ? saved : c));
+                setShowEditCategoryModal(false);
+                setEditingCategory(null);
+                alert('Category updated successfully!');
+              } catch (err) {
+                alert('Error updating category: ' + err.message);
+              }
+            }}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Category Name *</label>
+                <input 
+                  type="text" 
+                  value={editingCategory.name} 
+                  onChange={(e) => setEditingCategory(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Math, Coding & Tech"
+                  required 
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Description</label>
+                <textarea 
+                  value={editingCategory.description || ''} 
+                  onChange={(e) => setEditingCategory(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Short overview of the category subject..."
+                  rows={3}
+                ></textarea>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => { setShowEditCategoryModal(false); setEditingCategory(null); }}>Cancel</button>
+                <button type="submit" className="btn-submit">Save Changes</button>
               </div>
             </form>
           </div>

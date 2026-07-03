@@ -25,6 +25,16 @@ export default function Header({ currentUser, onLogout }) {
     }
   };
 
+  const handleSubjectFilterNav = (categoryName) => {
+    setMobileOpen(false);
+    navigate('/subjects', { state: { initialCategory: categoryName } });
+  };
+
+  const handleGradeFilterNav = (gradeName) => {
+    setMobileOpen(false);
+    navigate('/subjects', { state: { initialGrade: gradeName } });
+  };
+
   const handleSignOut = async () => {
     try {
       setMobileOpen(false);
@@ -60,10 +70,10 @@ export default function Header({ currentUser, onLogout }) {
                   Grades <span style={{ fontSize: '0.62rem', opacity: 0.8 }}>▼</span>
                 </a>
                 <ul className="dropdown-menu">
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>Early Learners (K–5)</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>Middle School</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>High School</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('audience-section'); }}>Homeschool Support</a></li>
+                  <li><a onClick={() => handleGradeFilterNav('K-5')}>Early Learners (K–5)</a></li>
+                  <li><a onClick={() => handleGradeFilterNav('Middle School')}>Middle School</a></li>
+                  <li><a onClick={() => handleGradeFilterNav('High School')}>High School</a></li>
+                  <li><a onClick={() => handleGradeFilterNav('K-5')}>Homeschool Support</a></li>
                 </ul>
               </li>
 
@@ -73,12 +83,11 @@ export default function Header({ currentUser, onLogout }) {
                   Subjects <span style={{ fontSize: '0.62rem', opacity: 0.8 }}>▼</span>
                 </a>
                 <ul className="dropdown-menu">
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Math</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Reading &amp; English</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Science</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Test Prep</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>World Languages</a></li>
-                  <li><a onClick={() => { setMobileOpen(false); handleNavClick('subjects-section'); }}>Coding</a></li>
+                  <li><a onClick={() => handleSubjectFilterNav('Math')}>Math</a></li>
+                  <li><a onClick={() => handleSubjectFilterNav('English & Reading')}>Reading &amp; English</a></li>
+                  <li><a onClick={() => handleSubjectFilterNav('Science')}>Science</a></li>
+                  <li><a onClick={() => handleSubjectFilterNav('Test Prep')}>Test Prep</a></li>
+                  <li><a onClick={() => handleSubjectFilterNav('Coding & Tech')}>Coding</a></li>
                 </ul>
               </li>
 

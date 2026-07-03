@@ -30,14 +30,10 @@ export default function Footer() {
             One-on-One Tutoring That Builds Strong Foundations for Lifelong Success.
           </p>
           <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.8)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <div>✉️ support@foundaxia.com</div>
-            <div>📞 +1 (555) 368-6329</div>
-          </div>
-          <div className="social-icons" style={{ display: 'flex', gap: '0.8rem', marginTop: '1.2rem' }}>
-            <a href="#" className="social-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.1)', color: 'white', textDecoration: 'none', fontSize: '0.85rem' }} title="Facebook">FB</a>
-            <a href="#" className="social-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.1)', color: 'white', textDecoration: 'none', fontSize: '0.85rem' }} title="Instagram">IG</a>
-            <a href="#" className="social-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.1)', color: 'white', textDecoration: 'none', fontSize: '0.85rem' }} title="LinkedIn">LN</a>
-            <a href="#" className="social-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.1)', color: 'white', textDecoration: 'none', fontSize: '0.85rem' }} title="YouTube">YT</a>
+            <div>📍 Darka Street,</div>
+            <div>📍 Wuse Zone I, FCT Abuja, Nigeria</div>
+            <div>📞 +2349061814608</div>
+            <div style={{ marginTop: '0.2rem' }}>✉️ info@foundaxia.com</div>
           </div>
         </div>
 
@@ -71,7 +67,6 @@ export default function Footer() {
             <li><a onClick={() => handleNavClick('subjects-section')}>English</a></li>
             <li><a onClick={() => handleNavClick('subjects-section')}>Science</a></li>
             <li><a onClick={() => handleNavClick('subjects-section')}>Test Prep</a></li>
-            <li><a onClick={() => handleNavClick('subjects-section')}>World Languages</a></li>
             <li><a onClick={() => handleNavClick('subjects-section')}>Coding</a></li>
           </ul>
         </div>

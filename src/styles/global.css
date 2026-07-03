@@ -419,10 +419,21 @@ footer {
 }
 
 @media (max-width: 768px) {
-  .stat-card {
+  .landing-stat-item {
     border-left: none !important;
     padding-left: 0 !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     padding-top: 1.5rem;
   }
 }
+
+@media (max-width: 992px) {
+  .subjects-grid-layout {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+  .filter-sidebar {
+    position: static !important;
+  }
+}
+

@@ -20,27 +20,61 @@ const initialMessages = [
   { id: 'm1', name: 'David Coker', email: 'david@coker.com', phone: '08034567890', subject: 'Weekend Class Shift', message: 'Hello, I want to inquire if Tobi can have an extra session this weekend.', created_at: new Date().toISOString() }
 ];
 
+const initialCourseCategories = [
+  { id: 'cat_math', name: 'Math', description: 'Mathematics and quantitative courses' },
+  { id: 'cat_english', name: 'English & Reading', description: 'Reading, writing, and language arts' },
+  { id: 'cat_science', name: 'Science', description: 'Natural and physical sciences' },
+  { id: 'cat_testprep', name: 'Test Prep', description: 'Preparation for examinations like JAMB, WAEC, NECO, SAT, ACT' },
+  { id: 'cat_coding', name: 'Coding & Tech', description: 'Software programming and future technology skills' }
+];
+
 const initialCourses = [
-  { id: 'c1', title: 'React Frontend Development', description: 'Comprehensive guide to HTML, CSS, JavaScript, and React component architectures.', course_type: 'regular', image_url: '/images/child online.jpg' },
-  { id: 'c2', title: 'Creative Writing & Composition', description: 'Advanced comprehension analysis, spelling accuracy, and storytelling structure.', course_type: 'regular', image_url: '/images/book1.jpg' },
-  { id: 'c3', title: 'Programming Class', description: 'Learn logic, algorithms, coding structures, and basic software engineering principles.', course_type: 'special', image_url: '/images/boylearning.jpg' },
-  { id: 'c4', title: 'Generative Artificial Intelligence', description: 'Explore prompt engineering, neural network concepts, and creative AI generation tools.', course_type: 'special', image_url: '/images/ai.jpg' },
-  { id: 'c5', title: 'Data Science for Teens', description: 'An introduction to databases, data parsing, charts, and predictive analysis.', course_type: 'special', image_url: '/images/student.jpg' },
-  { id: 'c6', title: 'Microsoft Excel and Word', description: 'Master spreadsheet tables, document structures, and formatting essentials.', course_type: 'special', image_url: '/images/book2.jpg' },
-  { id: 'c7', title: 'Website Design Basics', description: 'Design modern layout templates with clean CSS layouts and visual assets.', course_type: 'special', image_url: '/images/whyus.jpg' },
-  { id: 'c8', title: 'Creative Writing', description: 'Drafting stories, building fictional worlds, and refining voice and tone.', course_type: 'special', image_url: '/images/book3.jpg' }
+  // Math
+  { id: 'c_math_elem', title: 'Elementary Math', description: 'Building strong number sense, core arithmetic, fractions, decimals, and basic geometric shapes.', category: 'Math', course_type: 'regular', image_url: '/images/book1.jpg' },
+  { id: 'c_math_prealg', title: 'Pre-Algebra', description: 'Transitioning from arithmetic to algebraic thinking with variables, proportions, and equations.', category: 'Math', course_type: 'regular', image_url: '/images/book1.jpg' },
+  { id: 'c_math_alg', title: 'Algebra I & II', description: 'Solving complex equations, graphing functions, inequalities, logarithms, and quadratic relationships.', category: 'Math', course_type: 'regular', image_url: '/images/book1.jpg' },
+  { id: 'c_math_geom', title: 'Geometry', description: 'Exploring Euclidean geometry, shapes, similarity, proofs, and foundational trigonometry principles.', category: 'Math', course_type: 'regular', image_url: '/images/book1.jpg' },
+  { id: 'c_math_trig', title: 'Trigonometry', description: 'Comprehensive study of trigonometric functions, circular logic, laws of sines/cosines, and graphing waves.', category: 'Math', course_type: 'regular', image_url: '/images/book1.jpg' },
+  { id: 'c_math_calc', title: 'Calculus', description: 'Limits, derivatives, integrals, and their application to physics and mathematics systems.', category: 'Math', course_type: 'regular', image_url: '/images/book1.jpg' },
+  
+  // English & Reading
+  { id: 'c_eng_phonics', title: 'Phonics', description: 'Early child decoding skills, sounds, word combinations, and introductory reading exercises.', category: 'English & Reading', course_type: 'regular', image_url: '/images/book2.jpg' },
+  { id: 'c_eng_compre', title: 'Reading Comprehension', description: 'Developing active reading habits, extracting core ideas, context clues, and summarizing text structure.', category: 'English & Reading', course_type: 'regular', image_url: '/images/book2.jpg' },
+  { id: 'c_eng_creative', title: 'Creative Writing', description: 'Drafting stories, building fictional worlds, and refining voice and tone.', category: 'English & Reading', course_type: 'regular', image_url: '/images/book2.jpg' },
+  { id: 'c_eng_essay', title: 'Essay Writing', description: 'Constructing five-paragraph outlines, narrative descriptions, arguments, and academic research papers.', category: 'English & Reading', course_type: 'regular', image_url: '/images/book2.jpg' },
+  { id: 'c_eng_lit', title: 'Literature', description: 'Exploring classical books, plays, thematic motifs, character development, and narrative arcs.', category: 'English & Reading', course_type: 'regular', image_url: '/images/book2.jpg' },
+  
+  // Science
+  { id: 'c_sci_life', title: 'Life Science', description: 'Basic structures of cells, plant systems, food cycles, and elementary biological traits.', category: 'Science', course_type: 'regular', image_url: '/images/child online.jpg' },
+  { id: 'c_sci_bio', title: 'Biology', description: 'Microscopic organisms, cell mitosis, genetics, DNA transcription, and human anatomy systems.', category: 'Science', course_type: 'regular', image_url: '/images/child online.jpg' },
+  { id: 'c_sci_chem', title: 'Chemistry', description: 'Periodic table structure, atomic bonding, stoichiometry equations, acid/base balances, and lab procedures.', category: 'Science', course_type: 'regular', image_url: '/images/child online.jpg' },
+  { id: 'c_sci_phys', title: 'Physics', description: 'Mechanics, Newton laws, velocity vectors, work-energy theorems, waves, and electrical currents.', category: 'Science', course_type: 'regular', image_url: '/images/child online.jpg' },
+  { id: 'c_sci_earth', title: 'Earth Science', description: 'Rock formations, plate tectonics, weather cycles, water conservation, and planetary astronomy.', category: 'Science', course_type: 'regular', image_url: '/images/child online.jpg' },
+  
+  // Test Prep
+  { id: 'c_tp_jamb', title: 'JAMB Prep', description: 'Nigeria Joint Admissions and Matriculation Board exam preparation (UTME). Key past questions and exam strategies.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  { id: 'c_tp_waec', title: 'WAEC Prep', description: 'West African Examinations Council senior school certificate prep. Core syllabus walkthroughs.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  { id: 'c_tp_neco', title: 'NECO Prep', description: 'National Examinations Council exam preparation. Full subject drills and tips.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  { id: 'c_tp_postutme', title: 'Post-UTME Prep', description: 'University-specific Post-UTME screening prep for candidate selection success.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  { id: 'c_tp_sat', title: 'SAT Prep', description: 'College Board SAT reasoning test prep covering reading, writing, and math strategy.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  { id: 'c_tp_act', title: 'ACT Prep', description: 'Comprehensive ACT exam review covering English, math, reading, and science reasoning.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  { id: 'c_tp_state', title: 'State Assessments', description: 'Preparation for localized state tests and benchmark standard compliance assessments.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  
+  // Coding & Tech
+  { id: 'c_code_intro', title: 'Intro to Coding', description: 'Learn basic block logic, scratch sequences, loop parameters, and coding structures.', category: 'Coding & Tech', course_type: 'special', image_url: '/images/boylearning.jpg' },
+  { id: 'c_code_cs', title: 'Computer Science Fundamentals', description: 'Understanding machine architectures, data variables, array lists, and memory paradigms.', category: 'Coding & Tech', course_type: 'special', image_url: '/images/boylearning.jpg' }
 ];
 
 const initialTopics = [
-  { id: 'tp1', course_id: 'c1', title: 'HTML5 Semantic Web', description: 'Introduction to document outlines, elements, and layout trees.', sort_order: 1 },
-  { id: 'tp2', course_id: 'c1', title: 'CSS3 Flexbox & Grid', description: 'Flexible layouts, margins, relative sizes, and media-query responses.', sort_order: 2 },
-  { id: 'tp3', course_id: 'c1', title: 'React Hooks & State', description: 'Managing interactive client states using useState, useEffect, and custom hooks.', sort_order: 3 },
-  { id: 'tp4', course_id: 'c2', title: 'Narrative Essay Outline', description: 'Structuring introductions, build-ups, and logical conclusions in writing.', sort_order: 1 }
+  { id: 'tp1', course_id: 'c_code_intro', title: 'HTML5 Semantic Web', description: 'Introduction to document outlines, elements, and layout trees.', sort_order: 1 },
+  { id: 'tp2', course_id: 'c_code_intro', title: 'CSS3 Flexbox & Grid', description: 'Flexible layouts, margins, relative sizes, and media-query responses.', sort_order: 2 },
+  { id: 'tp3', course_id: 'c_code_intro', title: 'React Hooks & State', description: 'Managing interactive client states using useState, useEffect, and custom hooks.', sort_order: 3 },
+  { id: 'tp4', course_id: 'c_math_elem', title: 'Narrative Essay Outline', description: 'Structuring introductions, build-ups, and logical conclusions in writing.', sort_order: 1 }
 ];
 
 const initialMaterials = [
-  { id: 'mat1', course_id: 'c1', topic_id: 'tp1', title: 'HTML5 Reference Guide PDF', file_url: 'https://www.w3.org/html/html5-cheat-sheet.pdf', file_type: 'pdf' },
-  { id: 'mat2', course_id: 'c1', topic_id: 'tp2', title: 'Flexbox Cheatsheet Image', file_url: 'https://css-tricks.com/flexbox-poster.png', file_type: 'image' }
+  { id: 'mat1', course_id: 'c_code_intro', topic_id: 'tp1', title: 'HTML5 Reference Guide PDF', file_url: 'https://www.w3.org/html/html5-cheat-sheet.pdf', file_type: 'pdf' },
+  { id: 'mat2', course_id: 'c_code_intro', topic_id: 'tp2', title: 'Flexbox Cheatsheet Image', file_url: 'https://css-tricks.com/flexbox-poster.png', file_type: 'image' }
 ];
 
 const initialCourseTutors = [];
@@ -91,6 +125,9 @@ const initLocalStorage = () => {
   }
   if (!localStorage.getItem('lc_messages')) {
     localStorage.setItem('lc_messages', JSON.stringify(initialMessages));
+  }
+  if (!localStorage.getItem('lc_course_categories')) {
+    localStorage.setItem('lc_course_categories', JSON.stringify(initialCourseCategories));
   }
   if (!localStorage.getItem('lc_courses')) {
     localStorage.setItem('lc_courses', JSON.stringify(initialCourses));
@@ -234,41 +271,42 @@ export const getStudents = async () => {
 export const registerStudent = async (student) => {
   let savedStudent;
   if (hasSupabaseConfig) {
-    // Strip client-only or non-existent columns from database insertion
-    const { 
-      parentName, 
-      relationship, 
-      previous_school, 
-      emergencyName, 
-      emergencyPhone, 
-      address, 
-      ...cleanStudent 
-    } = student;
+    // Map variables cleanly matching the database schema columns
+    const dbPayload = {
+      full_name: student.full_name,
+      phone: student.phone,
+      email: student.email,
+      date_of_birth: student.date_of_birth,
+      gender: student.gender,
+      grade_level: student.grade_level,
+      special_needs: student.special_needs,
+      program: student.program,
+      schedule: student.schedule,
+      start_date: student.start_date,
+      additional_comments: student.additional_comments,
+      avatar_url: student.avatar_url,
+      parent_name: student.parentName || student.parent_name || null,
+      parent_email: student.email || student.parent_email || null,
+      relationship: student.relationship || null,
+      previous_school: student.previous_school || null,
+      emergency_name: student.emergencyName || student.emergency_name || null,
+      emergency_phone: student.emergencyPhone || student.emergency_phone || null,
+      address: student.address || null
+    };
 
     // Convert empty strings to default values to satisfy Postgres NOT NULL constraints
-    if (cleanStudent.date_of_birth === '' || cleanStudent.date_of_birth === null) {
-      cleanStudent.date_of_birth = new Date().toISOString().split('T')[0];
+    if (dbPayload.date_of_birth === '' || dbPayload.date_of_birth === null) {
+      dbPayload.date_of_birth = new Date().toISOString().split('T')[0];
     }
-    if (cleanStudent.start_date === '' || cleanStudent.start_date === null) {
-      cleanStudent.start_date = new Date().toISOString().split('T')[0];
-    }
-
-    let comments = student.additional_comments || '';
-    const extras = [];
-    if (parentName) extras.push(`Parent/Guardian: ${parentName} (${relationship || 'guardian'})`);
-    if (previous_school && previous_school !== 'None') extras.push(`Previous School: ${previous_school}`);
-    if (address) extras.push(`Address: ${address}`);
-    if (emergencyName) extras.push(`Emergency Contact: ${emergencyName} (${emergencyPhone || 'No Phone'})`);
-
-    if (extras.length > 0) {
-      cleanStudent.additional_comments = (comments && comments !== 'None' ? comments + '\n\n' : '') + '[Public Form Details]\n' + extras.join('\n');
+    if (dbPayload.start_date === '' || dbPayload.start_date === null) {
+      dbPayload.start_date = new Date().toISOString().split('T')[0];
     }
 
     const studentId = self.crypto.randomUUID();
     const { data, error } = await supabase.from('students').insert([{
       id: studentId,
       status: 'pending',
-      ...cleanStudent
+      ...dbPayload
     }]).select();
     if (error) throw error;
     savedStudent = data[0];
@@ -935,7 +973,62 @@ export const uploadAvatar = async (userId, file) => {
   }
 };
 
-// --- LMS NEW CHANNELS ---
+// 0. Categories CRUD
+export const getCourseCategories = async () => {
+  if (hasSupabaseConfig) {
+    const { data, error } = await supabase.from('course_categories').select('*');
+    if (error) throw error;
+    return data;
+  } else {
+    initLocalStorage();
+    return JSON.parse(localStorage.getItem('lc_course_categories'));
+  }
+};
+
+export const saveCourseCategory = async (category) => {
+  if (hasSupabaseConfig) {
+    if (category.id) {
+      const { data, error } = await supabase.from('course_categories').update(category).eq('id', category.id).select();
+      if (error) throw error;
+      return data[0];
+    } else {
+      const catId = 'cat_' + Date.now();
+      const { data, error } = await supabase.from('course_categories').insert([{ id: catId, ...category }]).select();
+      if (error) throw error;
+      return data[0];
+    }
+  } else {
+    initLocalStorage();
+    const categories = JSON.parse(localStorage.getItem('lc_course_categories'));
+    if (category.id) {
+      const idx = categories.findIndex(c => c.id === category.id);
+      if (idx !== -1) {
+        categories[idx] = { ...categories[idx], ...category };
+        localStorage.setItem('lc_course_categories', JSON.stringify(categories));
+        return categories[idx];
+      }
+      throw new Error('Category not found');
+    } else {
+      const catId = 'cat_' + Date.now();
+      const newCategory = { id: catId, ...category };
+      categories.push(newCategory);
+      localStorage.setItem('lc_course_categories', JSON.stringify(categories));
+      return newCategory;
+    }
+  }
+};
+
+export const deleteCourseCategory = async (id) => {
+  if (hasSupabaseConfig) {
+    const { error } = await supabase.from('course_categories').delete().eq('id', id);
+    if (error) throw error;
+  } else {
+    initLocalStorage();
+    let categories = JSON.parse(localStorage.getItem('lc_course_categories'));
+    categories = categories.filter(c => c.id !== id);
+    localStorage.setItem('lc_course_categories', JSON.stringify(categories));
+  }
+};
 
 // 1. Courses CRUD
 export const getCourses = async () => {
