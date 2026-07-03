@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   getBookings, getStudents, getTutors, getContactMessages,
-  updateBookingStatus, deleteBooking, deleteStudent, deleteTutor, updateStudent,
+  updateBookingStatus, deleteBooking, deleteStudent, deleteTutor, updateStudent, updateTutor,
   createStudentAccount, createTutorAccount, uploadAvatar, activateStudentAccount, resetUserPassword,
   getCourses, saveCourse, deleteCourse,
   getCourseCategories, saveCourseCategory, deleteCourseCategory,
@@ -59,6 +59,7 @@ export default function AdminDashboard() {
   const [showEditTutorModal, setShowEditTutorModal] = useState(false);
   const [editingTutor, setEditingTutor] = useState(null);
   const [tutorEditPassword, setTutorEditPassword] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Add Student Modal state
   const [showStudentModal, setShowStudentModal] = useState(false);

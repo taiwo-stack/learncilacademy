@@ -174,6 +174,7 @@ export default function LandingPage() {
     'English & Reading': ['Phonics', 'Reading Comprehension', 'Creative Writing', 'Essay Writing', 'Literature'],
     'Science': ['Life Science', 'Biology', 'Chemistry', 'Physics', 'Earth Science'],
     'Test Prep': ['JAMB Prep', 'WAEC Prep', 'NECO Prep', 'Post-UTME Prep', 'SAT Prep', 'ACT Prep', 'State Assessments'],
+    'World Languages': ['Spanish', 'French'],
     'Coding & Tech': ['Intro to Coding', 'Computer Science Fundamentals']
   };
 
@@ -862,31 +863,6 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="hero-form-card" id="register">
-                {location.state?.selectedSubject && (
-                  <div style={{
-                    background: 'rgba(242, 122, 36, 0.15)',
-                    border: '1.5px solid var(--accent-color)',
-                    borderRadius: '12px',
-                    padding: '0.75rem 1rem',
-                    marginBottom: '1rem',
-                    fontSize: '0.82rem',
-                    color: 'white',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ textAlign: 'left' }}>Requesting tutor for: <strong style={{ color: 'var(--accent-color)' }}>{location.state.selectedSubject}</strong></span>
-                    <button 
-                      onClick={() => navigate(location.pathname, { replace: true, state: {} })}
-                      style={{ background: 'transparent', border: 'none', color: 'rgba(255, 255, 255, 0.6)', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', padding: 0 }}
-                      onMouseEnter={e => e.currentTarget.style.color = 'white'}
-                      onMouseLeave={e => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'}
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.75rem' }}>
                   <button
                     type="button"

@@ -67,6 +67,7 @@ export default function Footer() {
             <li><a onClick={() => handleNavClick('subjects-section')}>English</a></li>
             <li><a onClick={() => handleNavClick('subjects-section')}>Science</a></li>
             <li><a onClick={() => handleNavClick('subjects-section')}>Test Prep</a></li>
+            <li><a onClick={() => handleNavClick('subjects-section')}>World Languages</a></li>
             <li><a onClick={() => handleNavClick('subjects-section')}>Coding</a></li>
           </ul>
         </div>

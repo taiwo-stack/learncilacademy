@@ -25,6 +25,7 @@ const initialCourseCategories = [
   { id: 'cat_english', name: 'English & Reading', description: 'Reading, writing, and language arts' },
   { id: 'cat_science', name: 'Science', description: 'Natural and physical sciences' },
   { id: 'cat_testprep', name: 'Test Prep', description: 'Preparation for examinations like JAMB, WAEC, NECO, SAT, ACT' },
+  { id: 'cat_languages', name: 'World Languages', description: 'Spanish, French, and world language courses' },
   { id: 'cat_coding', name: 'Coding & Tech', description: 'Software programming and future technology skills' }
 ];
 
@@ -59,6 +60,10 @@ const initialCourses = [
   { id: 'c_tp_sat', title: 'SAT Prep', description: 'College Board SAT reasoning test prep covering reading, writing, and math strategy.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
   { id: 'c_tp_act', title: 'ACT Prep', description: 'Comprehensive ACT exam review covering English, math, reading, and science reasoning.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
   { id: 'c_tp_state', title: 'State Assessments', description: 'Preparation for localized state tests and benchmark standard compliance assessments.', category: 'Test Prep', course_type: 'special', image_url: '/images/whyus.jpg' },
+  
+  // World Languages
+  { id: 'c_lang_spanish', title: 'Spanish', description: 'Introduction to Spanish vocabulary, grammar rules, and conversational dialogues.', category: 'World Languages', course_type: 'regular', image_url: '/images/book2.jpg' },
+  { id: 'c_lang_french', title: 'French', description: 'Foundational French syntax, pronouns, spelling rules, and listening comprehension.', category: 'World Languages', course_type: 'regular', image_url: '/images/book2.jpg' },
   
   // Coding & Tech
   { id: 'c_code_intro', title: 'Intro to Coding', description: 'Learn basic block logic, scratch sequences, loop parameters, and coding structures.', category: 'Coding & Tech', course_type: 'special', image_url: '/images/boylearning.jpg' },
@@ -502,7 +507,7 @@ export const signIn = async (email, password) => {
       throw new Error(`Profile not found for authenticated user: ${profileError.message}`);
     }
 
-    let fullName = 'User';
+    let fullName = profile.full_name || 'User';
     let profileRecordId = authData.user.id;
 
     if (profile.role === 'student') {
@@ -512,18 +517,29 @@ export const signIn = async (email, password) => {
         .eq('profile_id', authData.user.id)
         .single();
       if (student) {
-        fullName = student.full_name;
+        fullName = student.full_name || fullName;
         profileRecordId = student.id;
       }
     } else if (profile.role === 'tutor') {
-      const { data: tutor } = await supabase
+      // Try matching by id first (tutors.id = auth user id), then profile_id
+      const { data: tutorById } = await supabase
         .from('tutors')
         .select('id, full_name')
-        .eq('profile_id', authData.user.id)
+        .eq('id', authData.user.id)
         .single();
-      if (tutor) {
-        fullName = tutor.full_name;
-        profileRecordId = tutor.id;
+      if (tutorById) {
+        fullName = tutorById.full_name || fullName;
+        profileRecordId = tutorById.id;
+      } else {
+        const { data: tutorByProfile } = await supabase
+          .from('tutors')
+          .select('id, full_name')
+          .eq('profile_id', authData.user.id)
+          .single();
+        if (tutorByProfile) {
+          fullName = tutorByProfile.full_name || fullName;
+          profileRecordId = tutorByProfile.id;
+        }
       }
     } else {
       fullName = profile.full_name || 'Administrator';

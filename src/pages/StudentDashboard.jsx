@@ -10,12 +10,12 @@ import {
 } from '../services/dataService';
 import { 
   Calendar, User, BookOpen, Clock, AlertCircle, Save, 
-  MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play
+  MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play, LayoutDashboard
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
 export default function StudentDashboard({ user }) {
-  const [activeTab, setActiveTab] = useState('bookings');
+  const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
   const [studentInfo, setStudentInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -126,8 +126,8 @@ export default function StudentDashboard({ user }) {
     e.preventDefault();
     setSaving(true);
     try {
-      // Never allow email, password, or date_of_birth to be updated from the student side
-      const { email, password, date_of_birth, ...safeUpdates } = studentInfo;
+      // Never allow email, password, or start_date to be updated from the student side
+      const { email, password, start_date, ...safeUpdates } = studentInfo;
       await updateStudent(studentInfo.id, safeUpdates);
       alert('Profile updated successfully!');
     } catch (err) {
@@ -244,8 +244,8 @@ export default function StudentDashboard({ user }) {
       <aside className="dashboard-sidebar">
         <div className="sidebar-brand">Student Portal</div>
         <ul className="sidebar-menu">
-          <li className={`sidebar-item ${activeTab === 'bookings' ? 'active' : ''}`}>
-            <button onClick={() => setActiveTab('bookings')}><Calendar size={18} /> Consultations</button>
+          <li className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`}>
+            <button onClick={() => setActiveTab('overview')}><LayoutDashboard size={18} /> Dashboard</button>
           </li>
           <li className={`sidebar-item ${activeTab === 'courses' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('courses')}><BookOpen size={18} /> My Courses</button>
@@ -259,6 +259,9 @@ export default function StudentDashboard({ user }) {
           <li className={`sidebar-item ${activeTab === 'homework' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('homework')}><CheckSquare size={18} /> Tasks & Grades</button>
           </li>
+          <li className={`sidebar-item ${activeTab === 'bookings' ? 'active' : ''}`}>
+            <button onClick={() => setActiveTab('bookings')}><Calendar size={18} /> Consultations</button>
+          </li>
           <li className={`sidebar-item ${activeTab === 'profile' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('profile')}><User size={18} /> Personal Info</button>
           </li>
@@ -267,6 +270,139 @@ export default function StudentDashboard({ user }) {
 
       {/* Main Panel */}
       <main className="dashboard-main">
+
+        {/* Tab 0: Overview Dashboard */}
+        {activeTab === 'overview' && (
+          <div>
+            {/* Welcome Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, var(--primary-color) 0%, #1a3a6e 100%)',
+              borderRadius: '16px',
+              padding: '2rem 2.5rem',
+              marginBottom: '2rem',
+              color: 'white',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div>
+                <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', opacity: 0.85 }}>Welcome back,</p>
+                <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.75rem', fontWeight: 800 }}>
+                  {studentInfo?.full_name || user?.full_name || 'Student'} 👋
+                </h2>
+                <p style={{ margin: 0, fontSize: '0.88rem', opacity: 0.75 }}>
+                  {enrollments.length > 0
+                    ? `You're enrolled in ${enrollments.length} course${enrollments.length > 1 ? 's' : ''}. Keep pushing forward!`
+                    : 'Your learning journey starts here. Check out available courses!'}
+                </p>
+              </div>
+              <div style={{
+                background: 'rgba(255,255,255,0.15)',
+                borderRadius: '12px',
+                padding: '1rem 1.5rem',
+                textAlign: 'center',
+                minWidth: '120px'
+              }}>
+                <div style={{ fontSize: '2rem', fontWeight: 800 }}>{attendanceRate}%</div>
+                <div style={{ fontSize: '0.78rem', opacity: 0.85 }}>Attendance Rate</div>
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+              {[
+                { label: 'Courses Enrolled', value: enrollments.length, icon: '📚', color: '#4c6ef5', tab: 'courses' },
+                { label: 'Upcoming Classes', value: schedules.filter(s => new Date(s.scheduled_date) >= new Date()).length, icon: '📅', color: '#12b886', tab: 'timetable' },
+                { label: 'Pending Tasks', value: tasks.filter(t => !submissions.find(s => s.task_id === t.id)).length, icon: '✏️', color: '#f59f00', tab: 'homework' },
+                { label: 'Unread Messages', value: chatMessages.filter(m => m.receiver_id === (studentInfo?.profile_id || studentInfo?.id)).length, icon: '💬', color: '#ae3ec9', tab: 'chat' },
+              ].map(stat => (
+                <div
+                  key={stat.tab}
+                  onClick={() => setActiveTab(stat.tab)}
+                  style={{
+                    cursor: 'pointer',
+                    transition: 'transform 0.18s, box-shadow 0.18s',
+                    borderLeft: `4px solid ${stat.color}`,
+                    background: 'white',
+                    borderRadius: '16px',
+                    padding: '1.25rem 1.5rem',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}
+                >
+                  <div style={{ fontSize: '1.75rem' }}>{stat.icon}</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#718096', fontWeight: 600 }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="dashboard-card">
+              <h3 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <LayoutDashboard size={18} color="var(--primary-color)" /> Quick Actions
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                {[
+                  { label: '📖 Open My Courses', tab: 'courses' },
+                  { label: '🗓️ View Timetable', tab: 'timetable' },
+                  { label: '✏️ Tasks & Grades', tab: 'homework' },
+                  { label: '💬 Message Tutor', tab: 'chat' },
+                  { label: '📞 Book Consultation', tab: 'bookings' },
+                  { label: '👤 Edit Profile', tab: 'profile' },
+                ].map(action => (
+                  <button
+                    key={action.tab}
+                    onClick={() => setActiveTab(action.tab)}
+                    style={{
+                      padding: '0.55rem 1.25rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      background: 'var(--primary-color)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'opacity 0.15s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Announcements */}
+            {announcements.length > 0 && (
+              <div className="dashboard-card" style={{ marginTop: '1.5rem' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Megaphone size={18} color="var(--primary-color)" /> Recent Announcements
+                </h3>
+                {announcements.slice(0, 3).map(ann => (
+                  <div key={ann.id} style={{
+                    padding: '0.85rem 1rem',
+                    background: '#f7fafc',
+                    borderRadius: '8px',
+                    marginBottom: '0.75rem',
+                    borderLeft: '3px solid var(--primary-color)'
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: '0.25rem' }}>{ann.title}</div>
+                    <div style={{ fontSize: '0.82rem', color: '#4a5568' }}>{ann.message}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tab 1: Bookings */}
         {activeTab === 'bookings' && (
           <div>
@@ -851,12 +987,12 @@ export default function StudentDashboard({ user }) {
                     <input type="tel" name="phone" value={studentInfo.phone || ''} onChange={(e) => setStudentInfo(prev => ({ ...prev, phone: e.target.value }))} />
                   </div>
                   <div className="form-group">
-                    <label>Date of Birth <span style={{ fontSize: '0.72rem', color: '#a0aec0', fontWeight: 'normal' }}>— set by admin</span></label>
+                    <label>Date of Birth</label>
                     <input
-                      type="text"
+                      type="date"
                       value={studentInfo.date_of_birth || ''}
-                      readOnly
-                      style={{ background: '#f7fafc', color: '#a0aec0', cursor: 'not-allowed', border: '1.5px dashed #e2e8f0' }}
+                      onChange={(e) => setStudentInfo(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                      required
                     />
                   </div>
                   <div className="form-group">

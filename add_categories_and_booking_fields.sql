@@ -17,12 +17,13 @@ INSERT INTO public.course_categories (id, name, description) VALUES
   ('cat_english', 'English & Reading', 'Reading, writing, and language arts'),
   ('cat_science', 'Science', 'Natural and physical sciences'),
   ('cat_testprep', 'Test Prep', 'Preparation for examinations like JAMB, WAEC, NECO, SAT, ACT'),
+  ('cat_languages', 'World Languages', 'Spanish, French, and world language courses'),
   ('cat_coding', 'Coding & Tech', 'Software programming and future technology skills')
 ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description;
 
 -- 3. Update courses table structure to ensure category columns exist
--- (In full_migration.sql, courses table already has 'category TEXT' column)
 ALTER TABLE public.courses
+  ADD COLUMN IF NOT EXISTS category TEXT,
   ADD COLUMN IF NOT EXISTS course_type TEXT DEFAULT 'regular';
 
 -- 4. Seed standard subjects into courses table linked to their categories
@@ -57,6 +58,10 @@ INSERT INTO public.courses (id, title, description, category, course_type, image
   ('c_tp_sat', 'SAT Prep', 'College Board SAT reasoning test prep covering reading, writing, and math strategy.', 'Test Prep', 'special', '/images/whyus.jpg'),
   ('c_tp_act', 'ACT Prep', 'Comprehensive ACT exam review covering English, math, reading, and science reasoning.', 'Test Prep', 'special', '/images/whyus.jpg'),
   ('c_tp_state', 'State Assessments', 'Preparation for localized state tests and benchmark standard compliance assessments.', 'Test Prep', 'special', '/images/whyus.jpg'),
+  
+  -- World Languages
+  ('c_lang_spanish', 'Spanish', 'Introduction to Spanish vocabulary, grammar rules, and conversational dialogues.', 'World Languages', 'regular', '/images/book2.jpg'),
+  ('c_lang_french', 'French', 'Foundational French syntax, pronouns, spelling rules, and listening comprehension.', 'World Languages', 'regular', '/images/book2.jpg'),
   
   -- Coding & Tech
   ('c_code_intro', 'Intro to Coding', 'Learn basic block logic, scratch sequences, loop parameters, and coding structures.', 'Coding & Tech', 'special', '/images/boylearning.jpg'),

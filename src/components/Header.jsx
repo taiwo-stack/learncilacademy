@@ -87,6 +87,7 @@ export default function Header({ currentUser, onLogout }) {
                   <li><a onClick={() => handleSubjectFilterNav('English & Reading')}>Reading &amp; English</a></li>
                   <li><a onClick={() => handleSubjectFilterNav('Science')}>Science</a></li>
                   <li><a onClick={() => handleSubjectFilterNav('Test Prep')}>Test Prep</a></li>
+                  <li><a onClick={() => handleSubjectFilterNav('World Languages')}>World Languages</a></li>
                   <li><a onClick={() => handleSubjectFilterNav('Coding & Tech')}>Coding</a></li>
                 </ul>
               </li>
