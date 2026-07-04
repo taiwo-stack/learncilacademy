@@ -1076,28 +1076,22 @@ export default function LandingPage() {
         zIndex: 5
       }}>
         <div className="container" style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1.5rem',
-            textAlign: 'center',
-            alignItems: 'center'
-          }}>
+          <div className="stats-grid">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>100%</div>
-              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px' }}>Vetted, Qualified Tutors</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>100%</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px' }}>Vetted Tutors</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', borderLeft: '1px solid rgba(255, 255, 255, 0.12)' }} className="landing-stat-item">
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>1:1</div>
-              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.5rem' }}>Truly Individual Sessions — No Group Filler</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>1:1</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.25rem' }}>Private Lessons</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', borderLeft: '1px solid rgba(255, 255, 255, 0.12)' }} className="landing-stat-item">
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>4.9/5</div>
-              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.5rem' }}>Average Parent Rating</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>4.9/5</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.25rem' }}>Parent Rating</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', borderLeft: '1px solid rgba(255, 255, 255, 0.12)' }} className="landing-stat-item">
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>50+</div>
-              <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.5rem' }}>Subjects Covered, K–12</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-color)', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>50+</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600', letterSpacing: '0.3px', padding: '0 0.25rem' }}>Subjects Covered</div>
             </div>
           </div>
         </div>

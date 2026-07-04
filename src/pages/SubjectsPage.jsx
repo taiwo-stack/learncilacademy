@@ -161,6 +161,26 @@ export default function SubjectsPage() {
         zIndex: 1
       }} />
 
+      {/* Glowing decorative background blobs */}
+      <div style={{
+        position: 'absolute',
+        top: '8%', left: '4%',
+        width: '320px', height: '320px',
+        background: 'radial-gradient(circle, rgba(242, 122, 36, 0.12) 0%, rgba(242, 122, 36, 0) 70%)',
+        filter: 'blur(50px)',
+        pointerEvents: 'none',
+        zIndex: 1
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '20%', right: '4%',
+        width: '380px', height: '380px',
+        background: 'radial-gradient(circle, rgba(15, 44, 89, 0.35) 0%, rgba(15, 44, 89, 0) 70%)',
+        filter: 'blur(70px)',
+        pointerEvents: 'none',
+        zIndex: 1
+      }} />
+
       {/* Loading spinner while DB courses are being fetched */}
       {loading && (
         <div style={{
@@ -412,106 +432,45 @@ export default function SubjectsPage() {
             ) : (
               <div className="subjects-grid">
                 {filteredSubjects.map(subj => (
-                  <div
-                    key={subj.id}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1.5px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '24px',
-                      padding: '2rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                      transition: 'all 0.3s ease'
-                    }}
-                    className="subject-detail-card"
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-6px)';
-                      e.currentTarget.style.borderColor = 'rgba(242, 122, 36, 0.4)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                    }}
-                  >
+                  <div key={subj.id} className="subject-detail-card">
                     <div>
                       {/* Category badge + Grade chips */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                        <span style={{
-                          background: 'rgba(242, 122, 36, 0.15)',
-                          color: 'var(--accent-color)',
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '50px',
-                          fontSize: '0.72rem',
-                          fontWeight: '700',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
-                        }}>
+                        <span className="subject-card-category">
                           {subj.category}
                         </span>
                         <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          {subj.grades.map(g => (
-                            <span
-                              key={g}
-                              style={{
-                                background: 'rgba(255, 255, 255, 0.08)',
-                                color: 'rgba(255, 255, 255, 0.8)',
-                                padding: '0.25rem 0.6rem',
-                                borderRadius: '6px',
-                                fontSize: '0.7rem',
-                                fontWeight: '600'
-                              }}
-                            >
-                              {g}
-                            </span>
-                          ))}
+                          {subj.grades.map(g => {
+                            let gradeClass = 'k-5';
+                            if (g === 'Middle School') gradeClass = 'middle';
+                            if (g === 'High School') gradeClass = 'high';
+                            return (
+                              <span key={g} className={`subject-card-grade-tag ${gradeClass}`}>
+                                {g}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
 
                       {/* Title */}
-                      <h3 style={{
-                        color: 'white',
-                        fontSize: '1.3rem',
-                        fontWeight: '800',
-                        margin: '0 0 0.8rem 0',
-                        fontFamily: 'var(--font-heading)'
-                      }}>
+                      <h3 className="subject-card-title">
                         {subj.name}
                       </h3>
 
                       {/* Description */}
-                      <p style={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        fontSize: '0.88rem',
-                        lineHeight: '1.6',
-                        margin: '0 0 1.5rem 0',
-                        minHeight: '4.8rem'
-                      }}>
+                      <p className="subject-card-desc">
                         {subj.description}
                       </p>
 
-                      {/* Skills Tags */}
+                      {/* Skills/Topics tags list */}
                       <div style={{ marginBottom: '2rem' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'rgba(255, 255, 255, 0.45)', marginBottom: '0.6rem' }}>
+                        <div className="subject-card-topics-title">
                           Key Topics:
                         </div>
                         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                           {subj.skills.map(s => (
-                            <span
-                              key={s}
-                              style={{
-                                background: 'rgba(255, 255, 255, 0.04)',
-                                border: '1px solid rgba(255, 255, 255, 0.06)',
-                                color: 'rgba(255, 255, 255, 0.72)',
-                                padding: '0.25rem 0.65rem',
-                                borderRadius: '8px',
-                                fontSize: '0.75rem',
-                                fontWeight: '500'
-                              }}
-                            >
+                            <span key={s} className="subject-card-skill-tag">
                               {s}
                             </span>
                           ))}
@@ -522,27 +481,7 @@ export default function SubjectsPage() {
                     {/* Action Button */}
                     <button
                       onClick={() => handleRequestTutor(subj.name)}
-                      style={{
-                        width: '100%',
-                        padding: '0.8rem',
-                        background: 'transparent',
-                        border: '2.5px solid var(--accent-color)',
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontWeight: '700',
-                        fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        textAlign: 'center'
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.background = 'var(--accent-color)';
-                        e.currentTarget.style.boxShadow = '0 5px 15px rgba(242, 122, 36, 0.2)';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
+                      className="subject-card-button"
                     >
                       Request a Tutor
                     </button>

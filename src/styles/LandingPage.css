@@ -1395,12 +1395,11 @@ section {
     min-height: 32px;
   }
 
-  /* Stats strip */
   .landing-stat-item {
-    border-left: none !important;
-    padding-left: 0 !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 1.5rem;
+    border-top: none !important;
+    padding-top: 0 !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+    padding-left: 0.25rem !important;
   }
 
   /* Testimonials */
