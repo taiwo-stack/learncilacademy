@@ -1552,3 +1552,88 @@ section {
     text-align: center;
   }
 }
+
+/* ==========================================================
+   LANDING PAGE SUBJECTS SECTION STYLING (GRID & SCROLL TABS)
+   ========================================================== */
+
+/* Category Select Tab buttons */
+.landing-subject-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 3rem;
+  width: 100%;
+}
+
+/* Packed Subjects Grid */
+.landing-subject-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.85rem;
+  max-width: 900px;
+  margin: 0 auto 3rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Individual Subject Chip Card */
+.landing-subject-chip {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 54px;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  /* Scrollable horizontal category filters */
+  .landing-subject-tabs {
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    padding: 0.2rem 1.25rem 0.8rem !important;
+    margin-bottom: 2.25rem !important;
+    scrollbar-width: none !important; /* Firefox */
+    width: 100vw !important;
+    margin-left: calc(-50vw + 50%); /* Full bleed centering */
+    box-sizing: border-box !important;
+  }
+
+  .landing-subject-tabs::-webkit-scrollbar {
+    display: none !important; /* Chrome, Safari, Opera */
+  }
+
+  .landing-subject-tabs button {
+    flex-shrink: 0 !important;
+  }
+
+  /* Compact grid columns */
+  .landing-subject-chips-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 0.65rem !important;
+    padding: 0 0.5rem !important;
+    margin-bottom: 2.5rem !important;
+  }
+
+  .landing-subject-chip {
+    padding: 0.75rem 0.85rem !important;
+    font-size: 0.86rem !important;
+    min-height: 48px !important;
+    border-radius: 10px !important;
+  }
+}

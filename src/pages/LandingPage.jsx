@@ -1546,13 +1546,7 @@ export default function LandingPage() {
           </div>
 
           {/* Tab buttons / chips */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '0.75rem',
-            flexWrap: 'wrap',
-            marginBottom: '3rem'
-          }}>
+          <div className="landing-subject-tabs">
             {['All', ...Object.keys(subjectCategories)].map((cat) => {
               const isActive = activeSubjectTab === cat;
               return (
@@ -1591,31 +1585,14 @@ export default function LandingPage() {
           </div>
 
           {/* Filtered Subjects chips list */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '1rem',
-            flexWrap: 'wrap',
-            maxWidth: '900px',
-            margin: '0 auto 3rem'
-          }}>
+          <div className="landing-subject-chips-grid">
             {(activeSubjectTab === 'All' 
               ? Object.values(subjectCategories).flat() 
               : subjectCategories[activeSubjectTab]
             ).map((subj) => (
               <div
                 key={subj}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.07)',
-                  border: '1.5px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  padding: '0.8rem 1.5rem',
-                  color: 'white',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.05)',
-                  transition: 'all 0.25s ease'
-                }}
+                className="landing-subject-chip"
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = 'var(--accent-color)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
