@@ -869,56 +869,56 @@ footer {
     transform: translateX(-50%) translateY(-2px);
   }
 
-  /* Make checkbox group rows scroll horizontally */
+  /* Make checkbox group rows stack vertically inside mobile drawer */
   .filter-checkbox-group {
-    flex-direction: row !important;
-    gap: 0.6rem !important;
-    overflow-x: auto !important;
-    padding: 0.3rem 0.2rem !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    overflow-x: visible !important;
+    padding: 0 !important;
     width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    scrollbar-width: none !important; /* Firefox */
   }
 
   .filter-checkbox-group::-webkit-scrollbar {
-    display: none !important; /* Safari, Chrome */
+    display: none !important;
   }
 
-  /* Render checkbox containers as touch-friendly chips */
+  /* Render checkbox containers as touch-friendly lists */
   .filter-label-chip {
-    white-space: nowrap !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    padding: 0.5rem 1rem !important;
-    border-radius: 50px !important;
-    display: inline-flex !important;
+    white-space: normal !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 12px !important;
+    display: flex !important;
     align-items: center !important;
-    gap: 0.5rem !important;
-    font-size: 0.85rem !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    font-size: 0.9rem !important;
     transition: all 0.2s ease !important;
-    color: rgba(255, 255, 255, 0.8) !important;
+    color: rgba(255, 255, 255, 0.75) !important;
     cursor: pointer;
     user-select: none;
+    width: 100% !important;
+    box-sizing: border-box !important;
     transform: none !important;
   }
 
   .filter-label-chip:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
     transform: none !important;
   }
 
-  /* Hide native square checkbox in favor of the full chip color state */
+  /* Keep native checkbox visible inside drawer list */
   .filter-label-chip input[type="checkbox"] {
-    display: none !important;
+    display: inline-flex !important;
   }
 
-  /* Highlight checked chip using active class (supports 100% of mobile browsers) */
+  /* Highlight checked list item using active class */
   .filter-label-chip.active {
-    background: var(--accent-gradient) !important;
-    border-color: var(--accent-color) !important;
+    background: rgba(242, 122, 36, 0.08) !important;
+    border-color: rgba(242, 122, 36, 0.3) !important;
     color: white !important;
-    box-shadow: 0 4px 12px rgba(242, 122, 36, 0.2) !important;
+    box-shadow: none !important;
   }
 
   /* Pack subjects grid card widths tighter to enable side-by-side display */

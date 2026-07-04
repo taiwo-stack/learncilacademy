@@ -208,6 +208,13 @@ export default function SubjectsPage() {
           transition: 'opacity 0.3s ease'
         }}
       >
+        {/* Filter Drawer Backdrop Overlay inside container stacking context */}
+        {mobileFilterOpen && (
+          <div 
+            className="filter-drawer-backdrop" 
+            onClick={() => setMobileFilterOpen(false)} 
+          />
+        )}
         {/* Header Block */}
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
           <span style={{
@@ -511,13 +518,7 @@ export default function SubjectsPage() {
         🔍 Filter &amp; Search {(selectedCategories.length + selectedGrades.length + (searchQuery ? 1 : 0)) > 0 ? `(${selectedCategories.length + selectedGrades.length + (searchQuery ? 1 : 0)})` : ''}
       </button>
 
-      {/* Filter Drawer Backdrop Overlay */}
-      {mobileFilterOpen && (
-        <div 
-          className="filter-drawer-backdrop" 
-          onClick={() => setMobileFilterOpen(false)} 
-        />
-      )}
+
     </div>
   );
 }
