@@ -878,85 +878,7 @@ export default function StudentDashboard({ user }) {
                   )}
                 </div>
 
-                {/* Interactive Quiz Solving Modal */}
-                {activeQuizId && (
-                  <div className="dashboard-card" style={{ background: '#f8fafc', borderLeft: '4px solid var(--accent-color)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #edf2f7', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--primary-color)', margin: 0 }}>
-                        📝 {tasks.find(t => t.id === activeQuizId)?.title}
-                      </h4>
-                      <button onClick={() => { setActiveQuizId(null); setQuizScore(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0' }}><X size={18} /></button>
-                    </div>
 
-                    {/* Questions list */}
-                    {(() => {
-                      const activeTask = tasks.find(t => t.id === activeQuizId);
-                      const questions = parseQuizQuestions(activeTask?.quiz_questions);
-                      if (questions.length === 0) {
-                        return (
-                          <div style={{ color: '#a0aec0', padding: '1rem', textAlign: 'center', fontSize: '0.88rem' }}>
-                            This quiz has no questions yet. Ask your tutor to add questions.
-                          </div>
-                        );
-                      }
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                          {questions.map((q, qIdx) => (
-                            <div key={qIdx} style={{ background: 'white', padding: '1rem', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                              <p style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.6rem' }}>{qIdx + 1}. {q.question}</p>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                {(q.options || []).map((opt, optIdx) => (
-                                  <label
-                                    key={optIdx}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.5rem',
-                                      fontSize: '0.85rem',
-                                      padding: '0.5rem',
-                                      borderRadius: '6px',
-                                      background: quizAnswers[qIdx] === optIdx ? '#ebf8ff' : 'transparent',
-                                      border: quizAnswers[qIdx] === optIdx ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name={`quiz-${activeQuizId}-${qIdx}`}
-                                      checked={quizAnswers[qIdx] === optIdx}
-                                      onChange={() => handleQuizOptionSelect(qIdx, optIdx)}
-                                      disabled={quizScore !== null}
-                                    />
-                                    {opt}
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Submit Button */}
-                    <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                      {quizScore === null ? (
-                        <button
-                          className="btn-primary"
-                          style={{ padding: '0.6rem 1.2rem', fontSize: '0.9rem' }}
-                          onClick={() => handleQuizSubmit(tasks.find(t => t.id === activeQuizId))}
-                        >
-                          Submit Answers
-                        </button>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span style={{ fontWeight: 'bold', color: '#166534', fontSize: '0.95rem' }}>Result Score: {quizScore}%</span>
-                          <button className="btn-action edit" style={{ padding: '0.6rem 1rem' }} onClick={() => { setActiveQuizId(null); setQuizScore(null); }}>Done</button>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-                )}
 
               </div>
             )}
@@ -1185,9 +1107,17 @@ export default function StudentDashboard({ user }) {
                             {sub.feedback && <div style={{ color: 'var(--primary-color)', fontWeight: 'bold', marginTop: '0.3rem' }}>📝 Tutor Feedback: "{sub.feedback}"</div>}
                           </div>
                         ) : (
-                          tk.task_type !== 'quiz' && (
-                            <div style={{ marginTop: '0.8rem' }}>
-                              {activeSubTaskId === tk.id ? (
+                          <div style={{ marginTop: '0.8rem' }}>
+                            {tk.task_type === 'quiz' || tk.task_type === 'Quiz' || (tk.quiz_questions && tk.quiz_questions !== '[]' && tk.quiz_questions !== 'null') ? (
+                              <button
+                                className="btn-action edit"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px' }}
+                                onClick={() => { setActiveQuizId(tk.id); setQuizAnswers({}); setQuizScore(null); }}
+                              >
+                                <Play size={13} /> Start Quiz
+                              </button>
+                            ) : (
+                              activeSubTaskId === tk.id ? (
                                 <form onSubmit={handleHomeworkSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', background: '#f7fafc', padding: '1rem', borderRadius: '10px' }}>
                                   <div className="form-group">
                                     <label style={{ fontSize: '0.8rem' }}>Write homework solution / notes *</label>
@@ -1204,9 +1134,9 @@ export default function StudentDashboard({ user }) {
                                 </form>
                               ) : (
                                 <button className="btn-action edit" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => { setActiveSubTaskId(tk.id); setSubText(''); setSubFile(null); }}>Submit Homework</button>
-                              )}
-                            </div>
-                          )
+                              )
+                            )}
+                          </div>
                         )}
                       </li>
                     );
@@ -1304,6 +1234,111 @@ export default function StudentDashboard({ user }) {
                   <Save size={16} /> {saving ? 'Saving...' : 'Save Profile Details'}
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Interactive Quiz Solving Modal Overlay */}
+        {activeQuizId && (
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(8, 23, 48, 0.7)',
+            backdropFilter: 'blur(5px)',
+            WebkitBackdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1.25rem',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div className="dashboard-card" style={{
+              background: '#f8fafc',
+              borderLeft: '4px solid var(--accent-color)',
+              maxWidth: '650px',
+              width: '100%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              position: 'relative',
+              margin: 0,
+              boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+              borderRadius: '16px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #edf2f7', paddingBottom: '0.8rem', marginBottom: '1.25rem' }}>
+                <h4 style={{ fontSize: '1.15rem', fontWeight: 'bold', color: 'var(--primary-color)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  📝 {tasks.find(t => t.id === activeQuizId)?.title}
+                </h4>
+                <button onClick={() => { setActiveQuizId(null); setQuizScore(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0', padding: '0.25rem' }}><X size={20} /></button>
+              </div>
+
+              {/* Questions list */}
+              {(() => {
+                const activeTask = tasks.find(t => t.id === activeQuizId);
+                const questions = parseQuizQuestions(activeTask?.quiz_questions);
+                if (questions.length === 0) {
+                  return (
+                    <div style={{ color: '#a0aec0', padding: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>
+                      This quiz has no questions yet. Ask your tutor to add questions.
+                    </div>
+                  );
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {questions.map((q, qIdx) => (
+                      <div key={qIdx} style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', border: '1px solid #f0f4f8' }}>
+                        <p style={{ fontWeight: 'bold', fontSize: '0.92rem', marginBottom: '0.75rem', color: 'var(--text-dark)' }}>{qIdx + 1}. {q.question}</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {(q.options || []).map((opt, optIdx) => (
+                            <label
+                              key={optIdx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                fontSize: '0.88rem',
+                                padding: '0.65rem 0.85rem',
+                                borderRadius: '8px',
+                                background: quizAnswers[qIdx] === optIdx ? '#f0f7ff' : 'transparent',
+                                border: quizAnswers[qIdx] === optIdx ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                name={`quiz-${activeQuizId}-${qIdx}`}
+                                checked={quizAnswers[qIdx] === optIdx}
+                                onChange={() => handleQuizOptionSelect(qIdx, optIdx)}
+                                disabled={quizScore !== null}
+                                style={{ accentColor: 'var(--primary-color)' }}
+                              />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Submit Button */}
+              <div style={{ marginTop: '1.75rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem', borderTop: '1px solid #edf2f7', paddingTop: '1.25rem' }}>
+                {quizScore === null ? (
+                  <button
+                    className="btn-primary"
+                    style={{ padding: '0.65rem 1.5rem', fontSize: '0.9rem', borderRadius: '10px' }}
+                    onClick={() => handleQuizSubmit(tasks.find(t => t.id === activeQuizId))}
+                  >
+                    Submit Answers
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <span style={{ fontWeight: 'bold', color: '#166534', fontSize: '1rem' }}>Result Score: {quizScore}%</span>
+                    <button className="btn-action edit" style={{ padding: '0.65rem 1.25rem', borderRadius: '8px' }} onClick={() => { setActiveQuizId(null); setQuizScore(null); }}>Done</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
