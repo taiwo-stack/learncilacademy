@@ -52,6 +52,23 @@ export default function TutorDashboard({ user }) {
   const [newTaskMax, setNewTaskMax] = useState(100);
   const [newTaskType, setNewTaskType] = useState('assignment'); // 'assignment' | 'quiz'
 
+  // Target students selector
+  const [targetStudentIds, setTargetStudentIds] = useState([]); // empty = all
+  const [targetAll, setTargetAll] = useState(true);
+
+  const toggleTargetStudent = (id) => {
+    setTargetStudentIds(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  // Reset targeting when course changes
+  const handleTaskCourseChange = (courseId) => {
+    setNewTaskCourse(courseId);
+    setTargetStudentIds([]);
+    setTargetAll(true);
+  };
+
   // Quiz builder state
   const [quizQuestions, setQuizQuestions] = useState([
     { question: '', options: ['', '', '', ''], correct: 0 }
@@ -70,6 +87,11 @@ export default function TutorDashboard({ user }) {
     setQuizQuestions(prev => prev.map((q, i) =>
       i === qIdx ? { ...q, options: q.options.map((o, oi) => oi === optIdx ? value : o) } : q
     ));
+
+  // Students enrolled in the currently-selected course
+  const courseStudents = students.filter(s =>
+    enrollments.some(sc => sc.course_id === newTaskCourse && sc.student_id === s.id)
+  );
 
   // Grading states
   const [activeSubmissionId, setActiveSubmissionId] = useState(null);
@@ -184,7 +206,7 @@ export default function TutorDashboard({ user }) {
 
   // --- LMS TUTOR HANDLERS ---
 
-  const handleCreateTask = async (e) => {
+  const handleCreateTask = async (e, status = 'published') => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskCourse) return alert('Fill out task title and course.');
 
@@ -196,6 +218,11 @@ export default function TutorDashboard({ user }) {
       if (quizQuestions.length === 0) return alert('Add at least one quiz question.');
     }
 
+    // Resolve final target list
+    const resolvedTargets = targetAll
+      ? courseStudents.map(s => s.id)
+      : targetStudentIds;
+
     try {
       const taskPayload = {
         course_id: newTaskCourse,
@@ -203,6 +230,8 @@ export default function TutorDashboard({ user }) {
         description: newTaskDesc,
         task_type: newTaskType,
         max_points: newTaskType === 'quiz' ? quizQuestions.length * 10 : newTaskMax,
+        status,
+        target_student_ids: resolvedTargets,
         ...(newTaskType === 'quiz' && { quiz_questions: quizQuestions })
       };
       const saved = await saveTask(taskPayload);
@@ -213,7 +242,15 @@ export default function TutorDashboard({ user }) {
       setNewTaskMax(100);
       setNewTaskType('assignment');
       setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
-      alert(newTaskType === 'quiz' ? 'Quiz created and sent to students!' : 'Task created successfully!');
+      setTargetStudentIds([]);
+      setTargetAll(true);
+      setNewTaskCourse('');
+      if (status === 'draft') {
+        alert('Saved as draft. Students cannot see it yet.');
+      } else {
+        const who = targetAll ? 'all enrolled students' : `${resolvedTargets.length} selected student(s)`;
+        alert(`${newTaskType === 'quiz' ? 'Quiz' : 'Task'} published to ${who}!`);
+      }
     } catch (err) {
       alert('Error creating task: ' + err.message);
     }
@@ -1078,7 +1115,12 @@ export default function TutorDashboard({ user }) {
                   {/* Course */}
                   <div className="form-group">
                     <label>Select Course *</label>
-                    <select value={newTaskCourse} onChange={(e) => setNewTaskCourse(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
+                    <select
+                      value={newTaskCourse}
+                      onChange={(e) => handleTaskCourseChange(e.target.value)}
+                      required
+                      style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}
+                    >
                       <option value="">-- Choose Course --</option>
                       {courses.filter(c => enrollments.some(sc => sc.course_id === c.id && sc.tutor_id === (tutorInfo?.id || tutorId))).map(c => (
                         <option key={c.id} value={c.id}>{c.title}</option>
@@ -1237,9 +1279,116 @@ export default function TutorDashboard({ user }) {
                     </div>
                   )}
 
-                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem', marginTop: '0.5rem' }}>
-                    {newTaskType === 'quiz' ? '🚀 Publish Quiz to Students' : '📤 Post Assignment'}
-                  </button>
+                  {/* ── Target Students Selector ── */}
+                  {newTaskCourse && courseStudents.length > 0 && (
+                    <div className="form-group">
+                      <label>Send To *</label>
+                      <div style={{
+                        border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                        overflow: 'hidden', background: '#fafafa'
+                      }}>
+                        {/* Select All / None header */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '0.6rem',
+                          padding: '0.55rem 0.75rem',
+                          background: targetAll ? 'var(--primary-color)' : '#edf2f7',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s'
+                        }}
+                          onClick={() => { setTargetAll(true); setTargetStudentIds([]); }}
+                        >
+                          <div style={{
+                            width: '16px', height: '16px', borderRadius: '3px', flexShrink: 0,
+                            border: `2px solid ${targetAll ? 'white' : '#a0aec0'}`,
+                            background: targetAll ? 'white' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            {targetAll && <span style={{ color: 'var(--primary-color)', fontSize: '0.7rem', fontWeight: 'bold' }}>✓</span>}
+                          </div>
+                          <span style={{
+                            fontSize: '0.82rem', fontWeight: '700',
+                            color: targetAll ? 'white' : '#4a5568'
+                          }}>
+                            👥 All enrolled students ({courseStudents.length})
+                          </span>
+                        </div>
+
+                        {/* Individual student rows */}
+                        <div style={{ padding: '0.4rem 0' }}>
+                          {courseStudents.map(s => {
+                            const checked = !targetAll && targetStudentIds.includes(s.id);
+                            return (
+                              <div
+                                key={s.id}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                  padding: '0.45rem 0.75rem', cursor: 'pointer',
+                                  background: checked ? 'rgba(59,130,246,0.06)' : 'transparent',
+                                  transition: 'background 0.1s'
+                                }}
+                                onClick={() => {
+                                  setTargetAll(false);
+                                  toggleTargetStudent(s.id);
+                                }}
+                              >
+                                <div style={{
+                                  width: '16px', height: '16px', borderRadius: '3px', flexShrink: 0,
+                                  border: `2px solid ${checked ? 'var(--primary-color)' : '#cbd5e0'}`,
+                                  background: checked ? 'var(--primary-color)' : 'white',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                  {checked && <span style={{ color: 'white', fontSize: '0.65rem', fontWeight: 'bold' }}>✓</span>}
+                                </div>
+                                <span style={{ fontSize: '0.82rem', color: '#2d3748' }}>{s.full_name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Selection summary */}
+                        {!targetAll && (
+                          <div style={{
+                            padding: '0.4rem 0.75rem',
+                            borderTop: '1px solid #e2e8f0',
+                            fontSize: '0.72rem', color: '#718096'
+                          }}>
+                            {targetStudentIds.length === 0
+                              ? '⚠️ No students selected — pick at least one or use "All"'
+                              : `✅ ${targetStudentIds.length} of ${courseStudents.length} student(s) selected`
+                            }
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Draft / Publish action buttons ── */}
+                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => handleCreateTask(e, 'draft')}
+                      disabled={!newTaskTitle || !newTaskCourse || (!targetAll && targetStudentIds.length === 0)}
+                      style={{
+                        flex: 1, padding: '0.75rem', borderRadius: '10px',
+                        border: '2px solid #cbd5e0', background: 'white',
+                        color: '#4a5568', fontWeight: '700', cursor: 'pointer',
+                        fontSize: '0.85rem', opacity: (!newTaskTitle || !newTaskCourse) ? 0.5 : 1
+                      }}
+                    >
+                      💾 Save Draft
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!newTaskTitle || !newTaskCourse || (!targetAll && targetStudentIds.length === 0)}
+                      className="btn-primary"
+                      style={{
+                        flex: 2, padding: '0.75rem',
+                        opacity: (!newTaskTitle || !newTaskCourse) ? 0.5 : 1
+                      }}
+                    >
+                      {newTaskType === 'quiz' ? '🚀 Publish Quiz' : '📤 Publish Assignment'}
+                    </button>
+                  </div>
                 </form>
               </div>
 

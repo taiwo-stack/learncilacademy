@@ -22,6 +22,26 @@ const formatMessageTime = (dateStr) => {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+// Course banner image helper (mirrors LandingPage logic)
+const getSpecialClassImage = (title = '', index = 0) => {
+  const t = title.toLowerCase();
+  if (t.includes('programming') || t.includes('code') || t.includes('python') || t.includes('java')) return '/images/book4.jpg';
+  if (t.includes('ai') || t.includes('intelligence') || t.includes('artificial')) return '/images/ai.jpg';
+  if (t.includes('science') || t.includes('data')) return '/images/student5.jpg';
+  if (t.includes('excel') || t.includes('word') || t.includes('microsoft') || t.includes('office')) return '/images/student6.jpg';
+  if (t.includes('web') || t.includes('design') || t.includes('html')) return '/images/student10.jpg';
+  if (t.includes('writing') || t.includes('creative') || t.includes('essay')) return '/images/student3.jpg';
+  const images = ['/images/book4.jpg', '/images/ai.jpg', '/images/student5.jpg', '/images/student6.jpg', '/images/student10.jpg', '/images/student3.jpg'];
+  return images[index % images.length];
+};
+
+// Safely parse quiz_questions whether it arrives as an array or a JSON string
+const parseQuizQuestions = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw); } catch { return []; }
+};
+
 export default function StudentDashboard({ user }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
@@ -166,7 +186,7 @@ export default function StudentDashboard({ user }) {
   };
 
   const handleQuizSubmit = async (taskObj) => {
-    const questions = taskObj.quiz_questions || [];
+    const questions = parseQuizQuestions(taskObj?.quiz_questions);
     let correctCount = 0;
 
     questions.forEach((q, idx) => {
@@ -726,7 +746,16 @@ export default function StudentDashboard({ user }) {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                           {topics.filter(t => t.course_id === selectedCourseId).map((t, idx) => {
                             const topicMats = materials.filter(m => m.topic_id === t.id);
-                            const topicTasks = tasks.filter(tk => tk.topic_id === t.id);
+                            const topicTasks = tasks.filter(tk => {
+                              if (tk.topic_id !== t.id) return false;
+                              // Hide drafts
+                              if (tk.status === 'draft') return false;
+                              // If task has a target list, student must be in it
+                              if (tk.target_student_ids && tk.target_student_ids.length > 0) {
+                                return tk.target_student_ids.includes(studentInfo?.id || studentId);
+                              }
+                              return true; // no targeting = visible to all enrolled
+                            });
 
                             return (
                               <div key={t.id} style={{ borderBottom: '1px solid #edf2f7', paddingBottom: '1rem' }}>
@@ -819,10 +848,12 @@ export default function StudentDashboard({ user }) {
                                 )}
 
                                 {/* Interactive Quiz trigger links */}
-                                {topicTasks.filter(tk => tk.task_type === 'quiz').map(tk => {
+                                {topicTasks
+                                  .filter(tk => tk.task_type === 'quiz' || tk.task_type === 'Quiz' || (tk.quiz_questions && tk.quiz_questions !== '[]' && tk.quiz_questions !== 'null'))
+                                  .map(tk => {
                                   const sub = submissions.find(x => x.task_id === tk.id);
                                   return (
-                                    <div key={tk.id} style={{ marginTop: '0.5rem' }}>
+                                    <div key={tk.id} style={{ marginTop: '0.75rem' }}>
                                       {sub ? (
                                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: '#166534', background: '#d1fae5', padding: '0.3rem 0.6rem', borderRadius: '6px' }}>
                                           <Award size={12} /> Score: {sub.grade}% (Completed)
@@ -830,10 +861,10 @@ export default function StudentDashboard({ user }) {
                                       ) : (
                                         <button
                                           className="btn-action edit"
-                                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px' }}
                                           onClick={() => { setActiveQuizId(tk.id); setQuizAnswers({}); setQuizScore(null); }}
                                         >
-                                          <Play size={12} /> Start {tk.title}
+                                          <Play size={13} /> Start Quiz: {tk.title}
                                         </button>
                                       )}
                                     </div>
@@ -858,41 +889,53 @@ export default function StudentDashboard({ user }) {
                         </div>
 
                         {/* Questions list */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                          {(tasks.find(t => t.id === activeQuizId)?.quiz_questions || []).map((q, qIdx) => (
-                            <div key={qIdx} style={{ background: 'white', padding: '1rem', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                              <p style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.6rem' }}>{qIdx + 1}. {q.question}</p>
-
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                {q.options.map((opt, optIdx) => (
-                                  <label
-                                    key={optIdx}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.5rem',
-                                      fontSize: '0.85rem',
-                                      padding: '0.5rem',
-                                      borderRadius: '6px',
-                                      background: quizAnswers[qIdx] === optIdx ? '#ebf8ff' : 'transparent',
-                                      border: quizAnswers[qIdx] === optIdx ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name={`quiz-${activeQuizId}-${qIdx}`}
-                                      checked={quizAnswers[qIdx] === optIdx}
-                                      onChange={() => handleQuizOptionSelect(qIdx, optIdx)}
-                                      disabled={quizScore !== null}
-                                    />
-                                    {opt}
-                                  </label>
-                                ))}
+                        {(() => {
+                          const activeTask = tasks.find(t => t.id === activeQuizId);
+                          const questions = parseQuizQuestions(activeTask?.quiz_questions);
+                          if (questions.length === 0) {
+                            return (
+                              <div style={{ color: '#a0aec0', padding: '1rem', textAlign: 'center', fontSize: '0.88rem' }}>
+                                This quiz has no questions yet. Ask your tutor to add questions.
                               </div>
+                            );
+                          }
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                              {questions.map((q, qIdx) => (
+                                <div key={qIdx} style={{ background: 'white', padding: '1rem', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                  <p style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.6rem' }}>{qIdx + 1}. {q.question}</p>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                    {(q.options || []).map((opt, optIdx) => (
+                                      <label
+                                        key={optIdx}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '0.5rem',
+                                          fontSize: '0.85rem',
+                                          padding: '0.5rem',
+                                          borderRadius: '6px',
+                                          background: quizAnswers[qIdx] === optIdx ? '#ebf8ff' : 'transparent',
+                                          border: quizAnswers[qIdx] === optIdx ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={`quiz-${activeQuizId}-${qIdx}`}
+                                          checked={quizAnswers[qIdx] === optIdx}
+                                          onChange={() => handleQuizOptionSelect(qIdx, optIdx)}
+                                          disabled={quizScore !== null}
+                                        />
+                                        {opt}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })()}
 
                         {/* Submit Button */}
                         <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
