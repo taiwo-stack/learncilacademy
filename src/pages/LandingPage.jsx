@@ -902,7 +902,7 @@ export default function LandingPage() {
                       <label>Student's Full Name *</label>
                       <input type="text" name="studentName" value={studentForm.studentName} onChange={handleRegChange} placeholder="e.g. John Doe" required />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-row-2col">
                       <div className="form-group" style={{ margin: 0 }}>
                         <label>Parent Email *</label>
                         <input type="email" name="email" value={studentForm.email} onChange={handleRegChange} placeholder="parent@example.com" required />
@@ -912,7 +912,7 @@ export default function LandingPage() {
                         <input type="tel" name="primaryPhone" value={studentForm.primaryPhone} onChange={handleRegChange} placeholder="080..." required />
                       </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-row-2col">
                       <div className="form-group" style={{ margin: 0 }}>
                         <label>Grade Level *</label>
                         <select name="gradeLevel" value={studentForm.gradeLevel} onChange={handleRegChange} required>
@@ -958,7 +958,7 @@ export default function LandingPage() {
                         required
                       />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-row-2col">
                       <div className="form-group" style={{ margin: 0 }}>
                         <label>Parent Email *</label>
                         <input
@@ -993,7 +993,7 @@ export default function LandingPage() {
                         required
                       />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="form-row-2col">
                       <div className="form-group" style={{ margin: 0 }}>
                         <label>Preferred Date *</label>
                         <input
@@ -1125,7 +1125,7 @@ export default function LandingPage() {
             </p>
           </div>
           
-          <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2.5rem' }}>
+          <div className="features-grid">
             
             {/* Step 1: Blueprints */}
             <div 
@@ -1683,7 +1683,7 @@ export default function LandingPage() {
         }}
       >
         <div className="container">
-          <div className="why-choose-content" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3.5rem', alignItems: 'center' }}>
+          <div className="why-choose-content">
             
             {/* Left Column: Vision, Mission & Testimonial Proof */}
             <div className="why-choose-left" style={{ color: 'white', textAlign: 'left' }}>
