@@ -606,29 +606,48 @@ export default function TutorDashboard({ user }) {
 
                   {schCourseId && (
                     <div className="form-group">
-                      <label>Lesson Topic (Optional - Auto-populates title)</label>
-                      <select value={schTopicId} onChange={(e) => {
-                        const val = e.target.value;
-                        setSchTopicId(val);
-                        if (val) {
-                          const selectedTopicObj = topics.find(tp => tp.id === val);
-                          if (selectedTopicObj) {
-                            setSchTitle(selectedTopicObj.title);
+                      <label>Class Topic *</label>
+                      <select 
+                        value={schTopicId} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSchTopicId(val);
+                          if (val === 'custom') {
+                            setSchTitle('');
+                          } else if (val) {
+                            const selectedTopicObj = topics.find(tp => tp.id === val);
+                            if (selectedTopicObj) {
+                              setSchTitle(selectedTopicObj.title);
+                            }
+                          } else {
+                            setSchTitle('');
                           }
-                        }
-                      }} style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
-                        <option value="">-- Choose Topic / Custom --</option>
+                        }} 
+                        required 
+                        style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}
+                      >
+                        <option value="">-- Choose Topic --</option>
                         {topics.filter(t => t.course_id === schCourseId).map(t => (
                           <option key={t.id} value={t.id}>{t.title}</option>
                         ))}
+                        <option value="custom">✏️ Custom Title...</option>
                       </select>
                     </div>
                   )}
 
-                  <div className="form-group">
-                    <label>Lecture Title / Topic *</label>
-                    <input type="text" value={schTitle} onChange={(e) => setSchTitle(e.target.value)} placeholder="e.g. State Management Intro" required style={{ width: '100%' }} />
-                  </div>
+                  {schCourseId && (schTopicId === 'custom' || topics.filter(t => t.course_id === schCourseId).length === 0) && (
+                    <div className="form-group">
+                      <label>Lecture Title *</label>
+                      <input 
+                        type="text" 
+                        value={schTitle} 
+                        onChange={(e) => setSchTitle(e.target.value)} 
+                        placeholder="e.g. Special Revision Class" 
+                        required 
+                        style={{ width: '100%' }} 
+                      />
+                    </div>
+                  )}
                   <div className="form-group">
                     <label>Schedule Mode *</label>
                     <select value={schType} onChange={(e) => setSchType(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
