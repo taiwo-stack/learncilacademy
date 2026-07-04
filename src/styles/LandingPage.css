@@ -1237,66 +1237,99 @@ section {
   }
 }
 
-/* ============================================
-   COMPREHENSIVE MOBILE RESPONSIVE STYLES
-   ============================================ */
+/* ================================================================
+   COMPREHENSIVE MOBILE RESPONSIVE — LANDING PAGE (TOP TO BOTTOM)
+   Breakpoints: 1024 | 768 | 480 | 360
+   ================================================================ */
 
-/* Tablet (max 900px) */
-@media (max-width: 900px) {
-  /* Hero */
+/* ── TABLET  (≤1024px) ────────────────────────────────────────── */
+@media (max-width: 1024px) {
+
+  /* ─ Hero ─ */
   .hero {
     padding-top: 6rem;
+    padding-bottom: 3.5rem;
     min-height: auto;
-    padding-bottom: 3rem;
+  }
+
+  .hero-content,
+  .why-choose-content,
+  .contact-content {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    text-align: center;
   }
 
   .hero-text h1 {
-    font-size: 2.4rem;
+    font-size: 2.6rem;
   }
 
   .hero-buttons {
-    flex-wrap: wrap;
-    gap: 0.8rem;
     justify-content: center;
+    flex-wrap: wrap;
   }
 
-  /* Why choose - stack image below text on tablet */
-  .why-choose-content {
+  .hero-form-card {
+    max-width: 540px !important;
+    margin: 0 auto !important;
+  }
+
+  /* ─ Why-choose ─ */
+  .why-choose-left {
+    text-align: center !important;
+  }
+
+  .why-choose-right {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  }
+
+  /* ─ Contact ─ */
+  .contact-image-placeholder {
+    height: 260px;
+    order: -1;
+  }
+
+  .checkmark-list {
+    display: inline-block;
+    text-align: left;
+  }
+
+  /* ─ Teachers nav ─ */
+  .teachers-nav {
+    display: none;
+  }
+
+  /* ─ Learning Approach ─ */
+  .learning-approach-split {
+    grid-template-columns: 1fr;
     gap: 2.5rem;
-  }
-
-  .why-choose-image {
-    height: 280px;
-  }
-
-  /* Calendar */
-  .calendar-container {
-    overflow-x: auto;
-  }
-
-  /* Tutors grid */
-  .teachers-section .teachers-grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-
-  /* Booking section */
-  .booking-layout {
-    flex-direction: column;
   }
 }
 
-/* Mobile (max 768px) */
+
+/* ── MOBILE  (≤768px) ────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Container padding */
+
+  /* ─ Global ─ */
   .container {
-    padding: 0 1rem;
+    padding: 0 1.1rem;
   }
 
   section {
     padding: 3.5rem 0;
   }
 
-  /* Hero */
+  /* ─ Section titles ─ */
+  .section-title h2 {
+    font-size: 1.9rem;
+  }
+
+  .section-title p {
+    font-size: 0.97rem;
+    padding: 0 0.5rem;
+  }
+
+  /* ─ Hero ─ */
   .hero {
     padding-top: 5.5rem;
     text-align: center;
@@ -1304,51 +1337,95 @@ section {
 
   .hero-content {
     grid-template-columns: 1fr;
-    gap: 2.5rem;
+    gap: 2rem;
   }
 
   .hero-text h1 {
-    font-size: 2rem;
+    font-size: 2.1rem;
+    line-height: 1.28;
   }
 
   .hero-text p {
     font-size: 1rem;
+    margin-bottom: 1.75rem;
   }
 
   .hero-buttons {
     justify-content: center;
     flex-wrap: wrap;
+    gap: 0.85rem;
   }
 
   .hero-image-placeholder {
-    height: 250px;
+    height: 220px;
   }
 
-  /* Hero Form Card */
+  /* Hero form card – full width */
   .hero-form-card {
     max-width: 100% !important;
     margin: 0 !important;
     padding: 1.25rem !important;
   }
 
-  /* Section titles */
-  .section-title h2 {
-    font-size: 1.75rem;
+  /* ─ Stats / Trust bar ─ */
+  .landing-stat-item {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1.25rem;
   }
 
-  .section-title p {
-    font-size: 0.95rem;
-  }
-
-  /* Why choose */
-  .why-choose-content {
+  /* ─ Features ─ */
+  .features-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .feature-card {
+    padding: 1.75rem 1.5rem;
+  }
+
+  /* ─ Audience cards – single column ─ */
+  #audience-section .features-grid,
+  #audience-section > div > div {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+
+  /* ─ How It Works steps ─ */
+  #how-it-works .container > div {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* ─ Subjects preview – single column ─ */
+  #subjects-section .courses-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .course-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  /* ─ Why Choose ─ */
+  .why-choose-content {
+    grid-template-columns: 1fr !important;
     gap: 2rem;
     text-align: center;
   }
 
+  .why-choose-left {
+    text-align: center !important;
+  }
+
+  .why-choose-right {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+
   .why-choose-image {
-    height: 220px;
+    height: 210px;
     order: -1;
   }
 
@@ -1356,51 +1433,89 @@ section {
     text-align: left;
   }
 
-  /* Contact */
-  .contact-content {
+  /* ─ Teachers carousel ─ */
+  .teachers-grid {
+    gap: 1rem !important;
+  }
+
+  .teacher-card {
+    flex: 0 0 260px !important;
+    padding: 1.5rem 1.25rem !important;
+  }
+
+  /* ─ Testimonials ─ */
+  .testimonials-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  /* ─ FAQ ─ */
+  #faq .container > div:nth-child(2) {
+    padding: 0 0.25rem;
+  }
+
+  /* ─ Contact ─ */
+  .contact-content {
+    grid-template-columns: 1fr !important;
     gap: 2rem;
   }
 
   .contact-image-placeholder {
-    height: 220px;
+    height: 210px;
+    display: none; /* hide image on mobile to save space */
   }
 
   .contact-form {
-    padding: 1.75rem;
+    padding: 1.75rem 1.5rem;
+    border-radius: 18px;
   }
 
-  /* Calendar */
+  /* ─ Calendar (Booking) ─ */
+  .calendar-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .calendar-grid {
     gap: 3px;
     padding: 0.6rem;
+    min-width: 280px;
   }
 
   .calendar-day {
     font-size: 0.72rem;
     min-height: 32px;
+    border-radius: 6px;
   }
 
-  /* Stats strip */
-  .landing-stat-item {
-    border-left: none !important;
-    padding-left: 0 !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 1.5rem;
+  /* ─ Registration form ─ */
+  .registration-tabs {
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
-  /* Testimonials */
-  .testimonials-grid {
-    grid-template-columns: 1fr;
+  .tab-btn {
+    flex: 1 1 auto;
+    text-align: center;
   }
 
-  /* Features */
-  .features-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+  .registration-form-container,
+  .booking-container {
+    padding: 1.5rem;
+    border-radius: 18px;
   }
 
-  /* Learning approach */
+  .form-progress {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .progress-line {
+    width: 30px !important;
+  }
+
+  /* ─ Learning Approach ─ */
   .learning-approach-split {
     grid-template-columns: 1fr;
     gap: 2rem;
@@ -1408,92 +1523,155 @@ section {
 
   .mock-dashboard-panel {
     min-height: auto;
-    padding: 1.5rem;
+    padding: 1.5rem 1.25rem;
+  }
+
+  /* ─ Final CTA banner ─ */
+  .final-cta-heading {
+    font-size: 2rem !important;
+  }
+
+  /* ─ Timeline steps ─ */
+  .timeline-step-card {
+    padding: 1.25rem;
+    gap: 1rem;
   }
 }
 
-/* Small phones (max 480px) */
+
+/* ── SMALL PHONES  (≤480px) ──────────────────────────────────── */
 @media (max-width: 480px) {
+
+  /* ─ Global ─ */
   .container {
-    padding: 0 0.75rem;
+    padding: 0 0.85rem;
   }
 
   section {
     padding: 3rem 0;
   }
 
+  /* ─ Section titles ─ */
+  .section-title h2 {
+    font-size: 1.6rem;
+  }
+
+  /* ─ Hero ─ */
   .hero {
     padding-top: 5rem;
   }
 
   .hero-text h1 {
-    font-size: 1.7rem;
+    font-size: 1.75rem;
     line-height: 1.3;
   }
 
   .hero-text p {
-    font-size: 0.92rem;
+    font-size: 0.93rem;
     margin-bottom: 1.5rem;
   }
 
-  .btn-primary {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
+  .hero-buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
   }
 
-  .section-title h2 {
-    font-size: 1.5rem;
+  .hero-buttons button {
+    width: 100%;
+    justify-content: center !important;
+    text-align: center !important;
+    align-items: center !important;
   }
 
-  /* Feature cards */
+  .hero-form-card {
+    padding: 1rem !important;
+    border-radius: 14px !important;
+  }
+
+  /* ─ Stats bar – 2-column grid on phones ─ */
+  .stats-bar-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* ─ Feature / audience cards ─ */
   .feature-card {
-    padding: 1.5rem 1.25rem;
+    padding: 1.5rem 1.1rem;
   }
 
-  /* Course cards */
+  .feature-card h3 {
+    font-size: 1.1rem;
+  }
+
+  /* ─ Course cards ─ */
   .course-card {
+    padding: 1.25rem 1rem;
+  }
+
+  /* ─ Why Choose ─ */
+  .why-choose-right {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ─ Teachers carousel cards ─ */
+  .teacher-card {
+    flex: 0 0 240px !important;
+    padding: 1.25rem 1rem !important;
+  }
+
+  .teacher-card img {
+    width: 80px !important;
+    height: 80px !important;
+  }
+
+  /* ─ Testimonial cards ─ */
+  .testimonial-card {
     padding: 1.5rem 1.25rem;
+    border-radius: 18px;
   }
 
-  /* Calendar - make it scroll horizontally on tiny screens */
-  .calendar-grid {
-    min-width: 280px;
+  /* ─ FAQ ─ */
+  #faq .faq-question-btn {
+    padding: 0.9rem 1rem !important;
+    font-size: 0.88rem !important;
   }
 
-  .calendar-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  #faq .faq-answer {
+    padding: 0 1rem 1rem 1rem !important;
+    font-size: 0.88rem !important;
   }
 
+  /* ─ Contact form ─ */
+  .contact-form {
+    padding: 1.25rem 1rem;
+    border-radius: 14px;
+  }
+
+  .contact-form h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1.1rem;
+  }
+
+  /* ─ Calendar ─ */
   .calendar-day {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     min-height: 28px;
     border-radius: 5px;
   }
 
-  /* Contact form */
-  .contact-form {
-    padding: 1.25rem;
+  .calendar-nav {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
   }
 
-  /* Booking */
-  .registration-form-container,
-  .booking-container {
-    padding: 1.25rem;
+  .calendar-nav span {
+    min-width: auto;
+    font-size: 0.85rem;
   }
 
-  /* Progress steps - hide connecting lines */
-  .progress-line {
-    width: 20px !important;
-  }
-
-  /* Tutor / staff cards  */
-  .tutor-card,
-  .staff-card {
-    padding: 1.25rem;
-  }
-
-  /* Registration tabs */
+  /* ─ Registration tabs – stack vertically ─ */
   .registration-tabs {
     flex-direction: column;
     border-radius: 12px;
@@ -1504,38 +1682,122 @@ section {
     width: 100%;
     border-radius: 10px !important;
     text-align: center;
+    padding: 0.65rem 1rem !important;
   }
 
-  /* Footer */
+  .registration-form-container,
+  .booking-container {
+    padding: 1.1rem;
+    border-radius: 14px;
+  }
+
+  .progress-line {
+    width: 16px !important;
+  }
+
+  /* ─ Time slots ─ */
+  .slots-container {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.5rem;
+  }
+
+  .time-slot {
+    padding: 0.55rem 0.4rem;
+    font-size: 0.78rem;
+  }
+
+  /* ─ Final CTA ─ */
+  .final-cta-heading {
+    font-size: 1.7rem !important;
+    line-height: 1.3 !important;
+  }
+
+  /* ─ Buttons ─ */
+  .btn-primary,
+  .btn-next {
+    padding: 0.8rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* ─ Footer ─ */
   .footer-content {
-    padding: 0 1rem;
+    padding: 0 0.85rem;
     gap: 2rem;
   }
 
-  /* Subjects page filter - make filter panel collapsible appearance */
+  .footer-section h3 {
+    font-size: 1.05rem;
+  }
+
+  /* ─ Subjects filter sidebar ─ */
   .subjects-grid-layout {
     grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
   }
 
   .filter-sidebar {
     position: static !important;
     border-radius: 16px !important;
   }
+
+  /* ─ Form inputs — full width tap-target ─ */
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px !important; /* prevent iOS zoom */
+    padding: 0.65rem 0.8rem !important;
+  }
 }
 
-/* Extra small (max 360px) */
+
+/* ── EXTRA SMALL  (≤360px) ──────────────────────────────────── */
 @media (max-width: 360px) {
+
+  .container {
+    padding: 0 0.65rem;
+  }
+
   .hero-text h1 {
     font-size: 1.5rem;
   }
 
   .hero-buttons {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
 
-  .btn-primary {
+  .section-title h2 {
+    font-size: 1.4rem;
+  }
+
+  .btn-primary,
+  .btn-next {
     width: 100%;
     text-align: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
   }
-}
+
+  .hero-form-card {
+    padding: 0.85rem !important;
+    border-radius: 12px !important;
+  }
+
+  .teacher-card {
+    flex: 0 0 220px !important;
+  }
+
+  .time-slot {
+    font-size: 0.72rem;
+    padding: 0.45rem 0.3rem;
+  }
+
+  .slots-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Hide progress line dots connector on tiny screens */
+  .progress-line {
+    display: none !important;
+  }
+}
