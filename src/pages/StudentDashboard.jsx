@@ -22,6 +22,7 @@ export default function StudentDashboard({ user }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileChatView, setMobileChatView] = useState('list');
 
   // LMS Student state variables
   const [enrollments, setEnrollments] = useState([]);
@@ -601,29 +602,26 @@ export default function StudentDashboard({ user }) {
             {enrollments.length === 0 ? (
               <div style={{ padding: '2rem', background: 'white', borderRadius: '15px', color: '#a0aec0', textAlign: 'center' }}>You are not currently enrolled in any classes. Contact the administrator to assign you.</div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2.8fr', gap: '2rem', alignItems: 'start' }}>
+              <div className="course-tab-layout">
                 
                 {/* Enrolled selector sidebar */}
-                <div className="dashboard-card" style={{ padding: '1rem' }}>
-                  <h3>Courses List</h3>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="portal-sidebar-card">
+                  <h3 style={{ fontSize: '1.05rem', marginBottom: '1rem', color: 'var(--primary-color)' }}>Courses List</h3>
+                  <ul className="portal-list-container">
                     {enrollments.map(en => {
                       const c = courses.find(co => co.id === en.course_id);
                       if (!c) return null;
+                      const isActive = selectedCourseId === c.id;
                       return (
                         <li 
                           key={c.id} 
-                          style={{ 
-                            padding: '0.8rem', 
-                            borderRadius: '10px', 
-                            background: selectedCourseId === c.id ? '#edf2f7' : '#f7fafc',
-                            cursor: 'pointer',
-                            border: selectedCourseId === c.id ? '1px solid var(--primary-color)' : '1px solid transparent'
-                          }}
+                          className={`portal-list-item ${isActive ? 'active' : ''}`}
                           onClick={() => { setSelectedCourseId(c.id); setActiveQuizId(null); setQuizAnswers({}); setQuizScore(null); }}
                         >
-                          <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--primary-color)', display: 'block' }}>{c.title}</span>
-                          <span style={{ fontSize: '0.75rem', color: '#718096' }}>Tutor: {tutors.find(t => t.id === en.tutor_id)?.full_name || 'Assigned'}</span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span className="portal-list-item-title">{c.title}</span>
+                            <span className="portal-list-item-subtitle">Tutor: {tutors.find(t => t.id === en.tutor_id)?.full_name || 'Assigned'}</span>
+                          </div>
                         </li>
                       );
                     })}
@@ -923,54 +921,88 @@ export default function StudentDashboard({ user }) {
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         )}
 
-        {/* Tab 4: Student-Tutor messaging */}
+        {/* Tab 4: Student-Tutor messaging (WhatsApp Style UI) */}
         {activeTab === 'chat' && (
-          <div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2.8fr', gap: '2rem', alignItems: 'start' }}>
-              
-              {/* Tutors selector */}
-              <div className="dashboard-card" style={{ padding: '1rem' }}>
-                <h3>Assigned Tutors</h3>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {enrollments.map(en => {
-                    const t = tutors.find(tu => tu.id === en.tutor_id);
-                    const c = courses.find(co => co.id === en.course_id);
-                    if (!t) return null;
-                    return (
-                      <li 
-                        key={en.course_id} 
-                        style={{ 
-                          padding: '0.8rem', 
-                          borderRadius: '10px', 
-                          background: activeTutorChat?.id === t.id ? '#edf2f7' : '#f7fafc',
-                          cursor: 'pointer',
-                          border: activeTutorChat?.id === t.id ? '1px solid var(--primary-color)' : '1px solid transparent'
-                        }}
-                        onClick={() => { setActiveTutorChat(t); }}
-                      >
-                        <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--primary-color)', display: 'block' }}>{t.full_name}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#718096' }}>Subject: {c?.title}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
+          <div className="whatsapp-chat-container">
+            {/* Contacts Sidebar Pane */}
+            <div className={`whatsapp-contacts-sidebar ${activeTutorChat && mobileChatView === 'chat' ? 'mobile-hidden' : ''}`}>
+              <div className="whatsapp-sidebar-header">
+                <h3>Tutor Chat</h3>
               </div>
+              <ul className="whatsapp-contacts-list">
+                {enrollments.map(en => {
+                  const t = tutors.find(tu => tu.id === en.tutor_id);
+                  const c = courses.find(co => co.id === en.course_id);
+                  if (!t) return null;
+                  const isSelected = activeTutorChat?.id === t.id;
+                  
+                  // Extract last message
+                  const threadMessages = chatMessages.filter(m => 
+                    (m.sender_id === (studentInfo?.profile_id || studentInfo?.id || studentId) && m.receiver_id === (t.profile_id || t.id)) ||
+                    (m.sender_id === (t.profile_id || t.id) && m.receiver_id === (studentInfo?.profile_id || studentInfo?.id || studentId))
+                  );
+                  const lastMsg = threadMessages[threadMessages.length - 1];
+                  const lastMsgText = lastMsg ? lastMsg.message_text : `Start learning in ${c?.title || 'course'}`;
+                  const lastMsgTime = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                  
+                  return (
+                    <li 
+                      key={en.course_id} 
+                      className={`whatsapp-contact-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => { setActiveTutorChat(t); setMobileChatView('chat'); }}
+                    >
+                      <div className="whatsapp-avatar">
+                        {t.full_name ? t.full_name[0] : 'T'}
+                      </div>
+                      <div className="whatsapp-contact-info">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="whatsapp-contact-name">{t.full_name}</div>
+                          {lastMsgTime && <span style={{ fontSize: '0.7rem', color: '#8696a0' }}>{lastMsgTime}</span>}
+                        </div>
+                        <div className="whatsapp-contact-status">{lastMsgText}</div>
+                      </div>
+                    </li>
+                  );
+                })}
+                {enrollments.filter(en => tutors.find(tu => tu.id === en.tutor_id)).length === 0 && (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#8696a0', fontSize: '0.9rem' }}>
+                    No assigned tutors found.
+                  </div>
+                )}
+              </ul>
+            </div>
 
-              {/* Messaging Panel */}
+            {/* Chat Thread Pane */}
+            <div className={`whatsapp-chat-window ${!activeTutorChat || mobileChatView === 'list' ? 'mobile-hidden' : ''}`}>
               {activeTutorChat ? (
-                <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', height: '550px', padding: '1.5rem' }}>
-                  <div style={{ display: 'flex', borderBottom: '1px solid #edf2f7', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
-                    <span style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>Instructor Chat Thread: {activeTutorChat.full_name}</span>
+                <>
+                  {/* Active Header details */}
+                  <div className="whatsapp-chat-header">
+                    <div className="whatsapp-header-user">
+                      <button 
+                        className="whatsapp-header-back-btn"
+                        onClick={() => setMobileChatView('list')}
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <div className="whatsapp-avatar" style={{ width: '40px', height: '40px', fontSize: '0.95rem' }}>
+                        {activeTutorChat.full_name ? activeTutorChat.full_name[0] : 'T'}
+                      </div>
+                      <div className="whatsapp-header-details">
+                        <div className="whatsapp-header-name">{activeTutorChat.full_name}</div>
+                        <div className="whatsapp-header-status">
+                          <span className="whatsapp-header-status-dot"></span> Active Specialist
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Message logs */}
-                  <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', padding: '0.5rem', marginBottom: '1rem' }}>
+                  {/* Messages Logs view container */}
+                  <div className="whatsapp-messages-container">
                     {chatMessages.filter(m => 
                       (m.sender_id === (studentInfo?.profile_id || studentInfo?.id || studentId) && m.receiver_id === (activeTutorChat.profile_id || activeTutorChat.id)) ||
                       (m.sender_id === (activeTutorChat.profile_id || activeTutorChat.id) && m.receiver_id === (studentInfo?.profile_id || studentInfo?.id || studentId))
@@ -979,41 +1011,39 @@ export default function StudentDashboard({ user }) {
                       return (
                         <div 
                           key={m.id} 
-                          style={{ 
-                            alignSelf: isMe ? 'flex-end' : 'flex-start',
-                            background: isMe ? 'var(--primary-color)' : '#edf2f7',
-                            color: isMe ? 'white' : 'var(--text-dark)',
-                            padding: '0.6rem 0.9rem',
-                            borderRadius: '12px',
-                            maxWidth: '75%',
-                            fontSize: '0.85rem',
-                            boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-                          }}
+                          className={`whatsapp-bubble ${isMe ? 'sent' : 'received'}`}
                         >
-                          <div>{m.message_text}</div>
-                          <span style={{ fontSize: '0.65rem', opacity: 0.7, float: 'right', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.88rem', color: '#111b21', whiteSpace: 'pre-wrap' }}>{m.message_text}</div>
+                          <div className="whatsapp-bubble-time">
                             {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                            {isMe && <span className="whatsapp-bubble-checks"> ✓✓</span>}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Chat sender input form */}
-                  <form onSubmit={handleSendChat} style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid #edf2f7', paddingTop: '1rem' }}>
+                  {/* Input sending bar */}
+                  <form onSubmit={handleSendChat} className="whatsapp-input-bar">
                     <input 
                       type="text" 
+                      className="whatsapp-input-field"
                       value={chatInput} 
                       onChange={(e) => setChatInput(e.target.value)} 
-                      placeholder="Type your message..." 
-                      style={{ flex: 1, padding: '0.6rem', border: '1px solid #cbd5e0', borderRadius: '8px', fontSize: '0.85rem' }} 
+                      placeholder="Type a message" 
                       required 
                     />
-                    <button type="submit" className="btn-primary" style={{ padding: '0.6rem 1rem', borderRadius: '8px' }}><Send size={16} /></button>
+                    <button type="submit" className="whatsapp-send-btn">
+                      <Send size={16} />
+                    </button>
                   </form>
-                </div>
+                </>
               ) : (
-                <div style={{ padding: '2rem', background: '#f7fafc', borderRadius: '15px', color: '#a0aec0', textAlign: 'center' }}>Choose an assigned instructor to review messages and text directly.</div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#8696a0', padding: '2rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '4.5rem', marginBottom: '1rem' }}>💬</div>
+                  <h3 style={{ color: '#54656f', fontSize: '1.25rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>Academic Messaging</h3>
+                  <p style={{ fontSize: '0.88rem', maxWidth: '320px', margin: '0 auto', lineHeight: '1.5' }}>Choose a tutor from the contacts list to review message logs or send text notes directly.</p>
+                </div>
               )}
             </div>
           </div>
