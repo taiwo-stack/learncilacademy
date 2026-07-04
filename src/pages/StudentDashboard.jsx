@@ -318,36 +318,22 @@ export default function StudentDashboard({ user }) {
             <div style={{
               background: 'linear-gradient(135deg, var(--primary-color) 0%, #1a3a6e 100%)',
               borderRadius: '16px',
-              padding: '2rem 2.5rem',
+              padding: '1.25rem 2rem',
               marginBottom: '2rem',
               color: 'white',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '1rem'
+              flexDirection: 'column',
+              justifyContent: 'center'
             }}>
-              <div>
-                <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', opacity: 0.85 }}>Welcome back,</p>
-                <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.75rem', fontWeight: 800 }}>
-                  {studentInfo?.full_name || user?.full_name || 'Student'} 👋
-                </h2>
-                <p style={{ margin: 0, fontSize: '0.88rem', opacity: 0.75 }}>
-                  {enrollments.length > 0
-                    ? `You're enrolled in ${enrollments.length} course${enrollments.length > 1 ? 's' : ''}. Keep pushing forward!`
-                    : 'Your learning journey starts here. Check out available courses!'}
-                </p>
-              </div>
-              <div style={{
-                background: 'rgba(255,255,255,0.15)',
-                borderRadius: '12px',
-                padding: '1rem 1.5rem',
-                textAlign: 'center',
-                minWidth: '120px'
-              }}>
-                <div style={{ fontSize: '2rem', fontWeight: 800 }}>{attendanceRate}%</div>
-                <div style={{ fontSize: '0.78rem', opacity: 0.85 }}>Attendance Rate</div>
-              </div>
+              <p style={{ margin: '0 0 0.15rem 0', fontSize: '0.85rem', opacity: 0.85 }}>Welcome back,</p>
+              <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.5rem', fontWeight: 800 }}>
+                {studentInfo?.full_name || user?.full_name || 'Student'} 👋
+              </h2>
+              <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.75 }}>
+                {enrollments.length > 0
+                  ? `You're enrolled in ${enrollments.length} course${enrollments.length > 1 ? 's' : ''}. Keep pushing forward!`
+                  : 'Your learning journey starts here. Check out available courses!'}
+              </p>
             </div>
 
             {/* Quick Stats Grid */}
@@ -355,30 +341,21 @@ export default function StudentDashboard({ user }) {
               {[
                 { label: 'Courses Enrolled', value: enrollments.length, icon: '📚', color: '#4c6ef5', tab: 'courses' },
                 { label: 'Upcoming Classes', value: schedules.filter(s => new Date(s.scheduled_date) >= new Date()).length, icon: '📅', color: '#12b886', tab: 'timetable' },
+                { label: 'Attendance Rate', value: `${attendanceRate}%`, icon: '📊', color: '#3b82f6', tab: 'timetable' },
                 { label: 'Pending Tasks', value: tasks.filter(t => !submissions.find(s => s.task_id === t.id)).length, icon: '✏️', color: '#f59f00', tab: 'homework' },
                 { label: 'Unread Messages', value: chatMessages.filter(m => m.receiver_id === (studentInfo?.profile_id || studentInfo?.id)).length, icon: '💬', color: '#ae3ec9', tab: 'chat' },
               ].map(stat => (
                 <div
                   key={stat.tab}
                   onClick={() => setActiveTab(stat.tab)}
-                  style={{
-                    cursor: 'pointer',
-                    transition: 'transform 0.18s, box-shadow 0.18s',
-                    borderLeft: `4px solid ${stat.color}`,
-                    background: 'white',
-                    borderRadius: '16px',
-                    padding: '1.25rem 1.5rem',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.25rem'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}
+                  className="dashboard-stat-card"
+                  style={{ borderLeft: `4px solid ${stat.color}` }}
                 >
-                  <div style={{ fontSize: '1.75rem' }}>{stat.icon}</div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#718096', fontWeight: 600 }}>{stat.label}</div>
+                  <div className="dashboard-stat-icon" style={{ background: `${stat.color}12` }}>{stat.icon}</div>
+                  <div className="dashboard-stat-info">
+                    <div className="dashboard-stat-value" style={{ color: stat.color }}>{stat.value}</div>
+                    <div className="dashboard-stat-label">{stat.label}</div>
+                  </div>
                 </div>
               ))}
             </div>
