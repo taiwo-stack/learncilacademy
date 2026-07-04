@@ -1559,11 +1559,6 @@ section {
   .subjects-grid-layout {
     grid-template-columns: 1fr !important;
   }
-
-  .filter-sidebar {
-    position: static !important;
-    border-radius: 16px !important;
-  }
 }
 
 /* Extra small (max 360px) */

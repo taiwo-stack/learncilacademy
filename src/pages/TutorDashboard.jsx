@@ -15,6 +15,13 @@ import {
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
+const formatMessageTime = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
 export default function TutorDashboard({ user }) {
   const [activeTab, setActiveTab] = useState('schedule');
   const [bookings, setBookings] = useState([]);
@@ -1051,7 +1058,7 @@ export default function TutorDashboard({ user }) {
                           }}>
                             <div>{m.message_text}</div>
                             <div style={{ fontSize: '0.65rem', opacity: 0.65, textAlign: 'right', marginTop: '4px' }}>
-                              {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatMessageTime(m.created_at)}
                             </div>
                           </div>
                         </div>
