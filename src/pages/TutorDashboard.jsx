@@ -4,6 +4,7 @@ import {
   getStudentCourses, getStudents, getCourses,
   getTasks, saveTask, deleteTask,
   getStudentTasks, gradeStudentTask,
+  getTopics,
   getSchedules, getAttendance, markAttendance, saveSchedule, deleteSchedule,
   getAnnouncements, createAnnouncement,
   getChatMessages, sendChatMessage
@@ -34,6 +35,7 @@ export default function TutorDashboard({ user }) {
   
   // Chat Inbox states
   const [chatMessages, setChatMessages] = useState([]);
+  const [topics, setTopics] = useState([]); // lesson topics for task/quiz linking
   const [activeStudentChat, setActiveStudentChat] = useState(null);
   const [activeCourseChat, setActiveCourseChat] = useState(null);
   const [chatInput, setChatInput] = useState('');
@@ -49,8 +51,13 @@ export default function TutorDashboard({ user }) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskCourse, setNewTaskCourse] = useState('');
+  const [newTaskTopic, setNewTaskTopic] = useState(''); // NEW: topic_id
   const [newTaskMax, setNewTaskMax] = useState(100);
   const [newTaskType, setNewTaskType] = useState('assignment'); // 'assignment' | 'quiz'
+
+  // Quiz edit state (for viewing/editing published quizzes)
+  const [editingQuizId, setEditingQuizId] = useState(null);
+  const [editQuizQuestions, setEditQuizQuestions] = useState([]);
 
   // Target students selector
   const [targetStudentIds, setTargetStudentIds] = useState([]); // empty = all
@@ -65,6 +72,7 @@ export default function TutorDashboard({ user }) {
   // Reset targeting when course changes
   const handleTaskCourseChange = (courseId) => {
     setNewTaskCourse(courseId);
+    setNewTaskTopic(''); // reset topic when course changes
     setTargetStudentIds([]);
     setTargetAll(true);
   };
@@ -122,9 +130,9 @@ export default function TutorDashboard({ user }) {
 
   const loadTutorDashboard = async () => {
     try {
-      const [allBookings, allTutors, sList, cList, scList, tkList, subList, schList, attList, annList, msgList] = await Promise.all([
+      const [allBookings, allTutors, sList, cList, scList, tkList, subList, schList, attList, annList, msgList, topicList] = await Promise.all([
         getBookings(), getTutors(), getStudents(), getCourses(), getStudentCourses(),
-        getTasks(), getStudentTasks(), getSchedules(), getAttendance(), getAnnouncements(), getChatMessages()
+        getTasks(), getStudentTasks(), getSchedules(), getAttendance(), getAnnouncements(), getChatMessages(), getTopics()
       ]);
 
       const currentTutor = allTutors.find(t => 
@@ -152,6 +160,7 @@ export default function TutorDashboard({ user }) {
       setAttendanceLog(attList);
       setAnnouncements(annList);
       setChatMessages(msgList);
+      setTopics(topicList || []);
 
       if (cList.length > 0) setNewTaskCourse(cList[0].id);
     } catch (err) {
@@ -226,6 +235,7 @@ export default function TutorDashboard({ user }) {
     try {
       const taskPayload = {
         course_id: newTaskCourse,
+        topic_id: newTaskTopic || null,
         title: newTaskTitle,
         description: newTaskDesc,
         task_type: newTaskType,
@@ -241,6 +251,7 @@ export default function TutorDashboard({ user }) {
       setNewTaskDesc('');
       setNewTaskMax(100);
       setNewTaskType('assignment');
+      setNewTaskTopic('');
       setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
       setTargetStudentIds([]);
       setTargetAll(true);
@@ -1128,6 +1139,32 @@ export default function TutorDashboard({ user }) {
                     </select>
                   </div>
 
+                  {/* Topic/Lesson — required so quiz appears under the correct lesson */}
+                  {newTaskCourse && (
+                    <div className="form-group">
+                      <label>{newTaskType === 'quiz' ? 'Attach to Lesson (Required for Quiz) *' : 'Attach to Lesson (Optional)'}</label>
+                      <select
+                        value={newTaskTopic}
+                        onChange={(e) => setNewTaskTopic(e.target.value)}
+                        required={newTaskType === 'quiz'}
+                        style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}
+                      >
+                        <option value="">-- Choose Lesson --</option>
+                        {(() => {
+                          const courseTopics = topics.filter(tp => tp.course_id === newTaskCourse);
+                          return courseTopics.length === 0
+                            ? <option disabled value="">No lessons found for this course</option>
+                            : courseTopics.map(tp => (
+                                <option key={tp.id} value={tp.id}>{tp.title}</option>
+                              ));
+                        })()}
+                      </select>
+                      {newTaskType === 'quiz' && !newTaskTopic && (
+                        <p style={{ fontSize: '0.75rem', color: '#e53e3e', margin: '0.25rem 0 0' }}>⚠ Select a lesson so the quiz appears under that topic for students.</p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Title */}
                   <div className="form-group">
                     <label>{newTaskType === 'quiz' ? 'Quiz Title *' : 'Task Title *'}</label>
@@ -1449,6 +1486,137 @@ export default function TutorDashboard({ user }) {
                       );
                     })}
                   </ul>
+                )}
+              </div>
+
+              {/* My Published Quizzes \u2014 view + edit */}
+              <div className="dashboard-card">
+                <h3>🧩 My Published Quizzes</h3>
+                {tasks.filter(t => t.task_type === 'quiz' && enrollments.some(sc => sc.course_id === t.course_id && sc.tutor_id === (tutorInfo?.id || tutorId))).length === 0 ? (
+                  <div style={{ color: '#a0aec0', padding: '1rem' }}>No quizzes published yet. Create one using the form above.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {tasks
+                      .filter(t => t.task_type === 'quiz' && enrollments.some(sc => sc.course_id === t.course_id && sc.tutor_id === (tutorInfo?.id || tutorId)))
+                      .map(quizTask => {
+                        const completions = submissions.filter(s => s.task_id === quizTask.id);
+                        const cName = courses.find(c => c.id === quizTask.course_id)?.title || 'Course';
+                        const tName = topics.find(tp => tp.id === quizTask.topic_id)?.title || null;
+                        const isEditing = editingQuizId === quizTask.id;
+                        const parsedQs = (() => {
+                          const raw = quizTask.quiz_questions;
+                          if (!raw) return [];
+                          if (Array.isArray(raw)) return raw;
+                          try { return JSON.parse(raw); } catch { return []; }
+                        })();
+
+                        return (
+                          <div key={quizTask.id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem', background: '#fafbff' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <div>
+                                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: 'var(--primary-color)' }}>📝 {quizTask.title}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#718096', marginTop: '0.2rem' }}>
+                                  {cName}{tName ? ` › ${tName}` : ''} &bull; {parsedQs.length} question{parsedQs.length !== 1 ? 's' : ''} &bull; {completions.length} completion{completions.length !== 1 ? 's' : ''}
+                                </div>
+                              </div>
+                              <button
+                                className="btn-action edit"
+                                style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                                onClick={() => {
+                                  if (isEditing) { setEditingQuizId(null); setEditQuizQuestions([]); }
+                                  else { setEditingQuizId(quizTask.id); setEditQuizQuestions(parsedQs.length ? [...parsedQs] : [{ question: '', options: ['', '', '', ''], correct: 0 }]); }
+                                }}
+                              >
+                                {isEditing ? '✕ Cancel Edit' : '✏ Edit Quiz'}
+                              </button>
+                            </div>
+
+                            {/* Completions list */}
+                            {completions.length > 0 && (
+                              <div style={{ marginTop: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                {completions.map(c => {
+                                  const sName = students.find(s => s.id === c.student_id)?.full_name || 'Student';
+                                  return (
+                                    <span key={c.id} style={{ background: '#d1fae5', color: '#166534', fontSize: '0.72rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
+                                      {sName}: {c.grade ?? '?'}%
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Inline Quiz Editor */}
+                            {isEditing && (
+                              <div style={{ marginTop: '1rem', borderTop: '1px solid #edf2f7', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {editQuizQuestions.map((q, qIdx) => (
+                                  <div key={qIdx} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                      <span style={{ fontWeight: '700', fontSize: '0.82rem', color: 'var(--primary-color)' }}>Q{qIdx + 1}</span>
+                                      {editQuizQuestions.length > 1 && (
+                                        <button type="button" onClick={() => setEditQuizQuestions(prev => prev.filter((_, i) => i !== qIdx))} style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer', fontSize: '0.75rem' }}>✕ Remove</button>
+                                      )}
+                                    </div>
+                                    <input
+                                      type="text"
+                                      placeholder="Question text"
+                                      value={q.question}
+                                      onChange={e => setEditQuizQuestions(prev => prev.map((item, i) => i === qIdx ? { ...item, question: e.target.value } : item))}
+                                      style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', marginBottom: '0.5rem', boxSizing: 'border-box' }}
+                                    />
+                                    {q.options.map((opt, oIdx) => (
+                                      <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                                        <input
+                                          type="radio"
+                                          name={`eq-${quizTask.id}-${qIdx}`}
+                                          checked={q.correct === oIdx}
+                                          onChange={() => setEditQuizQuestions(prev => prev.map((item, i) => i === qIdx ? { ...item, correct: oIdx } : item))}
+                                          title="Mark as correct answer"
+                                        />
+                                        <input
+                                          type="text"
+                                          placeholder={`Option ${oIdx + 1}`}
+                                          value={opt}
+                                          onChange={e => setEditQuizQuestions(prev => prev.map((item, i) => i === qIdx ? { ...item, options: item.options.map((o, oi) => oi === oIdx ? e.target.value : o) } : item))}
+                                          style={{ flex: 1, padding: '0.4rem', borderRadius: '6px', border: `1px solid ${q.correct === oIdx ? '#38a169' : '#e2e8f0'}`, fontSize: '0.82rem', background: q.correct === oIdx ? '#f0fff4' : 'white' }}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                ))}
+
+                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditQuizQuestions(prev => [...prev, { question: '', options: ['', '', '', ''], correct: 0 }])}
+                                    style={{ padding: '0.4rem 0.75rem', borderRadius: '7px', border: '1px dashed var(--primary-color)', background: 'transparent', color: 'var(--primary-color)', fontSize: '0.8rem', cursor: 'pointer' }}
+                                  >
+                                    + Add Question
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-action approve"
+                                    style={{ padding: '0.4rem 0.9rem', fontSize: '0.82rem' }}
+                                    onClick={async () => {
+                                      try {
+                                        const updated = await saveTask({ ...quizTask, quiz_questions: editQuizQuestions, max_points: editQuizQuestions.length * 10 });
+                                        setTasks(prev => prev.map(t => t.id === quizTask.id ? updated : t));
+                                        setEditingQuizId(null);
+                                        setEditQuizQuestions([]);
+                                        alert('Quiz updated successfully!');
+                                      } catch (err) {
+                                        alert('Failed to save quiz: ' + err.message);
+                                      }
+                                    }}
+                                  >
+                                    💾 Save Quiz Changes
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
                 )}
               </div>
 
