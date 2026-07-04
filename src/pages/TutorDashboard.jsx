@@ -122,6 +122,7 @@ export default function TutorDashboard({ user }) {
   // Scheduling state inputs
   const [schStudentId, setSchStudentId] = useState('');
   const [schCourseId, setSchCourseId] = useState('');
+  const [schTopicId, setSchTopicId] = useState('');
   const [schTitle, setSchTitle] = useState('');
   const [schStart, setSchStart] = useState('');
   const [schEnd, setSchEnd] = useState('');
@@ -350,6 +351,7 @@ export default function TutorDashboard({ user }) {
         });
         setSchedules(prev => [...prev, saved]);
         setSchTitle('');
+        setSchTopicId('');
         setSchStart('');
         setSchEnd('');
         setSchLink('');
@@ -404,6 +406,7 @@ export default function TutorDashboard({ user }) {
         } else {
           setSchedules(prev => [...prev, ...generated]);
           setSchTitle('');
+          setSchTopicId('');
           setSchLink('');
           setSchRecurStartDate('');
           setSchRecurEndDate('');
@@ -557,9 +560,9 @@ export default function TutorDashboard({ user }) {
                     </select>
                   </div>
                   
-                  <div className="form-group">
+                   <div className="form-group">
                     <label>Select Assigned Course *</label>
-                    <select value={schCourseId} onChange={(e) => setSchCourseId(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                    <select value={schCourseId} onChange={(e) => { setSchCourseId(e.target.value); setSchTopicId(''); }} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
                       <option value="">-- Choose Course --</option>
                       {(() => {
                         const actualTutorId = tutorInfo?.id || tutorId;
@@ -573,6 +576,27 @@ export default function TutorDashboard({ user }) {
                       })()}
                     </select>
                   </div>
+
+                  {schCourseId && (
+                    <div className="form-group">
+                      <label>Lesson Topic (Optional - Auto-populates title)</label>
+                      <select value={schTopicId} onChange={(e) => {
+                        const val = e.target.value;
+                        setSchTopicId(val);
+                        if (val) {
+                          const selectedTopicObj = topics.find(tp => tp.id === val);
+                          if (selectedTopicObj) {
+                            setSchTitle(selectedTopicObj.title);
+                          }
+                        }
+                      }} style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0', width: '100%', fontFamily: 'inherit' }}>
+                        <option value="">-- Choose Topic / Custom --</option>
+                        {topics.filter(t => t.course_id === schCourseId).map(t => (
+                          <option key={t.id} value={t.id}>{t.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label>Lecture Title / Topic *</label>
