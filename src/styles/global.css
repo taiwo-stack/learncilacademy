@@ -555,7 +555,7 @@ footer {
 }
 
 /* Beautiful custom desktop checkboxes styling */
-.filter-checkbox-group label {
+.filter-label-chip {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -566,12 +566,12 @@ footer {
   user-select: none;
 }
 
-.filter-checkbox-group label:hover {
+.filter-label-chip:hover {
   color: white;
   transform: translateX(3px);
 }
 
-.filter-checkbox-group label input[type="checkbox"] {
+.filter-label-chip input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   width: 18px;
@@ -589,13 +589,13 @@ footer {
   outline: none;
 }
 
-.filter-checkbox-group label input[type="checkbox"]:checked {
+.filter-label-chip input[type="checkbox"]:checked {
   background: var(--accent-gradient);
   border-color: var(--accent-color);
   box-shadow: 0 0 8px rgba(242, 122, 36, 0.3);
 }
 
-.filter-checkbox-group label input[type="checkbox"]:checked::after {
+.filter-label-chip input[type="checkbox"]:checked::after {
   content: '✓';
   color: white;
   font-size: 0.75rem;
@@ -788,10 +788,13 @@ footer {
     box-sizing: border-box;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
+    overflow: hidden !important; /* Prevent scrollbar stretching */
   }
 
   .filter-sidebar > div {
     margin-bottom: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
   }
 
   /* Make checkbox group rows scroll horizontally */
@@ -801,6 +804,8 @@ footer {
     overflow-x: auto !important;
     padding: 0.3rem 0.2rem !important;
     width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     scrollbar-width: none !important; /* Firefox */
   }
 
@@ -809,7 +814,7 @@ footer {
   }
 
   /* Render checkbox containers as touch-friendly chips */
-  .filter-checkbox-group label {
+  .filter-label-chip {
     white-space: nowrap !important;
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -823,20 +828,21 @@ footer {
     color: rgba(255, 255, 255, 0.8) !important;
     cursor: pointer;
     user-select: none;
+    transform: none !important;
   }
 
-  .filter-checkbox-group label:hover {
+  .filter-label-chip:hover {
     background: rgba(255, 255, 255, 0.08) !important;
     transform: none !important;
   }
 
   /* Hide native square checkbox in favor of the full chip color state */
-  .filter-checkbox-group label input[type="checkbox"] {
+  .filter-label-chip input[type="checkbox"] {
     display: none !important;
   }
 
-  /* Highlight checked chip */
-  .filter-checkbox-group label:has(input:checked) {
+  /* Highlight checked chip using active class (supports 100% of mobile browsers) */
+  .filter-label-chip.active {
     background: var(--accent-gradient) !important;
     border-color: var(--accent-color) !important;
     color: white !important;

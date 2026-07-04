@@ -344,12 +344,11 @@ export default function SubjectsPage() {
                 ).map(category => {
                   const isChecked = selectedCategories.includes(category);
                   return (
-                    <label key={category} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', fontSize: '0.92rem', color: isChecked ? 'white' : 'rgba(255, 255, 255, 0.8)' }}>
+                    <label key={category} className={`filter-label-chip ${isChecked ? 'active' : ''}`}>
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => handleCategoryChange(category)}
-                        style={{ accentColor: 'var(--accent-color)', cursor: 'pointer', width: '16px', height: '16px' }}
                       />
                       {category}
                     </label>
@@ -367,12 +366,11 @@ export default function SubjectsPage() {
                 {['K-5', 'Middle School', 'High School'].map(grade => {
                   const isChecked = selectedGrades.includes(grade);
                   return (
-                    <label key={grade} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', fontSize: '0.92rem', color: isChecked ? 'white' : 'rgba(255, 255, 255, 0.8)' }}>
+                    <label key={grade} className={`filter-label-chip ${isChecked ? 'active' : ''}`}>
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => handleGradeChange(grade)}
-                        style={{ accentColor: 'var(--accent-color)', cursor: 'pointer', width: '16px', height: '16px' }}
                       />
                       {grade === 'K-5' ? 'Early Learners (K-5)' : grade}
                     </label>
