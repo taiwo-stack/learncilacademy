@@ -317,7 +317,7 @@ export default function SubjectsPage() {
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '0.8rem' }}>
                 Categories
               </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+              <div className="filter-checkbox-group">
                 {(categoryList.length > 0
                   ? categoryList
                   : ['Math', 'English & Reading', 'Science', 'Test Prep', 'World Languages', 'Coding & Tech']
@@ -343,7 +343,7 @@ export default function SubjectsPage() {
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '0.8rem' }}>
                 Grade Level
               </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+              <div className="filter-checkbox-group">
                 {['K-5', 'Middle School', 'High School'].map(grade => {
                   const isChecked = selectedGrades.includes(grade);
                   return (
@@ -410,11 +410,7 @@ export default function SubjectsPage() {
                 </button>
               </div>
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '2rem'
-              }} className="subjects-grid">
+              <div className="subjects-grid">
                 {filteredSubjects.map(subj => (
                   <div
                     key={subj.id}

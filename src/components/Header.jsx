@@ -5,6 +5,7 @@ import { signOut } from '../services/dataService';
 
 export default function Header({ currentUser, onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeMobileDropdown, setActiveMobileDropdown] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -65,30 +66,46 @@ export default function Header({ currentUser, onLogout }) {
           {!isDashboard ? (
             <>
               {/* Grades Dropdown */}
-              <li className="dropdown">
-                <a style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  Grades <span style={{ fontSize: '0.62rem', opacity: 0.8 }}>▼</span>
+              <li className={`dropdown ${activeMobileDropdown === 'grades' ? 'open' : ''}`}>
+                <a 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    if (window.innerWidth <= 900) {
+                      e.preventDefault();
+                      setActiveMobileDropdown(activeMobileDropdown === 'grades' ? null : 'grades');
+                    }
+                  }}
+                >
+                  Grades <span style={{ fontSize: '0.62rem', opacity: 0.8, transform: activeMobileDropdown === 'grades' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
                 </a>
-                <ul className="dropdown-menu">
-                  <li><a onClick={() => handleGradeFilterNav('K-5')}>Early Learners (K–5)</a></li>
-                  <li><a onClick={() => handleGradeFilterNav('Middle School')}>Middle School</a></li>
-                  <li><a onClick={() => handleGradeFilterNav('High School')}>High School</a></li>
-                  <li><a onClick={() => handleGradeFilterNav('K-5')}>Homeschool Support</a></li>
+                <ul className={`dropdown-menu ${activeMobileDropdown === 'grades' ? 'mobile-show' : ''}`}>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleGradeFilterNav('K-5'); }}>Early Learners (K–5)</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleGradeFilterNav('Middle School'); }}>Middle School</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleGradeFilterNav('High School'); }}>High School</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleGradeFilterNav('K-5'); }}>Homeschool Support</a></li>
                 </ul>
               </li>
 
               {/* Subjects Dropdown */}
-              <li className="dropdown">
-                <a style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  Subjects <span style={{ fontSize: '0.62rem', opacity: 0.8 }}>▼</span>
+              <li className={`dropdown ${activeMobileDropdown === 'subjects' ? 'open' : ''}`}>
+                <a 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    if (window.innerWidth <= 900) {
+                      e.preventDefault();
+                      setActiveMobileDropdown(activeMobileDropdown === 'subjects' ? null : 'subjects');
+                    }
+                  }}
+                >
+                  Subjects <span style={{ fontSize: '0.62rem', opacity: 0.8, transform: activeMobileDropdown === 'subjects' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
                 </a>
-                <ul className="dropdown-menu">
-                  <li><a onClick={() => handleSubjectFilterNav('Math')}>Math</a></li>
-                  <li><a onClick={() => handleSubjectFilterNav('English & Reading')}>Reading &amp; English</a></li>
-                  <li><a onClick={() => handleSubjectFilterNav('Science')}>Science</a></li>
-                  <li><a onClick={() => handleSubjectFilterNav('Test Prep')}>Test Prep</a></li>
-                  <li><a onClick={() => handleSubjectFilterNav('World Languages')}>World Languages</a></li>
-                  <li><a onClick={() => handleSubjectFilterNav('Coding & Tech')}>Coding</a></li>
+                <ul className={`dropdown-menu ${activeMobileDropdown === 'subjects' ? 'mobile-show' : ''}`}>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleSubjectFilterNav('Math'); }}>Math</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleSubjectFilterNav('English & Reading'); }}>Reading &amp; English</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleSubjectFilterNav('Science'); }}>Science</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleSubjectFilterNav('Test Prep'); }}>Test Prep</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleSubjectFilterNav('World Languages'); }}>World Languages</a></li>
+                  <li><a onClick={() => { setActiveMobileDropdown(null); handleSubjectFilterNav('Coding & Tech'); }}>Coding</a></li>
                 </ul>
               </li>
 
@@ -164,7 +181,10 @@ export default function Header({ currentUser, onLogout }) {
 
         <button 
           className="mobile-menu-toggle" 
-          onClick={() => setMobileOpen(!mobileOpen)}
+          onClick={() => {
+            setMobileOpen(!mobileOpen);
+            setActiveMobileDropdown(null);
+          }}
           aria-label="Toggle menu"
         >
           {mobileOpen ? <X /> : <Menu />}
