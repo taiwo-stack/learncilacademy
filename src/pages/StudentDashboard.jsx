@@ -45,7 +45,7 @@ export default function StudentDashboard({ user }) {
   const [announcements, setAnnouncements] = useState([]);
 
   // Active LMS states
-  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   // Interactive Quiz state variables
   const [activeQuizId, setActiveQuizId] = useState(null);
@@ -120,7 +120,8 @@ export default function StudentDashboard({ user }) {
       setAnnouncements(annList);
       setChatMessages(msgList);
 
-      if (studEnroll.length > 0) setSelectedCourseId(studEnroll[0].course_id);
+      // Do NOT auto-select a course on load — let student pick from card grid
+      // if (studEnroll.length > 0) setSelectedCourseId(studEnroll[0].course_id);
     } catch (err) {
       console.error('Error loading student dashboard details:', err);
     } finally {
@@ -280,6 +281,60 @@ export default function StudentDashboard({ user }) {
         {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
+      {/* Floating Unread Messages Badge FAB */}
+      {(() => {
+        const unreadCount = chatMessages.filter(
+          m => m.receiver_id === (studentInfo?.profile_id || studentInfo?.id)
+        ).length;
+        return unreadCount > 0 ? (
+          <button
+            onClick={() => { setActiveTab('chat'); setSidebarOpen(false); }}
+            title={`${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`}
+            style={{
+              position: 'fixed',
+              bottom: '1.5rem',
+              right: '1.5rem',
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 6px 20px rgba(124, 58, 237, 0.45)',
+              zIndex: 1200,
+              transition: 'transform 0.18s, box-shadow 0.18s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(124,58,237,0.55)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.45)'; }}
+          >
+            <MessageSquare size={22} />
+            <span style={{
+              position: 'absolute',
+              top: '2px',
+              right: '2px',
+              width: '18px',
+              height: '18px',
+              borderRadius: '50%',
+              background: '#ef4444',
+              color: 'white',
+              fontSize: '0.65rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid white',
+              lineHeight: 1
+            }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          </button>
+        ) : null;
+      })()}
+
       {/* Sidebar */}
       <aside className={`dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">Student Portal</div>
@@ -326,24 +381,18 @@ export default function StudentDashboard({ user }) {
               justifyContent: 'center'
             }}>
               <p style={{ margin: '0 0 0.15rem 0', fontSize: '0.85rem', opacity: 0.85 }}>Welcome back,</p>
-              <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.5rem', fontWeight: 800 }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>
                 {studentInfo?.full_name || user?.full_name || 'Student'} 👋
               </h2>
-              <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.75 }}>
-                {enrollments.length > 0
-                  ? `You're enrolled in ${enrollments.length} course${enrollments.length > 1 ? 's' : ''}. Keep pushing forward!`
-                  : 'Your learning journey starts here. Check out available courses!'}
-              </p>
             </div>
 
-            {/* Quick Stats Grid */}
+            {/* Quick Stats Grid — 4 cards in 2x2 layout (Unread Messages moved to floating FAB) */}
             <div className="dashboard-quick-stats">
               {[
                 { label: 'Courses Enrolled', value: enrollments.length, icon: '📚', color: '#4c6ef5', tab: 'courses' },
                 { label: 'Upcoming Classes', value: schedules.filter(s => new Date(s.scheduled_date) >= new Date()).length, icon: '📅', color: '#12b886', tab: 'timetable' },
                 { label: 'Attendance Rate', value: `${attendanceRate}%`, icon: '📊', color: '#3b82f6', tab: 'timetable' },
                 { label: 'Pending Tasks', value: tasks.filter(t => !submissions.find(s => s.task_id === t.id)).length, icon: '✏️', color: '#f59f00', tab: 'homework' },
-                { label: 'Unread Messages', value: chatMessages.filter(m => m.receiver_id === (studentInfo?.profile_id || studentInfo?.id)).length, icon: '💬', color: '#ae3ec9', tab: 'chat' },
               ].map(stat => (
                 <div
                   key={stat.tab}
@@ -583,61 +632,90 @@ export default function StudentDashboard({ user }) {
         {/* Tab 2: My Courses Curriculum Reader */}
         {activeTab === 'courses' && (
           <div>
-
             {enrollments.length === 0 ? (
               <div style={{ padding: '2rem', background: 'white', borderRadius: '15px', color: '#a0aec0', textAlign: 'center' }}>You are not currently enrolled in any classes. Contact the administrator to assign you.</div>
-            ) : (
-              <div className="course-tab-layout">
-
-                {/* Enrolled selector sidebar */}
-                <div className="portal-sidebar-card">
-                  <h3 style={{ fontSize: '1.05rem', marginBottom: '1rem', color: 'var(--primary-color)' }}>Courses List</h3>
-                  <ul className="portal-list-container">
-                    {enrollments.map(en => {
-                      const c = courses.find(co => co.id === en.course_id);
-                      if (!c) return null;
-                      const isActive = selectedCourseId === c.id;
-                      return (
-                        <li
-                          key={c.id}
-                          className={`portal-list-item ${isActive ? 'active' : ''}`}
-                          onClick={() => { setSelectedCourseId(c.id); setActiveQuizId(null); setQuizAnswers({}); setQuizScore(null); }}
+            ) : selectedCourseId === null ? (
+              /* ── STATE 1: Course Grid List ── */
+              <div>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-color)', marginBottom: '0.4rem' }}>My Courses</h2>
+                <p style={{ color: '#718096', fontSize: '0.88rem', marginBottom: '1.5rem', marginTop: 0 }}>Select a course below to view its full content and materials.</p>
+                <div className="courses-dashboard-grid">
+                  {enrollments.map(en => {
+                    const c = courses.find(co => co.id === en.course_id);
+                    if (!c) return null;
+                    const assignedTutor = tutors.find(t => t.id === en.tutor_id);
+                    const coverImg = getSpecialClassImage(c.title, courses.indexOf(c));
+                    const courseTopicsCount = topics.filter(t => t.course_id === c.id).length;
+                    return (
+                      <div
+                        key={c.id}
+                        className="course-enrollment-card"
+                        onClick={() => { setSelectedCourseId(c.id); setActiveQuizId(null); setQuizAnswers({}); setQuizScore(null); }}
+                      >
+                        <div
+                          className="course-card-banner-img"
+                          style={{ backgroundImage: `url('${coverImg}')` }}
                         >
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <span className="portal-list-item-title">{c.title}</span>
-                            <span className="portal-list-item-subtitle">Tutor: {tutors.find(t => t.id === en.tutor_id)?.full_name || 'Assigned'}</span>
+                          {c.grade_level && (
+                            <span className="course-card-category-badge">{c.grade_level}</span>
+                          )}
+                        </div>
+                        <div className="course-card-content-body">
+                          <h3 className="course-card-title-heading">{c.title}</h3>
+                          <p className="course-card-description-text">{c.description || 'No description available.'}</p>
+                          {courseTopicsCount > 0 && (
+                            <span style={{ fontSize: '0.75rem', color: '#a0aec0', fontWeight: 600 }}>{courseTopicsCount} lesson{courseTopicsCount !== 1 ? 's' : ''}</span>
+                          )}
+                          <div className="course-card-tutor-row">
+                            <span className="course-tutor-label">Specialist Tutor</span>
+                            <span className="course-tutor-value">{assignedTutor?.full_name || 'Not yet assigned'}</span>
                           </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        </div>
+                        <div className="course-card-action-bar">
+                          <button className="course-enter-classroom-btn">
+                            📖 Open Course
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* ── STATE 2: Full Course Classroom Workspace ── */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+                {/* Back navigation */}
+                <div>
+                  <button
+                    className="classroom-back-btn-link"
+                    onClick={() => { setSelectedCourseId(null); setActiveQuizId(null); setQuizScore(null); }}
+                  >
+                    <ChevronLeft size={15} /> Back to My Courses
+                  </button>
                 </div>
 
-                {/* Course Reader Workspace */}
-                {selectedCourseId ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Course Header Details */}
+                <div className="dashboard-card">
+                  <h2 style={{ fontSize: '1.5rem', color: 'var(--primary-color)', margin: '0 0 0.5rem 0' }}>{courses.find(c => c.id === selectedCourseId)?.title}</h2>
+                  <p style={{ color: '#4a5568', fontSize: '0.9rem', margin: 0 }}>{courses.find(c => c.id === selectedCourseId)?.description}</p>
+                </div>
 
-                    {/* Course Header Details */}
-                    <div className="dashboard-card">
-                      <h2 style={{ fontSize: '1.5rem', color: 'var(--primary-color)', margin: '0 0 0.5rem 0' }}>{courses.find(c => c.id === selectedCourseId)?.title}</h2>
-                      <p style={{ color: '#4a5568', fontSize: '0.9rem', margin: 0 }}>{courses.find(c => c.id === selectedCourseId)?.description}</p>
-                    </div>
-
-                    {/* Announcements Board */}
-                    {announcements.filter(a => a.course_id === selectedCourseId).length > 0 && (
-                      <div className="dashboard-card" style={{ borderLeft: '4px solid var(--accent-color)', background: '#fffbeb' }}>
-                        <h3><Megaphone size={16} /> Course Announcements</h3>
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                          {announcements.filter(a => a.course_id === selectedCourseId).map(a => (
-                            <li key={a.id}>
-                              <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--primary-color)' }}>{a.title}</div>
-                              <p style={{ fontSize: '0.85rem', color: '#4a5568', margin: '0.2rem 0' }}>"{a.announcement}"</p>
-                              <span style={{ fontSize: '0.7rem', color: '#718096' }}>Posted: {new Date(a.created_at).toLocaleDateString()}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                {/* Announcements Board */}
+                {announcements.filter(a => a.course_id === selectedCourseId).length > 0 && (
+                  <div className="dashboard-card" style={{ borderLeft: '4px solid var(--accent-color)', background: '#fffbeb' }}>
+                    <h3><Megaphone size={16} /> Course Announcements</h3>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {announcements.filter(a => a.course_id === selectedCourseId).map(a => (
+                        <li key={a.id}>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--primary-color)' }}>{a.title}</div>
+                          <p style={{ fontSize: '0.85rem', color: '#4a5568', margin: '0.2rem 0' }}>"{a.announcement}"</p>
+                          <span style={{ fontSize: '0.7rem', color: '#718096' }}>Posted: {new Date(a.created_at).toLocaleDateString()}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                     {/* Syllabus Outline */}
                     <div className="dashboard-card">
@@ -837,10 +915,6 @@ export default function StudentDashboard({ user }) {
                       </div>
                     )}
 
-                  </div>
-                ) : (
-                  <div style={{ padding: '2rem', background: '#f7fafc', borderRadius: '15px', color: '#a0aec0', textAlign: 'center' }}>Choose a course from the list to display topics, files, quizzes, and bulletins.</div>
-                )}
               </div>
             )}
           </div>
