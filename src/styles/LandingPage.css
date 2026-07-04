@@ -26,6 +26,23 @@ section {
   display: inline-block;
 }
 
+/* Uniform section heading — applies consistent font-size across every landing page section */
+.landing-section-heading {
+  font-family: var(--font-heading) !important;
+  font-size: 2.3rem !important;
+  font-weight: 800 !important;
+  color: white !important;
+  line-height: 1.25 !important;
+}
+
+/* Desktop-only / Mobile-only CTA helpers for Why Choose Us section */
+.why-choose-cta-desktop {
+  display: inline-block;
+}
+.why-choose-cta-mobile {
+  display: none;
+}
+
 .section-title h2::after {
   content: '';
   position: absolute;
@@ -1346,12 +1363,24 @@ section {
   }
 
   /* Section titles */
-  .section-title h2 {
-    font-size: 1.75rem;
+  .section-title h2,
+  .landing-section-heading {
+    font-size: 1.75rem !important;
   }
 
   .section-title p {
     font-size: 0.95rem;
+  }
+
+  /* Mobile Why Choose Us CTA — show below feature grid */
+  .why-choose-cta-desktop {
+    display: none !important;
+  }
+  .why-choose-cta-mobile {
+    display: flex !important;
+    justify-content: center;
+    width: 100%;
+    margin-top: 2rem;
   }
 
   /* Why choose */
@@ -1454,8 +1483,9 @@ section {
     font-size: 0.9rem;
   }
 
-  .section-title h2 {
-    font-size: 1.5rem;
+  .section-title h2,
+  .landing-section-heading {
+    font-size: 1.5rem !important;
   }
 
   /* Feature cards */

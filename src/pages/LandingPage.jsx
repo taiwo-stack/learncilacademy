@@ -1111,7 +1111,7 @@ export default function LandingPage() {
       >
         <div className="container">
           <div className="section-title" style={{ textAlign: 'center', marginBottom: '4rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', color: 'white', fontWeight: '800', marginBottom: '0.75rem' }}>
+            <h2 className="landing-section-heading" style={{ marginBottom: '0.75rem' }}>
               Our Learning Approach
             </h2>
             <p style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '1.1rem', maxWidth: '720px', margin: '0 auto', lineHeight: '1.6' }}>
@@ -1285,7 +1285,7 @@ export default function LandingPage() {
       }}>
         <div className="container">
           <div className="section-title" style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <h2 style={{ color: 'white', fontSize: '2.5rem', fontWeight: '800', fontFamily: 'var(--font-heading)', margin: '0 0 0.8rem 0' }}>Support for Every Kind of Learner</h2>
+            <h2 className="landing-section-heading" style={{ margin: '0 0 0.8rem 0' }}>Support for Every Kind of Learner</h2>
             <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '1.1rem', margin: 0 }}>
               Whatever stage your child is at, there's a path built for them.
             </p>
@@ -1448,7 +1448,7 @@ export default function LandingPage() {
       }}>
         <div className="container">
           <div className="section-title" style={{ textAlign: 'center', marginBottom: '4rem' }}>
-            <h2 style={{ color: 'white', fontSize: '2.5rem', fontWeight: '800', fontFamily: 'var(--font-heading)', margin: 0 }}>Getting Started Is Simple</h2>
+            <h2 className="landing-section-heading" style={{ margin: 0 }}>Getting Started Is Simple</h2>
           </div>
           <div style={{
             display: 'grid',
@@ -1539,7 +1539,7 @@ export default function LandingPage() {
       }}>
         <div className="container">
           <div className="section-title" style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <h2 style={{ color: 'white', fontSize: '2.5rem', fontWeight: '800', fontFamily: 'var(--font-heading)', margin: '0 0 0.8rem 0' }}>One Platform, Every Subject Your Child Needs</h2>
+            <h2 className="landing-section-heading" style={{ margin: '0 0 0.8rem 0' }}>One Platform, Every Subject Your Child Needs</h2>
             <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '1.1rem', margin: '0 auto', maxWidth: '800px' }}>
               50+ subjects across every grade level, taught by tutors who specialize in exactly what your child needs help with.
             </p>
@@ -1674,14 +1674,7 @@ export default function LandingPage() {
                 Why Families Choose Us
               </span>
               
-              <h2 style={{
-                fontFamily: 'var(--font-heading)',
-                fontSize: '2.5rem',
-                fontWeight: '800',
-                lineHeight: '1.2',
-                marginBottom: '1.25rem',
-                color: 'white'
-              }}>
+              <h2 className="landing-section-heading" style={{ marginBottom: '1.25rem' }}>
                 A Trusted Partner in Your Child's Success
               </h2>
               
@@ -1722,14 +1715,14 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              {/* Primary Action Button */}
+              {/* Primary Action Button — Desktop only (hidden on mobile) */}
               <button
                 onClick={() => {
                   setActiveTab('registration');
                   const el = document.getElementById('register');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="btn-primary"
+                className="btn-primary why-choose-cta-desktop"
                 style={{
                   background: 'var(--accent-color)',
                   color: 'white',
@@ -1843,6 +1836,42 @@ export default function LandingPage() {
                   </p>
                 </div>
               ))}
+            </div>
+
+            {/* Primary Action Button — Mobile only (shown below feature grid) */}
+            <div className="why-choose-cta-mobile">
+              <button
+                onClick={() => {
+                  setActiveTab('registration');
+                  const el = document.getElementById('register');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="btn-primary"
+                style={{
+                  background: 'var(--accent-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '0.9rem 2.2rem',
+                  fontWeight: '700',
+                  fontSize: '0.98rem',
+                  cursor: 'pointer',
+                  width: '100%',
+                  maxWidth: '340px',
+                  boxShadow: '0 4px 14px rgba(242, 122, 36, 0.25)',
+                  transition: 'background 0.2s, transform 0.15s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'var(--accent-dark)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--accent-color)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                Enroll Your Child Today
+              </button>
             </div>
             
           </div>
@@ -2023,7 +2052,7 @@ export default function LandingPage() {
       }}>
         <div className="container">
           <div className="section-title" style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <h2 style={{ color: 'white', fontSize: '2.5rem', fontWeight: '800', fontFamily: 'var(--font-heading)', margin: '0 0 0.8rem 0' }}>Loved by Parents and Students</h2>
+            <h2 className="landing-section-heading" style={{ margin: '0 0 0.8rem 0' }}>Loved by Parents and Students</h2>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.8rem' }}>
               <span style={{ color: '#ffb400', fontSize: '1.25rem' }}>⭐⭐⭐⭐⭐</span>
               <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem' }}>4.9/5 Average Family Rating</span>
@@ -2133,7 +2162,7 @@ export default function LandingPage() {
       >
         <div className="container">
           <div className="section-title" style={{ marginBottom: '3rem', textAlign: 'center' }}>
-            <h2 style={{ color: 'white' }}>Common Questions From Parents</h2>
+            <h2 className="landing-section-heading">Common Questions From Parents</h2>
             <p style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Everything parents need to know before enrolling their child</p>
           </div>
 
@@ -2330,7 +2359,7 @@ export default function LandingPage() {
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
       }}>
         <div className="container" style={{ maxWidth: '800px', margin: '0 auto', padding: '0 2rem' }}>
-          <h2 style={{ color: 'white', fontSize: '2.5rem', fontWeight: '800', fontFamily: 'var(--font-heading)', marginBottom: '1rem', lineHeight: '1.25' }}>
+          <h2 className="landing-section-heading" style={{ marginBottom: '1rem' }}>
             Give Your Child a Tutor Who Actually Knows Them
           </h2>
           <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '1.1rem', marginBottom: '2.5rem', lineHeight: '1.6' }}>
