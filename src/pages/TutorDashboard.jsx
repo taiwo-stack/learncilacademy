@@ -7,11 +7,13 @@ import {
   getTopics,
   getSchedules, getAttendance, markAttendance, saveSchedule, deleteSchedule,
   getAnnouncements, createAnnouncement,
-  getChatMessages, sendChatMessage
+  getChatMessages, sendChatMessage,
+  getCourseTutors, getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile
 } from '../services/dataService';
 import { 
   Calendar, User, Clock, AlertCircle, Save, Check, X, 
-  MessageSquare, Plus, CheckSquare, Megaphone, Trash2, Send
+  MessageSquare, Plus, CheckSquare, Megaphone, Trash2, Send,
+  BookOpen, FileText, Upload
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
@@ -20,6 +22,18 @@ const formatMessageTime = (dateStr) => {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const getSpecialClassImage = (title = '', index = 0) => {
+  const t = title.toLowerCase();
+  if (t.includes('programming') || t.includes('code') || t.includes('python') || t.includes('java')) return '/images/book4.jpg';
+  if (t.includes('ai') || t.includes('intelligence') || t.includes('artificial')) return '/images/ai.jpg';
+  if (t.includes('science') || t.includes('data')) return '/images/student5.jpg';
+  if (t.includes('excel') || t.includes('word') || t.includes('microsoft') || t.includes('office')) return '/images/student6.jpg';
+  if (t.includes('web') || t.includes('design') || t.includes('html')) return '/images/student10.jpg';
+  if (t.includes('writing') || t.includes('creative') || t.includes('essay')) return '/images/student3.jpg';
+  const images = ['/images/book4.jpg', '/images/ai.jpg', '/images/student5.jpg', '/images/student6.jpg', '/images/student10.jpg', '/images/student3.jpg'];
+  return images[index % images.length];
 };
 
 export default function TutorDashboard({ user }) {
@@ -39,6 +53,13 @@ export default function TutorDashboard({ user }) {
   const [schedules, setSchedules] = useState([]);
   const [attendanceLog, setAttendanceLog] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [courseTutors, setCourseTutors] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [activeTopicId, setActiveTopicId] = useState(null);
+  const [newMaterialTitle, setNewMaterialTitle] = useState('');
+  const [materialFile, setMaterialFile] = useState(null);
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
   
   // Chat Inbox states
   const [chatMessages, setChatMessages] = useState([]);
@@ -139,9 +160,10 @@ export default function TutorDashboard({ user }) {
 
   const loadTutorDashboard = async () => {
     try {
-      const [allBookings, allTutors, sList, cList, scList, tkList, subList, schList, attList, annList, msgList, topicList] = await Promise.all([
+      const [allBookings, allTutors, sList, cList, scList, tkList, subList, schList, attList, annList, msgList, topicList, ctList, matList] = await Promise.all([
         getBookings(), getTutors(), getStudents(), getCourses(), getStudentCourses(),
-        getTasks(), getStudentTasks(), getSchedules(), getAttendance(), getAnnouncements(), getChatMessages(), getTopics()
+        getTasks(), getStudentTasks(), getSchedules(), getAttendance(), getAnnouncements(), getChatMessages(), getTopics(),
+        getCourseTutors(), getMaterials()
       ]);
 
       const currentTutor = allTutors.find(t => 
@@ -170,6 +192,8 @@ export default function TutorDashboard({ user }) {
       setAnnouncements(annList);
       setChatMessages(msgList);
       setTopics(topicList || []);
+      setCourseTutors(ctList || []);
+      setMaterials(matList || []);
 
       if (cList.length > 0) setNewTaskCourse(cList[0].id);
     } catch (err) {
@@ -506,6 +530,9 @@ export default function TutorDashboard({ user }) {
           <li className={`sidebar-item ${activeTab === 'students' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('students')}><User size={18} /> Assigned Students</button>
           </li>
+          <li className={`sidebar-item ${activeTab === 'courses' ? 'active' : ''}`}>
+            <button onClick={() => { setActiveTab('courses'); setSelectedCourseId(null); }}><BookOpen size={18} /> My Courses</button>
+          </li>
           <li className={`sidebar-item ${activeTab === 'tasks' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('tasks')}><CheckSquare size={18} /> Tasks & Grading</button>
           </li>
@@ -787,6 +814,257 @@ export default function TutorDashboard({ user }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Tab: My Courses */}
+        {activeTab === 'courses' && (
+          <div>
+            {!selectedCourseId ? (
+              /* State 1: Courses Cards Grid List */
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary-color)', marginBottom: '0.4rem' }}>My Assigned Courses</h2>
+                <p style={{ color: '#718096', fontSize: '0.88rem', marginBottom: '1.5rem', marginTop: 0 }}>Select a course to view its curriculum, lesson topics, and manage files.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '1.5rem' }}>
+                  {(() => {
+                    const actualTutorId = tutorInfo?.id || tutorId;
+                    const myCourses = courses.filter(c =>
+                      courseTutors.some(ct => ct.course_id === c.id && ct.tutor_id === actualTutorId) ||
+                      enrollments.some(sc => sc.course_id === c.id && sc.tutor_id === actualTutorId)
+                    );
+                    if (myCourses.length === 0) {
+                      return <div style={{ color: '#a0aec0', padding: '2rem', gridColumn: '1 / -1', textAlign: 'center' }}>No courses currently assigned to you.</div>;
+                    }
+                    return myCourses.map((c, index) => {
+                      const coverImg = getSpecialClassImage(c.title, index);
+                      const courseTopicsCount = topics.filter(t => t.course_id === c.id).length;
+                      const courseStudentsCount = students.filter(s =>
+                        enrollments.some(sc => sc.course_id === c.id && sc.student_id === s.id && sc.tutor_id === actualTutorId)
+                      ).length;
+
+                      return (
+                        <div
+                          key={c.id}
+                          className="course-enrollment-card"
+                          onClick={() => { setSelectedCourseId(c.id); setActiveTopicId(null); }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div
+                            className="course-card-banner-img"
+                            style={{ backgroundImage: `url('${coverImg}')` }}
+                          >
+                            {c.category && (
+                              <span className="course-card-category-badge">{c.category}</span>
+                            )}
+                          </div>
+                          <div className="course-card-content-body">
+                            <h3 className="course-card-title-heading" style={{ color: 'var(--primary-color)', margin: '0 0 0.5rem 0' }}>{c.title}</h3>
+                            <p className="course-card-description-text">{c.description || 'No description available.'}</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', borderTop: '1px solid #edf2f7', paddingTop: '0.75rem', fontSize: '0.75rem', color: '#718096', fontWeight: 600 }}>
+                              <span>📚 {courseTopicsCount} Topic{courseTopicsCount !== 1 ? 's' : ''}</span>
+                              <span>👥 {courseStudentsCount} Student{courseStudentsCount !== 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
+                          <div className="course-card-action-bar">
+                            <button className="course-enter-classroom-btn">
+                              📖 View Content
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            ) : (
+              /* State 2: Course Curriculum Details Panel */
+              (() => {
+                const selectedCourse = courses.find(c => c.id === selectedCourseId);
+                const courseTopics = topics.filter(tp => tp.course_id === selectedCourseId).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+                
+                // Default activeTopicId to first topic if none is selected
+                let activeTopic = courseTopics.find(tp => tp.id === activeTopicId);
+                if (!activeTopic && courseTopics.length > 0) {
+                  activeTopic = courseTopics[0];
+                }
+                const activeTopicIdToUse = activeTopic?.id || null;
+
+                const handleMaterialUpload = async (e) => {
+                  e.preventDefault();
+                  if (!newMaterialTitle.trim() || !materialFile || !activeTopicIdToUse) return;
+                  setUploadingMaterial(true);
+                  try {
+                    const fileUrl = await uploadMaterialFile(materialFile.name, materialFile);
+                    const saved = await saveMaterial({
+                      course_id: selectedCourseId,
+                      topic_id: activeTopicIdToUse,
+                      title: newMaterialTitle.trim(),
+                      file_url: fileUrl,
+                      file_type: materialFile.type || 'file'
+                    });
+                    setMaterials(prev => [...prev, saved]);
+                    setNewMaterialTitle('');
+                    setMaterialFile(null);
+                    alert('Material file uploaded successfully!');
+                  } catch (err) {
+                    alert('Failed to upload material: ' + err.message);
+                  } finally {
+                    setUploadingMaterial(false);
+                  }
+                };
+
+                const handleMaterialDelete = async (id) => {
+                  if (!window.confirm('Delete this material file?')) return;
+                  try {
+                    await deleteMaterial(id);
+                    setMaterials(prev => prev.filter(m => m.id !== id));
+                    alert('Material deleted.');
+                  } catch (err) {
+                    alert('Failed to delete material: ' + err.message);
+                  }
+                };
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px solid #edf2f7', paddingBottom: '1rem' }}>
+                      <button className="btn-action cancel" style={{ padding: '0.45rem 1rem' }} onClick={() => setSelectedCourseId(null)}>
+                        ⬅ Back to Courses
+                      </button>
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-color)' }}>{selectedCourse?.title}</h2>
+                        <span style={{ fontSize: '0.78rem', color: '#718096' }}>Syllabus &amp; Lesson Content Workspace</span>
+                      </div>
+                    </div>
+
+                    {courseTopics.length === 0 ? (
+                      <div className="dashboard-card" style={{ padding: '3rem', textAlign: 'center', color: '#a0aec0' }}>
+                        No curriculum topics exist for this course yet.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '2rem', alignItems: 'start' }} className="classroom-grid-layout">
+                        {/* Left column: lesson topics list */}
+                        <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden' }}>
+                          <div style={{ background: '#f7fafc', padding: '0.85rem 1.25rem', borderBottom: '1px solid #edf2f7', fontWeight: 'bold', fontSize: '0.82rem', color: 'var(--primary-color)' }}>
+                            📖 Lessons / Topics
+                          </div>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                            {courseTopics.map((tp, idx) => (
+                              <li key={tp.id}>
+                                <button
+                                  onClick={() => setActiveTopicId(tp.id)}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '0.85rem 1.25rem',
+                                    border: 'none',
+                                    borderBottom: '1px solid #f0f4f8',
+                                    background: activeTopicIdToUse === tp.id ? 'rgba(15,44,89,0.06)' : 'white',
+                                    borderLeft: activeTopicIdToUse === tp.id ? '4px solid var(--primary-color)' : '4px solid transparent',
+                                    color: activeTopicIdToUse === tp.id ? 'var(--primary-color)' : '#4a5568',
+                                    fontWeight: activeTopicIdToUse === tp.id ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    fontSize: '0.82rem',
+                                    display: 'block',
+                                    boxSizing: 'border-box'
+                                  }}
+                                >
+                                  {idx + 1}. {tp.title}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Right column: lesson content workspace */}
+                        {activeTopic && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {/* Lesson Description */}
+                            <div className="dashboard-card">
+                              <h3 style={{ borderBottom: '1px solid #edf2f7', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--primary-color)' }}>
+                                {activeTopic.title}
+                              </h3>
+                              <p style={{ fontSize: '0.88rem', color: '#4a5568', lineHeight: '1.5', margin: 0 }}>
+                                {activeTopic.description || 'No description provided for this lesson.'}
+                              </p>
+                            </div>
+
+                            {/* Lesson Materials / Files */}
+                            <div className="dashboard-card">
+                              <h4 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}><FileText size={16} style={{ marginRight: '0.3rem', verticalAlign: 'middle' }} /> Lesson Materials &amp; Resources</h4>
+                              {materials.filter(m => m.topic_id === activeTopicIdToUse).length === 0 ? (
+                                <p style={{ fontSize: '0.82rem', color: '#a0aec0', margin: '0 0 1rem 0' }}>No materials uploaded to this lesson yet.</p>
+                              ) : (
+                                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                  {materials.filter(m => m.topic_id === activeTopicIdToUse).map(m => (
+                                    <li key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #edf2f7' }}>
+                                      <a href={m.file_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--primary-color)', fontWeight: '600', textDecoration: 'none' }}>
+                                        📎 {m.title}
+                                      </a>
+                                      <button onClick={() => handleMaterialDelete(m.id)} style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer', fontSize: '0.75rem', display: 'inline-flex', padding: '0.2rem' }} title="Delete material">✕</button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+
+                              {/* Upload form */}
+                              <form onSubmit={handleMaterialUpload} style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                <div style={{ fontWeight: '600', fontSize: '0.82rem', color: '#4a5568' }}>Upload Lesson File</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                  <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <input
+                                      type="text"
+                                      placeholder="File Display Name"
+                                      value={newMaterialTitle}
+                                      onChange={(e) => setNewMaterialTitle(e.target.value)}
+                                      required
+                                      style={{ padding: '0.5rem', fontSize: '0.8rem', height: '36px', boxSizing: 'border-box' }}
+                                    />
+                                  </div>
+                                  <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <input
+                                      type="file"
+                                      onChange={(e) => setMaterialFile(e.target.files[0])}
+                                      required
+                                      style={{ border: 'none', background: 'transparent', padding: '0.2rem', fontSize: '0.8rem' }}
+                                    />
+                                  </div>
+                                </div>
+                                <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', padding: '0.45rem 1rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }} disabled={uploadingMaterial}>
+                                  <Upload size={14} /> {uploadingMaterial ? 'Uploading...' : 'Upload File'}
+                                </button>
+                              </form>
+                            </div>
+
+                            {/* Linked Quizzes & Tasks */}
+                            <div className="dashboard-card">
+                              <h4 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}><CheckSquare size={16} style={{ marginRight: '0.3rem', verticalAlign: 'middle' }} /> Lesson Assignments &amp; Quizzes</h4>
+                              {tasks.filter(tk => tk.topic_id === activeTopicIdToUse).length === 0 ? (
+                                <p style={{ fontSize: '0.82rem', color: '#a0aec0', margin: 0 }}>No quizzes or assignments are linked to this lesson topic.</p>
+                              ) : (
+                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                  {tasks.filter(tk => tk.topic_id === activeTopicIdToUse).map(tk => (
+                                    <li key={tk.id} style={{ padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid #edf2f7', background: '#fcfdfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <div>
+                                        <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: '#2d3748' }}>{tk.title}</div>
+                                        <span style={{ fontSize: '0.7rem', color: tk.task_type === 'quiz' ? 'var(--accent-color)' : '#718096', textTransform: 'capitalize', fontWeight: '600' }}>
+                                          {tk.task_type === 'quiz' ? '🧩 Quiz' : '📝 Homework'}
+                                        </span>
+                                      </div>
+                                      <span style={{ fontSize: '0.72rem', color: '#718096' }}>Max: {tk.max_points} pts</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            )}
           </div>
         )}
 
