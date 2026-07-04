@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, createPortal } from 'react';
 import {
   getTutors,
   getCourses,
@@ -291,6 +291,8 @@ export default function LandingPage() {
   const [tzSearch, setTzSearch] = useState('');
   const [tzOpen, setTzOpen] = useState(false);
   const tzDropdownRef = useRef(null);
+  const tzTriggerRef = useRef(null); // Ref on the trigger button for portal positioning
+  const [tzRect, setTzRect] = useState(null); // Bounding rect of the trigger
 
   // Close timezone dropdown on outside click
   useEffect(() => {
@@ -1016,10 +1018,17 @@ export default function LandingPage() {
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
                       <label>Time Zone *</label>
-                      {/* Custom searchable timezone dropdown */}
+                      {/* Custom searchable timezone dropdown — panel portalled to body to escape transform stacking context */}
                       <div ref={tzDropdownRef} style={{ position: 'relative' }}>
+                        {/* Trigger button */}
                         <div
-                          onClick={() => setTzOpen(o => !o)}
+                          ref={tzTriggerRef}
+                          onClick={() => {
+                            if (!tzOpen) {
+                              setTzRect(tzTriggerRef.current.getBoundingClientRect());
+                            }
+                            setTzOpen(o => !o);
+                          }}
                           style={{
                             padding: '0.65rem', borderRadius: '8px',
                             border: `1.5px solid ${tzOpen ? 'var(--primary-color)' : '#cbd5e0'}`,
@@ -1032,6 +1041,83 @@ export default function LandingPage() {
                           {bookingForm.bookingTimezone || 'Select Timezone'}
                           <span>{tzOpen ? '▲' : '▼'}</span>
                         </div>
+
+                        {/* Dropdown panel — rendered via portal to escape CSS transform stacking context */}
+                        {tzOpen && tzRect && createPortal(
+                          <div
+                            style={{
+                              position: 'fixed',
+                              top: tzRect.bottom + 4,
+                              left: tzRect.left,
+                              width: tzRect.width,
+                              background: 'white',
+                              border: '1.5px solid var(--primary-color)',
+                              borderRadius: '8px',
+                              zIndex: 99999,
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {/* Search input */}
+                            <div style={{ padding: '0.5rem' }}>
+                              <input
+                                autoFocus
+                                type="text"
+                                placeholder="Search timezone..."
+                                value={tzSearch}
+                                onChange={e => setTzSearch(e.target.value)}
+                                style={{
+                                  width: '100%', padding: '0.45rem 0.6rem',
+                                  borderRadius: '6px', border: '1px solid #cbd5e0',
+                                  fontSize: '0.82rem', outline: 'none',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+                            {/* Options list */}
+                            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                              {tzOptions
+                                .filter(opt =>
+                                  opt.label.toLowerCase().includes(tzSearch.toLowerCase()) ||
+                                  opt.value.toLowerCase().includes(tzSearch.toLowerCase())
+                                )
+                                .map(opt => (
+                                  <div
+                                    key={opt.value}
+                                    onMouseDown={e => {
+                                      // Use onMouseDown + preventDefault to prevent blur closing before click registers
+                                      e.preventDefault();
+                                      setBookingForm(prev => ({ ...prev, bookingTimezone: opt.value }));
+                                      setTzOpen(false);
+                                      setTzSearch('');
+                                    }}
+                                    style={{
+                                      padding: '0.55rem 0.75rem',
+                                      fontSize: '0.82rem',
+                                      cursor: 'pointer',
+                                      background: bookingForm.bookingTimezone === opt.value ? 'rgba(59,130,246,0.08)' : 'transparent',
+                                      color: bookingForm.bookingTimezone === opt.value ? 'var(--primary-color)' : '#2d3748',
+                                      fontWeight: bookingForm.bookingTimezone === opt.value ? '600' : '400',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
+                                    onMouseLeave={e => e.currentTarget.style.background = bookingForm.bookingTimezone === opt.value ? 'rgba(59,130,246,0.08)' : 'transparent'}
+                                  >
+                                    {opt.label}
+                                  </div>
+                                ))
+                              }
+                              {tzOptions.filter(opt =>
+                                opt.label.toLowerCase().includes(tzSearch.toLowerCase()) ||
+                                opt.value.toLowerCase().includes(tzSearch.toLowerCase())
+                              ).length === 0 && (
+                                <div style={{ padding: '0.75rem', fontSize: '0.82rem', color: '#a0aec0', textAlign: 'center' }}>
+                                  No timezones found
+                                </div>
+                              )}
+                            </div>
+                          </div>,
+                          document.body
+                        )}
                       </div>
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
