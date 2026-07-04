@@ -46,6 +46,7 @@ export default function SubjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedGrades, setSelectedGrades] = useState([]);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Fetch courses from DB on mount, merge with enrichment map for grades/skills
   useEffect(() => {
@@ -263,26 +264,17 @@ export default function SubjectsPage() {
             WebkitBackdropFilter: 'blur(12px)',
             position: 'sticky',
             top: '7.5rem'
-          }} className="filter-sidebar">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+          }} className={`filter-sidebar ${mobileFilterOpen ? 'open' : ''}`}>
+            <div className="filter-sidebar-header">
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'white' }}>Filters</h3>
-              <button
-                onClick={handleResetFilters}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--accent-color)',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  padding: 0,
-                  transition: 'opacity 0.2s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = 0.8}
-                onMouseLeave={e => e.currentTarget.style.opacity = 1}
-              >
-                Clear All
-              </button>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <button onClick={handleResetFilters} className="filter-clear-link">
+                  Clear All
+                </button>
+                <button className="filter-drawer-close-btn" onClick={() => setMobileFilterOpen(false)} aria-label="Close filters">
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Search */}
@@ -383,20 +375,39 @@ export default function SubjectsPage() {
           {/* Subject Cards Results List */}
           <div style={{ width: '100%' }}>
             {/* Results Count Banner */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '2rem',
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: '0.95rem',
-              fontWeight: '600'
-            }}>
+            <div className="results-count-banner">
               <div>Showing {filteredSubjects.length} subjects found</div>
               {(selectedCategories.length > 0 || selectedGrades.length > 0 || searchQuery) && (
                 <div style={{ fontSize: '0.88rem', color: 'rgba(255, 255, 255, 0.5)' }}>Active filters apply</div>
               )}
             </div>
+
+            {/* Active Filters Row (Current State) */}
+            {(selectedCategories.length > 0 || selectedGrades.length > 0 || searchQuery) && (
+              <div className="active-filters-chips-container">
+                <span className="active-filters-label">Active Filters:</span>
+                <div className="active-filters-chips-list">
+                  {searchQuery && (
+                    <span className="filter-active-chip" onClick={() => setSearchQuery('')}>
+                      Search: "{searchQuery}" <span className="chip-close-icon">✕</span>
+                    </span>
+                  )}
+                  {selectedCategories.map(cat => (
+                    <span key={cat} className="filter-active-chip" onClick={() => handleCategoryChange(cat)}>
+                      {cat} <span className="chip-close-icon">✕</span>
+                    </span>
+                  ))}
+                  {selectedGrades.map(g => (
+                    <span key={g} className="filter-active-chip" onClick={() => handleGradeChange(g)}>
+                      {g === 'K-5' ? 'Early Learners' : g} <span className="chip-close-icon">✕</span>
+                    </span>
+                  ))}
+                  <button className="active-filters-clear-btn" onClick={handleResetFilters}>
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Grid display or empty state */}
             {filteredSubjects.length === 0 ? (
@@ -490,6 +501,23 @@ export default function SubjectsPage() {
           </div>
         </div>
       </div>
+
+      {/* Sticky Mobile Filter Trigger Button */}
+      <button 
+        className="mobile-filter-floating-btn" 
+        onClick={() => setMobileFilterOpen(true)}
+        aria-label="Open filter drawer"
+      >
+        🔍 Filter &amp; Search {(selectedCategories.length + selectedGrades.length + (searchQuery ? 1 : 0)) > 0 ? `(${selectedCategories.length + selectedGrades.length + (searchQuery ? 1 : 0)})` : ''}
+      </button>
+
+      {/* Filter Drawer Backdrop Overlay */}
+      {mobileFilterOpen && (
+        <div 
+          className="filter-drawer-backdrop" 
+          onClick={() => setMobileFilterOpen(false)} 
+        />
+      )}
     </div>
   );
 }
