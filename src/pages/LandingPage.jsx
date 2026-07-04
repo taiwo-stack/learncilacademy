@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, createPortal } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   getTutors,
   getCourses,
@@ -2011,24 +2012,7 @@ export default function LandingPage() {
                         e.currentTarget.style.boxShadow = '0 10px 30px rgba(15, 44, 89, 0.04)';
                       }}
                     >
-                      {/* Verified Badge */}
-                      <span style={{
-                        position: 'absolute',
-                        top: '1rem',
-                        right: '1rem',
-                        background: '#e6f4ea',
-                        color: '#1e7e34',
-                        borderRadius: '50px',
-                        padding: '0.2rem 0.65rem',
-                        fontSize: '0.65rem',
-                        fontWeight: '700',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        border: '1px solid rgba(30, 126, 52, 0.15)'
-                      }}>
-                        ✓ Verified
-                      </span>
+
 
                       {/* Avatar Wrapper with Status dot */}
                       <div style={{ position: 'relative', margin: '0.5rem auto 1.25rem' }}>
@@ -2083,12 +2067,9 @@ export default function LandingPage() {
                         {t.subject} Tutor
                       </span>
 
-                      {/* Rating/Reviews */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', color: '#718096', marginBottom: '1.25rem' }}>
-                        <span>⭐⭐⭐⭐⭐</span>
-                        <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>5.0</span>
-                        <span>•</span>
-                        <span>{t.experience || 'Experienced'}</span>
+                      {/* Experience */}
+                      <div style={{ fontSize: '0.78rem', color: '#718096', marginBottom: '1.25rem' }}>
+                        {t.experience || 'Experienced'}
                       </div>
 
                       {/* Bio modal trigger */}
