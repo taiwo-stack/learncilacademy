@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   getBookings, getStudents, updateStudent, updateBookingStatus, uploadAvatar,
   getStudentCourses, getCourses, getTutors,
   getTopics, getMaterials, uploadMaterialFile,
@@ -8,8 +8,8 @@ import {
   getAnnouncements,
   getChatMessages, sendChatMessage
 } from '../services/dataService';
-import { 
-  Calendar, User, BookOpen, Clock, AlertCircle, Save, 
+import {
+  Calendar, User, BookOpen, Clock, AlertCircle, Save,
   MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play, LayoutDashboard, Menu,
   ChevronLeft
 } from 'lucide-react';
@@ -46,7 +46,7 @@ export default function StudentDashboard({ user }) {
 
   // Active LMS states
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  
+
   // Interactive Quiz state variables
   const [activeQuizId, setActiveQuizId] = useState(null);
   const [quizAnswers, setQuizAnswers] = useState({});
@@ -63,7 +63,7 @@ export default function StudentDashboard({ user }) {
   const [chatInput, setChatInput] = useState('');
 
   // Load dynamically based on logged-in student details
-  const studentId = user?.id || 's1'; 
+  const studentId = user?.id || 's1';
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
@@ -89,8 +89,8 @@ export default function StudentDashboard({ user }) {
         getAttendance(), getAnnouncements(), getChatMessages()
       ]);
 
-      const currentStudent = allStudents.find(s => 
-        s.id === studentId || 
+      const currentStudent = allStudents.find(s =>
+        s.id === studentId ||
         s.profile_id === studentId ||
         s.email === user?.email
       );
@@ -100,7 +100,7 @@ export default function StudentDashboard({ user }) {
 
       // Filter bookings for Tobi Coker (or matching by student_name)
       const nameToMatch = currentStudent ? currentStudent.full_name : (user?.full_name || 'Tobi Coker');
-      const filtered = allBookings.filter(b => 
+      const filtered = allBookings.filter(b =>
         b.student_name.toLowerCase() === nameToMatch.toLowerCase() ||
         b.email === currentStudent?.email ||
         b.email === user?.email
@@ -167,7 +167,7 @@ export default function StudentDashboard({ user }) {
   const handleQuizSubmit = async (taskObj) => {
     const questions = taskObj.quiz_questions || [];
     let correctCount = 0;
-    
+
     questions.forEach((q, idx) => {
       if (quizAnswers[idx] === q.correct) {
         correctCount++;
@@ -266,14 +266,14 @@ export default function StudentDashboard({ user }) {
     <div className="dashboard-container">
       {/* Mobile Sidebar Backdrop Overlay */}
       {sidebarOpen && (
-        <div 
-          className="sidebar-backdrop" 
+        <div
+          className="sidebar-backdrop"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Mobile Sidebar Toggle FAB Button */}
-      <button 
+      <button
         className="sidebar-toggle-btn"
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
@@ -362,10 +362,10 @@ export default function StudentDashboard({ user }) {
 
             {/* Two-Column Dashboard Content Layout */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
-              
+
               {/* Left Column: Schedules (Today's & Next Incoming) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                
+
                 {/* Section: Next Incoming Class */}
                 <div className="dashboard-card" style={{ margin: 0, borderTop: '4px solid #10b981' }}>
                   <h3 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--primary-color)' }}>
@@ -375,7 +375,7 @@ export default function StudentDashboard({ user }) {
                     const cTitle = courses.find(c => c.id === nextClass.course_id)?.title || 'Course';
                     const tName = tutors.find(t => t.id === nextClass.tutor_id)?.full_name || 'Tutor';
                     const classTime = new Date(nextClass.start_time);
-                    
+
                     return (
                       <div>
                         <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-dark)', marginBottom: '0.25rem' }}>
@@ -384,14 +384,14 @@ export default function StudentDashboard({ user }) {
                         <div style={{ fontSize: '0.88rem', color: '#4a5568', marginBottom: '0.75rem' }}>
                           Subject: <strong style={{ color: 'var(--primary-color)' }}>{cTitle}</strong> &bull; Tutor: <strong>{tName}</strong>
                         </div>
-                        
-                        <div style={{ 
-                          background: '#f0fdf4', 
-                          border: '1px solid #bbf7d0', 
-                          borderRadius: '10px', 
-                          padding: '0.75rem 1rem', 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
+
+                        <div style={{
+                          background: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '10px',
+                          padding: '0.75rem 1rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
                           alignItems: 'center',
                           marginBottom: '1rem'
                         }}>
@@ -402,14 +402,14 @@ export default function StudentDashboard({ user }) {
                             </strong>
                           </div>
                           {nextClass.meeting_link && (
-                            <a 
-                              href={nextClass.meeting_link} 
-                              target="_blank" 
-                              rel="noreferrer" 
+                            <a
+                              href={nextClass.meeting_link}
+                              target="_blank"
+                              rel="noreferrer"
                               className="btn-action approve"
-                              style={{ 
-                                textDecoration: 'none', 
-                                padding: '0.5rem 1rem', 
+                              style={{
+                                textDecoration: 'none',
+                                padding: '0.5rem 1rem',
                                 fontSize: '0.85rem',
                                 fontWeight: 700,
                                 background: '#10b981',
@@ -447,7 +447,7 @@ export default function StudentDashboard({ user }) {
                         const tName = tutors.find(t => t.id === sch.tutor_id)?.full_name || 'Tutor';
                         const classTime = new Date(sch.start_time);
                         const isPast = classTime < now;
-                        
+
                         return (
                           <div key={sch.id} style={{
                             display: 'flex',
@@ -471,14 +471,14 @@ export default function StudentDashboard({ user }) {
                               </div>
                             </div>
                             {!isPast && sch.meeting_link && (
-                              <a 
-                                href={sch.meeting_link} 
-                                target="_blank" 
-                                rel="noreferrer" 
+                              <a
+                                href={sch.meeting_link}
+                                target="_blank"
+                                rel="noreferrer"
                                 className="btn-action approve"
-                                style={{ 
-                                  textDecoration: 'none', 
-                                  padding: '0.4rem 0.8rem', 
+                                style={{
+                                  textDecoration: 'none',
+                                  padding: '0.4rem 0.8rem',
                                   fontSize: '0.8rem',
                                   borderRadius: '6px'
                                 }}
@@ -497,7 +497,7 @@ export default function StudentDashboard({ user }) {
 
               {/* Right Column: Announcements */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                
+
                 {/* Recent Announcements */}
                 {announcements.length > 0 ? (
                   <div className="dashboard-card" style={{ margin: 0 }}>
@@ -537,7 +537,7 @@ export default function StudentDashboard({ user }) {
         {/* Tab 1: Bookings */}
         {activeTab === 'bookings' && (
           <div>
-            
+
             <div className="dashboard-card">
               <h3><Calendar size={20} color="var(--primary-color)" /> Appointment Log</h3>
               {bookings.length === 0 ? (
@@ -588,7 +588,7 @@ export default function StudentDashboard({ user }) {
               <div style={{ padding: '2rem', background: 'white', borderRadius: '15px', color: '#a0aec0', textAlign: 'center' }}>You are not currently enrolled in any classes. Contact the administrator to assign you.</div>
             ) : (
               <div className="course-tab-layout">
-                
+
                 {/* Enrolled selector sidebar */}
                 <div className="portal-sidebar-card">
                   <h3 style={{ fontSize: '1.05rem', marginBottom: '1rem', color: 'var(--primary-color)' }}>Courses List</h3>
@@ -598,8 +598,8 @@ export default function StudentDashboard({ user }) {
                       if (!c) return null;
                       const isActive = selectedCourseId === c.id;
                       return (
-                        <li 
-                          key={c.id} 
+                        <li
+                          key={c.id}
                           className={`portal-list-item ${isActive ? 'active' : ''}`}
                           onClick={() => { setSelectedCourseId(c.id); setActiveQuizId(null); setQuizAnswers({}); setQuizScore(null); }}
                         >
@@ -616,7 +616,7 @@ export default function StudentDashboard({ user }) {
                 {/* Course Reader Workspace */}
                 {selectedCourseId ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    
+
                     {/* Course Header Details */}
                     <div className="dashboard-card">
                       <h2 style={{ fontSize: '1.5rem', color: 'var(--primary-color)', margin: '0 0 0.5rem 0' }}>{courses.find(c => c.id === selectedCourseId)?.title}</h2>
@@ -649,12 +649,12 @@ export default function StudentDashboard({ user }) {
                           {topics.filter(t => t.course_id === selectedCourseId).map((t, idx) => {
                             const topicMats = materials.filter(m => m.topic_id === t.id);
                             const topicTasks = tasks.filter(tk => tk.topic_id === t.id);
-                            
+
                             return (
                               <div key={t.id} style={{ borderBottom: '1px solid #edf2f7', paddingBottom: '1rem' }}>
                                 <h4 style={{ color: 'var(--primary-color)', fontSize: '1rem', fontWeight: 'bold', margin: '0 0 0.3rem 0' }}>Lesson {idx + 1}: {t.title}</h4>
                                 <p style={{ color: '#718096', fontSize: '0.85rem', margin: '0 0 0.8rem 0' }}>{t.description}</p>
-                                
+
                                 {/* Downloads / View Files */}
                                 {topicMats.length > 0 && (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -664,9 +664,9 @@ export default function StudentDashboard({ user }) {
                                     {topicMats.map(m => {
                                       const type = (m.file_type || '').toLowerCase();
                                       const isImage = type === 'image' || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(m.file_url || '');
-                                      const isPdf   = type === 'pdf'   || /\.pdf$/i.test(m.file_url || '');
+                                      const isPdf = type === 'pdf' || /\.pdf$/i.test(m.file_url || '');
                                       const isVideo = type === 'video' || /\.(mp4|webm|mov|avi)$/i.test(m.file_url || '');
-                                      const isDoc   = type === 'doc' || type === 'docx' || /\.(doc|docx)$/i.test(m.file_url || '');
+                                      const isDoc = type === 'doc' || type === 'docx' || /\.(doc|docx)$/i.test(m.file_url || '');
 
                                       const fileIcon = isImage ? '🖼️' : isPdf ? '📄' : isVideo ? '🎬' : isDoc ? '📝' : '📎';
                                       const typeLabel = isImage ? 'Image' : isPdf ? 'PDF' : isVideo ? 'Video' : isDoc ? 'Document' : 'File';
@@ -750,8 +750,8 @@ export default function StudentDashboard({ user }) {
                                           <Award size={12} /> Score: {sub.grade}% (Completed)
                                         </div>
                                       ) : (
-                                        <button 
-                                          className="btn-action edit" 
+                                        <button
+                                          className="btn-action edit"
                                           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
                                           onClick={() => { setActiveQuizId(tk.id); setQuizAnswers({}); setQuizScore(null); }}
                                         >
@@ -784,26 +784,26 @@ export default function StudentDashboard({ user }) {
                           {(tasks.find(t => t.id === activeQuizId)?.quiz_questions || []).map((q, qIdx) => (
                             <div key={qIdx} style={{ background: 'white', padding: '1rem', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                               <p style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.6rem' }}>{qIdx + 1}. {q.question}</p>
-                              
+
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                 {q.options.map((opt, optIdx) => (
-                                  <label 
-                                    key={optIdx} 
-                                    style={{ 
-                                      display: 'flex', 
-                                      alignItems: 'center', 
-                                      gap: '0.5rem', 
-                                      fontSize: '0.85rem', 
-                                      padding: '0.5rem', 
-                                      borderRadius: '6px', 
+                                  <label
+                                    key={optIdx}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.5rem',
+                                      fontSize: '0.85rem',
+                                      padding: '0.5rem',
+                                      borderRadius: '6px',
                                       background: quizAnswers[qIdx] === optIdx ? '#ebf8ff' : 'transparent',
                                       border: quizAnswers[qIdx] === optIdx ? '1px solid var(--primary-color)' : '1px solid #edf2f7',
                                       cursor: 'pointer'
                                     }}
                                   >
-                                    <input 
-                                      type="radio" 
-                                      name={`quiz-${activeQuizId}-${qIdx}`} 
+                                    <input
+                                      type="radio"
+                                      name={`quiz-${activeQuizId}-${qIdx}`}
                                       checked={quizAnswers[qIdx] === optIdx}
                                       onChange={() => handleQuizOptionSelect(qIdx, optIdx)}
                                       disabled={quizScore !== null}
@@ -819,8 +819,8 @@ export default function StudentDashboard({ user }) {
                         {/* Submit Button */}
                         <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                           {quizScore === null ? (
-                            <button 
-                              className="btn-primary" 
+                            <button
+                              className="btn-primary"
                               style={{ padding: '0.6rem 1.2rem', fontSize: '0.9rem' }}
                               onClick={() => handleQuizSubmit(tasks.find(t => t.id === activeQuizId))}
                             >
@@ -851,7 +851,7 @@ export default function StudentDashboard({ user }) {
           <div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'start' }}>
-              
+
               {/* Left Column: Attendance rate */}
               <div className="dashboard-card" style={{ textAlign: 'center', padding: '2rem' }}>
                 <h3 style={{ marginBottom: '1rem' }}><Award size={20} color="var(--primary-color)" /> My Class Attendance</h3>
@@ -924,19 +924,19 @@ export default function StudentDashboard({ user }) {
                   const c = courses.find(co => co.id === en.course_id);
                   if (!t) return null;
                   const isSelected = activeTutorChat?.id === t.id;
-                  
+
                   // Extract last message
-                  const threadMessages = chatMessages.filter(m => 
+                  const threadMessages = chatMessages.filter(m =>
                     (m.sender_id === (studentInfo?.profile_id || studentInfo?.id || studentId) && m.receiver_id === (t.profile_id || t.id)) ||
                     (m.sender_id === (t.profile_id || t.id) && m.receiver_id === (studentInfo?.profile_id || studentInfo?.id || studentId))
                   );
                   const lastMsg = threadMessages[threadMessages.length - 1];
                   const lastMsgText = lastMsg ? lastMsg.message_text : `Start learning in ${c?.title || 'course'}`;
                   const lastMsgTime = lastMsg ? formatMessageTime(lastMsg.created_at) : '';
-                  
+
                   return (
-                    <li 
-                      key={en.course_id} 
+                    <li
+                      key={en.course_id}
                       className={`whatsapp-contact-item ${isSelected ? 'active' : ''}`}
                       onClick={() => { setActiveTutorChat(t); setMobileChatView('chat'); }}
                     >
@@ -968,7 +968,7 @@ export default function StudentDashboard({ user }) {
                   {/* Active Header details */}
                   <div className="whatsapp-chat-header">
                     <div className="whatsapp-header-user">
-                      <button 
+                      <button
                         className="whatsapp-header-back-btn"
                         onClick={() => setMobileChatView('list')}
                       >
@@ -988,14 +988,14 @@ export default function StudentDashboard({ user }) {
 
                   {/* Messages Logs view container */}
                   <div className="whatsapp-messages-container">
-                    {chatMessages.filter(m => 
+                    {chatMessages.filter(m =>
                       (m.sender_id === (studentInfo?.profile_id || studentInfo?.id || studentId) && m.receiver_id === (activeTutorChat.profile_id || activeTutorChat.id)) ||
                       (m.sender_id === (activeTutorChat.profile_id || activeTutorChat.id) && m.receiver_id === (studentInfo?.profile_id || studentInfo?.id || studentId))
                     ).map(m => {
                       const isMe = m.sender_id === (studentInfo?.profile_id || studentInfo?.id || studentId);
                       return (
-                        <div 
-                          key={m.id} 
+                        <div
+                          key={m.id}
                           className={`whatsapp-bubble ${isMe ? 'sent' : 'received'}`}
                         >
                           <div style={{ fontSize: '0.88rem', color: '#111b21', whiteSpace: 'pre-wrap' }}>{m.message_text}</div>
@@ -1010,13 +1010,13 @@ export default function StudentDashboard({ user }) {
 
                   {/* Input sending bar */}
                   <form onSubmit={handleSendChat} className="whatsapp-input-bar">
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="whatsapp-input-field"
-                      value={chatInput} 
-                      onChange={(e) => setChatInput(e.target.value)} 
-                      placeholder="Type a message" 
-                      required 
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Type a message"
+                      required
                     />
                     <button type="submit" className="whatsapp-send-btn">
                       <Send size={16} />
@@ -1047,7 +1047,7 @@ export default function StudentDashboard({ user }) {
                   {tasks.filter(tk => enrollments.some(e => e.course_id === tk.course_id)).map(tk => {
                     const sub = submissions.find(s => s.task_id === tk.id);
                     const cTitle = courses.find(c => c.id === tk.course_id)?.title || 'Course';
-                    
+
                     return (
                       <li key={tk.id} style={{ padding: '1rem', border: '1px solid #edf2f7', borderRadius: '12px', background: '#fcfdfe' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
@@ -1061,7 +1061,7 @@ export default function StudentDashboard({ user }) {
                           )}
                         </div>
                         <p style={{ fontSize: '0.85rem', color: '#718096', margin: '0.2rem 0' }}>Instructions: {tk.description}</p>
-                        
+
                         {sub ? (
                           <div style={{ marginTop: '0.5rem', background: '#edf2f7', padding: '0.6rem', borderRadius: '8px', fontSize: '0.8rem' }}>
                             <div>📩 Your submission: "{sub.submission_text}"</div>
