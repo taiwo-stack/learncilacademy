@@ -50,6 +50,26 @@ export default function TutorDashboard({ user }) {
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskCourse, setNewTaskCourse] = useState('');
   const [newTaskMax, setNewTaskMax] = useState(100);
+  const [newTaskType, setNewTaskType] = useState('assignment'); // 'assignment' | 'quiz'
+
+  // Quiz builder state
+  const [quizQuestions, setQuizQuestions] = useState([
+    { question: '', options: ['', '', '', ''], correct: 0 }
+  ]);
+
+  const addQuizQuestion = () =>
+    setQuizQuestions(prev => [...prev, { question: '', options: ['', '', '', ''], correct: 0 }]);
+
+  const removeQuizQuestion = (idx) =>
+    setQuizQuestions(prev => prev.filter((_, i) => i !== idx));
+
+  const updateQuizQuestion = (idx, field, value) =>
+    setQuizQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
+
+  const updateQuizOption = (qIdx, optIdx, value) =>
+    setQuizQuestions(prev => prev.map((q, i) =>
+      i === qIdx ? { ...q, options: q.options.map((o, oi) => oi === optIdx ? value : o) } : q
+    ));
 
   // Grading states
   const [activeSubmissionId, setActiveSubmissionId] = useState(null);
@@ -167,18 +187,33 @@ export default function TutorDashboard({ user }) {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!newTaskTitle || !newTaskCourse) return alert('Fill out task title and course.');
+
+    if (newTaskType === 'quiz') {
+      const incomplete = quizQuestions.some(q =>
+        !q.question.trim() || q.options.some(o => !o.trim())
+      );
+      if (incomplete) return alert('Please fill in all quiz questions and options.');
+      if (quizQuestions.length === 0) return alert('Add at least one quiz question.');
+    }
+
     try {
-      const saved = await saveTask({
+      const taskPayload = {
         course_id: newTaskCourse,
         title: newTaskTitle,
         description: newTaskDesc,
-        task_type: 'assignment',
-        max_points: newTaskMax
-      });
+        task_type: newTaskType,
+        max_points: newTaskType === 'quiz' ? quizQuestions.length * 10 : newTaskMax,
+        ...(newTaskType === 'quiz' && { quiz_questions: quizQuestions })
+      };
+      const saved = await saveTask(taskPayload);
       setTasks(prev => [...prev, saved]);
+      // Reset form
       setNewTaskTitle('');
       setNewTaskDesc('');
-      alert('Task created successfully!');
+      setNewTaskMax(100);
+      setNewTaskType('assignment');
+      setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
+      alert(newTaskType === 'quiz' ? 'Quiz created and sent to students!' : 'Task created successfully!');
     } catch (err) {
       alert('Error creating task: ' + err.message);
     }
@@ -1013,8 +1048,34 @@ export default function TutorDashboard({ user }) {
               
               {/* Task Creation Form */}
               <div className="dashboard-card">
-                <h3><Plus size={18} /> Post Lesson Assignment</h3>
+                <h3><Plus size={18} /> Create Task or Quiz</h3>
                 <form onSubmit={handleCreateTask} className="login-form" style={{ gap: '0.8rem' }}>
+
+                  {/* Task Type Toggle */}
+                  <div className="form-group">
+                    <label>Task Type *</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {['assignment', 'quiz'].map(type => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setNewTaskType(type)}
+                          style={{
+                            flex: 1, padding: '0.6rem', borderRadius: '10px',
+                            border: `2px solid ${newTaskType === type ? 'var(--primary-color)' : '#e2e8f0'}`,
+                            background: newTaskType === type ? 'var(--primary-color)' : 'white',
+                            color: newTaskType === type ? 'white' : '#4a5568',
+                            fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          {type === 'assignment' ? '📝 Assignment' : '🧪 Quiz'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Course */}
                   <div className="form-group">
                     <label>Select Course *</label>
                     <select value={newTaskCourse} onChange={(e) => setNewTaskCourse(e.target.value)} required style={{ padding: '0.8rem', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
@@ -1024,19 +1085,161 @@ export default function TutorDashboard({ user }) {
                       ))}
                     </select>
                   </div>
+
+                  {/* Title */}
                   <div className="form-group">
-                    <label>Task Title *</label>
-                    <input type="text" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} placeholder="e.g. Read Chapter 2 and Write Abstract" required />
+                    <label>{newTaskType === 'quiz' ? 'Quiz Title *' : 'Task Title *'}</label>
+                    <input
+                      type="text"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      placeholder={newTaskType === 'quiz' ? 'e.g. Chapter 3 Comprehension Quiz' : 'e.g. Read Chapter 2 and Write Abstract'}
+                      required
+                    />
                   </div>
-                  <div className="form-group">
-                    <label>Max Grading Points</label>
-                    <input type="number" value={newTaskMax} onChange={(e) => setNewTaskMax(Number(e.target.value))} required />
-                  </div>
-                  <div className="form-group">
-                    <label>Task Description Instructions</label>
-                    <textarea value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} placeholder="Describe grading details..." rows={3}></textarea>
-                  </div>
-                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem' }}>Post Task</button>
+
+                  {/* Description (only for assignments) */}
+                  {newTaskType === 'assignment' && (
+                    <>
+                      <div className="form-group">
+                        <label>Max Grading Points</label>
+                        <input type="number" value={newTaskMax} onChange={(e) => setNewTaskMax(Number(e.target.value))} required />
+                      </div>
+                      <div className="form-group">
+                        <label>Task Description / Instructions</label>
+                        <textarea value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} placeholder="Describe the task and grading criteria..." rows={3}></textarea>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Quiz Instructions (optional note) */}
+                  {newTaskType === 'quiz' && (
+                    <div className="form-group">
+                      <label>Quiz Instructions (Optional)</label>
+                      <textarea value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} placeholder="e.g. Read Chapter 3 before attempting. Each question is worth 10 points." rows={2}></textarea>
+                    </div>
+                  )}
+
+                  {/* ── Quiz Question Builder ── */}
+                  {newTaskType === 'quiz' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: '700', color: 'var(--primary-color)', fontSize: '0.9rem' }}>
+                          🧩 Questions ({quizQuestions.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={addQuizQuestion}
+                          style={{
+                            padding: '0.4rem 0.9rem', background: 'var(--primary-color)',
+                            color: 'white', border: 'none', borderRadius: '8px',
+                            fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer'
+                          }}
+                        >
+                          + Add Question
+                        </button>
+                      </div>
+
+                      {quizQuestions.map((q, qIdx) => (
+                        <div
+                          key={qIdx}
+                          style={{
+                            background: '#f8fafc', border: '1.5px solid #e2e8f0',
+                            borderRadius: '12px', padding: '1rem',
+                            display: 'flex', flexDirection: 'column', gap: '0.6rem',
+                            position: 'relative'
+                          }}
+                        >
+                          {/* Question header */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: '700', fontSize: '0.82rem', color: 'var(--primary-color)' }}>
+                              Q{qIdx + 1}
+                            </span>
+                            {quizQuestions.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeQuizQuestion(qIdx)}
+                                style={{
+                                  background: '#fed7d7', color: '#c53030', border: 'none',
+                                  borderRadius: '6px', padding: '0.2rem 0.5rem',
+                                  cursor: 'pointer', fontSize: '0.72rem', fontWeight: '700'
+                                }}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Question text */}
+                          <input
+                            type="text"
+                            placeholder={`Question ${qIdx + 1}...`}
+                            value={q.question}
+                            onChange={(e) => updateQuizQuestion(qIdx, 'question', e.target.value)}
+                            required
+                            style={{
+                              padding: '0.55rem 0.75rem', borderRadius: '8px',
+                              border: '1.5px solid #cbd5e0', fontSize: '0.85rem',
+                              width: '100%', boxSizing: 'border-box'
+                            }}
+                          />
+
+                          {/* Options */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {q.options.map((opt, optIdx) => (
+                              <div key={optIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {/* Correct answer radio */}
+                                <button
+                                  type="button"
+                                  title="Mark as correct answer"
+                                  onClick={() => updateQuizQuestion(qIdx, 'correct', optIdx)}
+                                  style={{
+                                    width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                                    border: `2px solid ${q.correct === optIdx ? '#22c55e' : '#cbd5e0'}`,
+                                    background: q.correct === optIdx ? '#22c55e' : 'white',
+                                    cursor: 'pointer', fontSize: '0.7rem', color: 'white',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontWeight: 'bold', transition: 'all 0.12s'
+                                  }}
+                                >
+                                  {q.correct === optIdx ? '✓' : ''}
+                                </button>
+                                {/* Option label */}
+                                <span style={{
+                                  fontWeight: '700', fontSize: '0.75rem', color: '#4a5568',
+                                  width: '18px', flexShrink: 0
+                                }}>
+                                  {['A', 'B', 'C', 'D'][optIdx]}
+                                </span>
+                                <input
+                                  type="text"
+                                  placeholder={`Option ${['A','B','C','D'][optIdx]}`}
+                                  value={opt}
+                                  onChange={(e) => updateQuizOption(qIdx, optIdx, e.target.value)}
+                                  required
+                                  style={{
+                                    flex: 1, padding: '0.45rem 0.65rem',
+                                    borderRadius: '7px',
+                                    border: `1.5px solid ${q.correct === optIdx ? '#22c55e' : '#e2e8f0'}`,
+                                    background: q.correct === optIdx ? '#f0fdf4' : 'white',
+                                    fontSize: '0.82rem', boxSizing: 'border-box',
+                                    transition: 'border-color 0.12s, background 0.12s'
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ margin: 0, fontSize: '0.7rem', color: '#a0aec0' }}>
+                            🟢 Click the circle next to an option to mark it as the correct answer.
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem', marginTop: '0.5rem' }}>
+                    {newTaskType === 'quiz' ? '🚀 Publish Quiz to Students' : '📤 Post Assignment'}
+                  </button>
                 </form>
               </div>
 
