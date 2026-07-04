@@ -1829,38 +1829,127 @@ export default function TutorDashboard({ user }) {
                                   {cName}{tName ? ` › ${tName}` : ''} &bull; {parsedQs.length} question{parsedQs.length !== 1 ? 's' : ''} &bull; {completions.length} completion{completions.length !== 1 ? 's' : ''}
                                 </div>
                               </div>
-                              <button
-                                className="btn-action edit"
-                                style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                                onClick={() => {
-                                  if (isEditing) {
-                                    setEditingQuizId(null);
-                                    setEditQuizQuestions([]);
-                                    setEditQuizTargets([]);
-                                  } else {
-                                    setEditingQuizId(quizTask.id);
-                                    setEditQuizQuestions(parsedQs.length ? [...parsedQs] : [{ question: '', options: ['', '', '', ''], correct: 0 }]);
-                                    setEditQuizTargets(quizTask.target_student_ids || []);
-                                  }
-                                }}
-                              >
-                                {isEditing ? '✕ Cancel Edit' : '✏ Edit Quiz'}
-                              </button>
+                              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <button
+                                  className="btn-action edit"
+                                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                                  onClick={() => {
+                                    if (isEditing) {
+                                      setEditingQuizId(null);
+                                      setEditQuizQuestions([]);
+                                      setEditQuizTargets([]);
+                                    } else {
+                                      setEditingQuizId(quizTask.id);
+                                      setEditQuizQuestions(parsedQs.length ? [...parsedQs] : [{ question: '', options: ['', '', '', ''], correct: 0 }]);
+                                      setEditQuizTargets(quizTask.target_student_ids || []);
+                                    }
+                                  }}
+                                >
+                                  {isEditing ? '✕ Cancel Edit' : '✏ Edit Quiz'}
+                                </button>
+                                <button
+                                  className="btn-action delete"
+                                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#fed7d7', color: '#c53030', border: '1px solid #feb2b2' }}
+                                  onClick={async () => {
+                                    if (window.confirm('Are you sure you want to permanently delete this quiz for all students? This cannot be undone.')) {
+                                      try {
+                                        await deleteTask(quizTask.id);
+                                        setTasks(prev => prev.filter(t => t.id !== quizTask.id));
+                                        alert('Quiz deleted successfully for all students.');
+                                      } catch (err) {
+                                        alert('Failed to delete quiz: ' + err.message);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  🗑 Delete Quiz
+                                </button>
+                              </div>
                             </div>
 
                             {/* Completions list */}
                             {completions.length > 0 && (
-                              <div style={{ marginTop: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                                {completions.map(c => {
-                                  const sName = students.find(s => s.id === c.student_id)?.full_name || 'Student';
-                                  return (
-                                    <span key={c.id} style={{ background: '#d1fae5', color: '#166534', fontSize: '0.72rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
-                                      {sName}: {c.grade ?? '?'}%
-                                    </span>
-                                  );
-                                })}
+                              <div style={{ marginTop: '0.75rem' }}>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#4a5568', marginBottom: '0.25rem' }}>🎯 Student Completions:</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                  {completions.map(c => {
+                                    const sName = students.find(s => s.id === c.student_id)?.full_name || 'Student';
+                                    return (
+                                      <span key={c.id} style={{ background: '#d1fae5', color: '#166534', fontSize: '0.72rem', fontWeight: '600', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
+                                        {sName}: {c.grade ?? '?'}%
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
+
+                            {/* Assigned Students list with quick unassign */}
+                            <div style={{ marginTop: '0.8rem', borderTop: '1px solid #edf2f7', paddingTop: '0.6rem' }}>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#4a5568' }}>👥 Assigned Students:</span>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
+                                {(() => {
+                                  const assignedIds = quizTask.target_student_ids || [];
+                                  if (assignedIds.length === 0) {
+                                    return <span style={{ fontSize: '0.78rem', color: '#a0aec0' }}>None (visible to all course students)</span>;
+                                  }
+                                  return assignedIds.map(stId => {
+                                    const student = students.find(s => s.id === stId);
+                                    if (!student) return null;
+                                    return (
+                                      <span
+                                        key={stId}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.35rem',
+                                          background: '#edf2f7',
+                                          color: '#2d3748',
+                                          fontSize: '0.72rem',
+                                          padding: '0.2rem 0.5rem',
+                                          borderRadius: '6px',
+                                          border: '1px solid #cbd5e0'
+                                        }}
+                                      >
+                                        {student.full_name}
+                                        <button
+                                          type="button"
+                                          style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#e53e3e',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            padding: '0 0.1rem',
+                                            fontSize: '0.8rem',
+                                            display: 'inline-flex',
+                                            alignItems: 'center'
+                                          }}
+                                          onClick={async () => {
+                                            if (window.confirm(`Unassign this quiz from ${student.full_name}?`)) {
+                                              try {
+                                                const newTargets = assignedIds.filter(id => id !== stId);
+                                                const updated = await saveTask({
+                                                  ...quizTask,
+                                                  target_student_ids: newTargets
+                                                });
+                                                setTasks(prev => prev.map(t => t.id === quizTask.id ? updated : t));
+                                                alert(`Quiz unassigned from ${student.full_name}.`);
+                                              } catch (err) {
+                                                alert('Failed to unassign student: ' + err.message);
+                                              }
+                                            }
+                                          }}
+                                          title="Remove assignment for this student"
+                                        >
+                                          ✕
+                                        </button>
+                                      </span>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            </div>
 
                             {/* Inline Quiz Editor */}
                             {isEditing && (

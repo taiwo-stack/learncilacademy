@@ -270,6 +270,19 @@ export default function StudentDashboard({ user }) {
     return new Date(sch.start_time).toDateString() === todayStr;
   });
 
+  // Filter tasks that are actually assigned to this student (active course, not draft, student in target_student_ids if defined)
+  const activeStudentTasks = tasks.filter(tk => {
+    // 1. Must be enrolled in the task's course
+    if (!enrollments.some(e => e.course_id === tk.course_id)) return false;
+    // 2. Hide drafts
+    if (tk.status === 'draft') return false;
+    // 3. If target list exists, student must be in it
+    if (tk.target_student_ids && tk.target_student_ids.length > 0) {
+      return tk.target_student_ids.includes(studentInfo?.id || studentId);
+    }
+    return true; // no target list = visible to all course students
+  });
+
   // Next incoming class (future class, sorted by start_time ascending)
   const nextClass = schedules
     .filter(sch => new Date(sch.start_time) > now)
@@ -412,7 +425,7 @@ export default function StudentDashboard({ user }) {
                 { label: 'Courses Enrolled', value: enrollments.length, icon: '📚', color: '#4c6ef5', tab: 'courses' },
                 { label: 'Upcoming Classes', value: schedules.filter(s => new Date(s.scheduled_date) >= new Date()).length, icon: '📅', color: '#12b886', tab: 'timetable' },
                 { label: 'Attendance Rate', value: `${attendanceRate}%`, icon: '📊', color: '#3b82f6', tab: 'timetable' },
-                { label: 'Pending Tasks', value: tasks.filter(t => !submissions.find(s => s.task_id === t.id)).length, icon: '✏️', color: '#f59f00', tab: 'homework' },
+                { label: 'Pending Tasks', value: activeStudentTasks.filter(t => !submissions.find(s => s.task_id === t.id)).length, icon: '✏️', color: '#f59f00', tab: 'homework' },
               ].map(stat => (
                 <div
                   key={stat.tab}
@@ -1079,11 +1092,11 @@ export default function StudentDashboard({ user }) {
 
             <div className="dashboard-card">
               <h3><CheckSquare size={20} color="var(--primary-color)" /> Homework Submission Panel</h3>
-              {tasks.filter(tk => enrollments.some(e => e.course_id === tk.course_id)).length === 0 ? (
+              {activeStudentTasks.length === 0 ? (
                 <div style={{ color: '#a0aec0', padding: '1rem' }}>No assignments or tasks assigned.</div>
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {tasks.filter(tk => enrollments.some(e => e.course_id === tk.course_id)).map(tk => {
+                  {activeStudentTasks.map(tk => {
                     const sub = submissions.find(s => s.task_id === tk.id);
                     const cTitle = courses.find(c => c.id === tk.course_id)?.title || 'Course';
 
