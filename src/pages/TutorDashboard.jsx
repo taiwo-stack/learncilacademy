@@ -65,6 +65,7 @@ export default function TutorDashboard({ user }) {
   // Quiz edit state (for viewing/editing published quizzes)
   const [editingQuizId, setEditingQuizId] = useState(null);
   const [editQuizQuestions, setEditQuizQuestions] = useState([]);
+  const [editQuizTargets, setEditQuizTargets] = useState([]);
 
   // Target students selector
   const [targetStudentIds, setTargetStudentIds] = useState([]); // empty = all
@@ -1530,8 +1531,15 @@ export default function TutorDashboard({ user }) {
                                 className="btn-action edit"
                                 style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                                 onClick={() => {
-                                  if (isEditing) { setEditingQuizId(null); setEditQuizQuestions([]); }
-                                  else { setEditingQuizId(quizTask.id); setEditQuizQuestions(parsedQs.length ? [...parsedQs] : [{ question: '', options: ['', '', '', ''], correct: 0 }]); }
+                                  if (isEditing) {
+                                    setEditingQuizId(null);
+                                    setEditQuizQuestions([]);
+                                    setEditQuizTargets([]);
+                                  } else {
+                                    setEditingQuizId(quizTask.id);
+                                    setEditQuizQuestions(parsedQs.length ? [...parsedQs] : [{ question: '', options: ['', '', '', ''], correct: 0 }]);
+                                    setEditQuizTargets(quizTask.target_student_ids || []);
+                                  }
                                 }}
                               >
                                 {isEditing ? '✕ Cancel Edit' : '✏ Edit Quiz'}
@@ -1555,6 +1563,59 @@ export default function TutorDashboard({ user }) {
                             {/* Inline Quiz Editor */}
                             {isEditing && (
                               <div style={{ marginTop: '1rem', borderTop: '1px solid #edf2f7', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                
+                                {/* Student Targets List Selector */}
+                                <div style={{ background: '#f7fafc', border: '1px solid #edf2f7', borderRadius: '12px', padding: '1rem' }}>
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--primary-color)', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span>👥</span> Assigned Students
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                    {(() => {
+                                      const myCourseStudents = students.filter(s =>
+                                        enrollments.some(sc => sc.course_id === quizTask.course_id && sc.student_id === s.id && sc.tutor_id === (tutorInfo?.id || tutorId))
+                                      );
+                                      if (myCourseStudents.length === 0) {
+                                        return <span style={{ fontSize: '0.78rem', color: '#a0aec0' }}>No students enrolled in this course under your tutoring.</span>;
+                                      }
+                                      return myCourseStudents.map(student => {
+                                        const isAssigned = editQuizTargets.includes(student.id);
+                                        return (
+                                          <label
+                                            key={student.id}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '0.4rem',
+                                              fontSize: '0.78rem',
+                                              background: isAssigned ? 'rgba(40,167,69,0.08)' : 'white',
+                                              border: isAssigned ? '1px solid #38a169' : '1px solid #edf2f7',
+                                              padding: '0.35rem 0.6rem',
+                                              borderRadius: '6px',
+                                              cursor: 'pointer',
+                                              fontWeight: isAssigned ? '700' : 'normal',
+                                              color: isAssigned ? '#276c3a' : '#4a5568',
+                                              transition: 'all 0.15s'
+                                            }}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isAssigned}
+                                              onChange={() => {
+                                                if (isAssigned) {
+                                                  setEditQuizTargets(prev => prev.filter(id => id !== student.id));
+                                                } else {
+                                                  setEditQuizTargets(prev => [...prev, student.id]);
+                                                }
+                                              }}
+                                            />
+                                            {student.full_name}
+                                          </label>
+                                        );
+                                      });
+                                    })()}
+                                  </div>
+                                </div>
+
                                 {editQuizQuestions.map((q, qIdx) => (
                                   <div key={qIdx} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -1605,10 +1666,16 @@ export default function TutorDashboard({ user }) {
                                     style={{ padding: '0.4rem 0.9rem', fontSize: '0.82rem' }}
                                     onClick={async () => {
                                       try {
-                                        const updated = await saveTask({ ...quizTask, quiz_questions: editQuizQuestions, max_points: editQuizQuestions.length * 10 });
+                                        const updated = await saveTask({
+                                          ...quizTask,
+                                          quiz_questions: editQuizQuestions,
+                                          target_student_ids: editQuizTargets,
+                                          max_points: editQuizQuestions.length * 10
+                                        });
                                         setTasks(prev => prev.map(t => t.id === quizTask.id ? updated : t));
                                         setEditingQuizId(null);
                                         setEditQuizQuestions([]);
+                                        setEditQuizTargets([]);
                                         alert('Quiz updated successfully!');
                                       } catch (err) {
                                         alert('Failed to save quiz: ' + err.message);
