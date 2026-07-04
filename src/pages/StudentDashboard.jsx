@@ -10,9 +10,17 @@ import {
 } from '../services/dataService';
 import { 
   Calendar, User, BookOpen, Clock, AlertCircle, Save, 
-  MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play, LayoutDashboard, Menu
+  MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play, LayoutDashboard, Menu,
+  ChevronLeft
 } from 'lucide-react';
 import '../styles/Dashboard.css';
+
+const formatMessageTime = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 export default function StudentDashboard({ user }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -343,7 +351,7 @@ export default function StudentDashboard({ user }) {
             </div>
 
             {/* Quick Stats Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+            <div className="dashboard-quick-stats">
               {[
                 { label: 'Courses Enrolled', value: enrollments.length, icon: '📚', color: '#4c6ef5', tab: 'courses' },
                 { label: 'Upcoming Classes', value: schedules.filter(s => new Date(s.scheduled_date) >= new Date()).length, icon: '📅', color: '#12b886', tab: 'timetable' },
@@ -947,7 +955,7 @@ export default function StudentDashboard({ user }) {
                   );
                   const lastMsg = threadMessages[threadMessages.length - 1];
                   const lastMsgText = lastMsg ? lastMsg.message_text : `Start learning in ${c?.title || 'course'}`;
-                  const lastMsgTime = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                  const lastMsgTime = lastMsg ? formatMessageTime(lastMsg.created_at) : '';
                   
                   return (
                     <li 
@@ -1015,7 +1023,7 @@ export default function StudentDashboard({ user }) {
                         >
                           <div style={{ fontSize: '0.88rem', color: '#111b21', whiteSpace: 'pre-wrap' }}>{m.message_text}</div>
                           <div className="whatsapp-bubble-time">
-                            {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatMessageTime(m.created_at)}
                             {isMe && <span className="whatsapp-bubble-checks"> ✓✓</span>}
                           </div>
                         </div>

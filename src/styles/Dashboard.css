@@ -1003,3 +1003,38 @@
   }
 }
 
+/* ==========================================================
+   STUDENT DASHBOARD QUICK STATS LAYOUT OVERRIDES
+   ========================================================== */
+
+.dashboard-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .dashboard-quick-stats {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    gap: 0.85rem !important;
+    padding: 0.25rem 0.2rem 0.85rem !important;
+    scrollbar-width: none !important; /* Hide scrollbar for Firefox */
+    width: auto !important;
+    box-sizing: border-box !important;
+  }
+  
+  .dashboard-quick-stats::-webkit-scrollbar {
+    display: none !important; /* Hide scrollbar for Chrome/Safari */
+  }
+
+  .dashboard-quick-stats > div {
+    flex: 0 0 145px !important; /* Fixed width prevents cards from stacking vertically! */
+    max-width: 145px !important;
+    box-sizing: border-box !important;
+  }
+}
+
