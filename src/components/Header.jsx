@@ -111,6 +111,7 @@ export default function Header({ currentUser, onLogout }) {
 
               <li><a onClick={() => handleNavClick('how-it-works')}>How It Works</a></li>
               <li><a onClick={() => handleNavClick('why-us')}>Why FoundaXia</a></li>
+              <li><a onClick={() => { setMobileOpen(false); navigate('/whiteboard'); }} style={{ color: 'var(--accent-color)', fontWeight: '600' }}>Whiteboard</a></li>
               <li><a onClick={() => handleNavClick('courses')}>Pricing</a></li>
               <li><a onClick={() => { setMobileOpen(false); alert('FoundaXia Blog and parent resources coming soon!'); }}>Resources / Blog</a></li>
               
@@ -131,6 +132,7 @@ export default function Header({ currentUser, onLogout }) {
             </>
           ) : (
             <>
+              <li><a onClick={() => { setMobileOpen(false); navigate('/whiteboard'); }} style={{ fontWeight: '500' }}>Whiteboard</a></li>
               {currentUser.role === 'student' && !location.pathname.startsWith('/student') && (
                 <li><a className="active" onClick={() => { setMobileOpen(false); navigate('/student'); }}>Student Dashboard</a></li>
               )}

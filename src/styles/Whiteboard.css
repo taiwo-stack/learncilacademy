@@ -1,0 +1,1274 @@
+/* Whiteboard container styles */
+.whiteboard-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  background-color: #121212;
+  color: #e0e0e0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Header layout */
+.whiteboard-header {
+  height: 60px;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+}
+
+.whiteboard-header.collapsed {
+  transform: translateY(-100%);
+  box-shadow: none;
+}
+
+.whiteboard-logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff; /* Solid white background */
+  padding: 6px 14px;
+  border-radius: 30px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: background 0.3s ease;
+}
+
+.whiteboard-logo-container:hover {
+  background: #f3f4f6; /* Off-white hover */
+}
+
+.whiteboard-logo-icon {
+  height: 32px;
+  object-fit: contain;
+}
+
+.whiteboard-logo-text {
+  height: 18px;
+  object-fit: contain;
+}
+
+.whiteboard-title-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.whiteboard-badge {
+  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* History (undo/redo) & top bar controls */
+.whiteboard-top-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.whiteboard-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.whiteboard-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.whiteboard-btn:active:not(:disabled) {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.whiteboard-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.whiteboard-btn.primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.whiteboard-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+}
+
+.whiteboard-btn.danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.whiteboard-btn.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #ef4444;
+}
+
+.whiteboard-btn-icon {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.whiteboard-btn-icon:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.whiteboard-btn-icon:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Main workspace area */
+.whiteboard-workspace {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  transition: margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.whiteboard-workspace.fullscreen {
+  margin-top: -60px;
+}
+
+/* Canvas background styles */
+.whiteboard-canvas {
+  display: block;
+  cursor: crosshair;
+  transition: background-color 0.3s ease;
+}
+
+.whiteboard-canvas.grabbing {
+  cursor: grabbing !important;
+}
+
+/* Canvas grids */
+.whiteboard-canvas.theme-light.grid-dots {
+  background-color: #f8fafc; /* Slate 50 */
+  background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px); /* Slate 300 */
+  background-size: 24px 24px;
+}
+.whiteboard-canvas.theme-light.grid-lines {
+  background-color: #f8fafc;
+  background-image: linear-gradient(#e2e8f0 1px, transparent 1px); /* Slate 200 */
+  background-size: 100% 28px;
+}
+.whiteboard-canvas.theme-light.grid-graph {
+  background-color: #f8fafc;
+  background-image: 
+    linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+    linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.whiteboard-canvas.theme-light.grid-blank {
+  background-color: #ffffff;
+}
+
+.whiteboard-canvas.theme-dark.grid-dots {
+  background-color: #0b0f19; /* Deep blue slate */
+  background-image: radial-gradient(#1e293b 1.2px, transparent 1.2px); /* Slate 800 */
+  background-size: 24px 24px;
+}
+.whiteboard-canvas.theme-dark.grid-lines {
+  background-color: #0b0f19;
+  background-image: linear-gradient(#141c2c 1px, transparent 1px);
+  background-size: 100% 28px;
+}
+.whiteboard-canvas.theme-dark.grid-graph {
+  background-color: #0b0f19;
+  background-image: 
+    linear-gradient(to right, #162032 1px, transparent 1px),
+    linear-gradient(to bottom, #162032 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.whiteboard-canvas.theme-dark.grid-blank {
+  background-color: #080b11;
+}
+
+/* Floating left toolbar */
+.whiteboard-toolbar {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  bottom: auto;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 6px; /* Shrunk padding */
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Shrunk gap */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toolbar-btn {
+  width: 38px; /* Shrunk size */
+  height: 38px; /* Shrunk size */
+  border-radius: 8px; /* Shrunk border radius */
+  border: 1px solid transparent;
+  background: transparent;
+  color: #a0a0a8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e0e0;
+}
+
+.toolbar-btn.active {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Sub-tooltip on hover */
+.toolbar-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 55px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.9);
+  background: #1e1e24;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  pointer-events: none;
+}
+
+.toolbar-btn:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) scale(1);
+}
+
+/* Floating right properties menu */
+/* Floating right properties menu */
+.whiteboard-properties {
+  position: absolute;
+  right: 20px;
+  top: 90px; /* Aligned below the header with extra top margin */
+  bottom: 20px;
+  width: 280px;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+  overflow: hidden; /* Do not scroll container itself */
+}
+
+/* Scrollable content container */
+.properties-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-right: 4px;
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar for IE/Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.properties-panel-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Non-scrollable fixed footer for collapse button */
+.properties-panel-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 10px;
+  flex-shrink: 0;
+}
+
+.prop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prop-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8f8f9e;
+  margin-bottom: 2px;
+}
+
+/* Color palettes */
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.active {
+  border-color: white;
+  transform: scale(1.05);
+}
+
+.custom-color-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-top: 4px;
+}
+
+.custom-color-picker {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.custom-color-picker::-webkit-color-swatch {
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.custom-color-hex {
+  font-size: 0.8rem;
+  color: #c0c0c8;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: monospace;
+  width: 100%;
+}
+
+/* Brush sizes */
+.brush-sizes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brush-size-btn {
+  flex: 1;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #c0c0c8;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brush-size-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.brush-size-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.brush-width-slider {
+  width: 100%;
+  margin-top: 6px;
+  accent-color: #6366f1;
+}
+
+/* Shape Fill Modes */
+.fill-modes {
+  display: flex;
+  gap: 6px;
+}
+
+.fill-mode-btn {
+  flex: 1;
+  padding: 6px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a0a0a8;
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: all 0.15s;
+}
+
+.fill-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.fill-mode-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #818cf8;
+}
+
+/* Backdrop options */
+.backdrop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.backdrop-btn {
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #c0c0c8;
+  cursor: pointer;
+  font-size: 0.78rem;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.backdrop-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.backdrop-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #818cf8;
+}
+
+.theme-toggle-container {
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.theme-btn {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #a0a0a8;
+  cursor: pointer;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.theme-btn:hover {
+  color: white;
+}
+
+.theme-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Floating bottom indicator/info bar */
+.whiteboard-statusbar {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 5;
+  font-size: 0.76rem;
+  color: #a0a0a8;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-highlight {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+/* Canvas bottom zoom controls */
+.whiteboard-zoom-controls {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 20px;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 30px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  z-index: 5;
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e0e0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.zoom-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-width: 48px;
+  text-align: center;
+  color: #ffffff;
+}
+
+/* Hidden inputs and overlays */
+.hidden-file-input {
+  display: none;
+}
+
+/* Text Input Overlay for Typing directly on Canvas */
+.canvas-text-input-overlay {
+  position: absolute;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  z-index: 99;
+}
+
+.canvas-text-input-textarea {
+  background: rgba(30, 30, 30, 0.95);
+  border: 2px solid #6366f1;
+  border-radius: 6px;
+  color: white;
+  padding: 8px;
+  font-family: inherit;
+  outline: none;
+  resize: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+/* Image insertion drag-and-drop placeholder overlay */
+.drag-drop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(99, 102, 241, 0.15);
+  border: 3px dashed #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+  pointer-events: none;
+}
+
+.drag-drop-message {
+  background: #1e1e24;
+  color: white;
+  padding: 16px 28px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Modal dialogue for clear board confirmation */
+.whiteboard-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.whiteboard-modal {
+  background: #1e1e24;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  width: 360px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideUp 0.2s ease-out;
+}
+
+.modal-header {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.modal-body {
+  font-size: 0.88rem;
+  color: #a0a0a8;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(15px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Tooltips */
+.tooltip-top::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 45px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: #1e1e24;
+  color: white;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s;
+  pointer-events: none;
+}
+
+.tooltip-top:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Floating delete action button for selection mode */
+.whiteboard-floating-delete-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.whiteboard-floating-delete-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Floating slide page controls */
+.whiteboard-slide-controls {
+  position: absolute;
+  left: calc(50% + 120px);
+  bottom: 20px;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 30px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  z-index: 5;
+}
+
+.slide-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e0e0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.slide-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.slide-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.slide-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-width: 90px;
+  text-align: center;
+  color: #ffffff;
+}
+
+@media (max-width: 900px) {
+  /* Position controls side-by-side or stacked on medium screens */
+  .whiteboard-zoom-controls {
+    left: 30%;
+    transform: translateX(-50%);
+  }
+  .whiteboard-slide-controls {
+    left: 70%;
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 600px) {
+  .whiteboard-zoom-controls {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 70px;
+  }
+  .whiteboard-slide-controls {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 20px;
+  }
+}
+
+/* Advanced Canvas Settings Styling */
+.canvas-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}
+
+.canvas-setting-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #c0c0c8;
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.canvas-setting-item:hover {
+  color: #ffffff;
+}
+
+.canvas-setting-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #6366f1;
+  cursor: pointer;
+  border-radius: 4px;
+  outline: none;
+}
+
+.setting-label-text {
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* Minimization Trigger Buttons (Floating chevrons) */
+.whiteboard-floating-trigger {
+  position: fixed; /* Always float above canvas & fixed header */
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a0a0a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  z-index: 10000; /* Ensure it stays above everything */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.whiteboard-floating-trigger:hover {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  transform: scale(1.08);
+}
+
+.toolbar-trigger {
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  bottom: auto;
+}
+
+.toolbar-trigger:hover {
+  transform: translateY(-50%) scale(1.08);
+}
+
+.properties-trigger {
+  right: 20px;
+  bottom: 20px; /* Shift to bottom right */
+}
+
+/* Header expand top hanging tab */
+.whiteboard-header-expand-trigger {
+  position: fixed; /* Make fixed so it never slides out of screen */
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 28px;
+  border-radius: 0 0 14px 14px;
+  background: rgba(30, 30, 30, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: none;
+  color: #a0a0a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  z-index: 101;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.whiteboard-header-expand-trigger:hover {
+  color: #ffffff;
+  height: 32px;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+}
+
+/* Add custom tooltip positioning for floating trigger buttons */
+.whiteboard-floating-trigger::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 55px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.9);
+  background: #1e1e24;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  pointer-events: none;
+}
+
+.properties-trigger::after {
+  left: auto;
+  right: 55px;
+}
+
+.whiteboard-floating-trigger:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) scale(1);
+}
+
+.whiteboard-header-expand-trigger::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 35px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: #1e1e24;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  pointer-events: none;
+}
+
+.whiteboard-header-expand-trigger:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Collaboration Toast notification */
+.whiteboard-toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 30, 30, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  padding: 12px 24px;
+  border-radius: 12px;
+  color: #10b981;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.2px;
+  z-index: 10500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideUpFade 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUpFade {
+  from {
+    transform: translate(-50%, 20px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+/* Collaboration Sidebar panel */
+.whiteboard-collab-sidebar {
+  position: absolute;
+  right: 20px;
+  top: 90px;
+  bottom: 20px;
+  width: 320px;
+  background: rgba(22, 22, 26, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: -10px 10px 40px rgba(0, 0, 0, 0.45);
+  z-index: 95;
+  animation: slideInRight 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.collab-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 12px;
+  color: #ffffff;
+}
+
+.collab-sidebar-share {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.share-link-box {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.share-link-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #a0a0a8;
+  font-size: 0.82rem;
+  outline: none;
+  text-overflow: ellipsis;
+}
+
+.collab-participants-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.participants-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+  scrollbar-width: none;
+}
+
+.participants-scroll-area::-webkit-scrollbar {
+  display: none;
+}
+
+.participant-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 10px 12px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.participant-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.participant-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.participant-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.participant-name {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.participant-role {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.participant-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.participant-mic-status {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.participant-mic-status.active {
+  background: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.draw-access-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.draw-access-badge.granted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.draw-access-badge.locked {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.draw-access-badge:hover:not(:disabled) {
+  transform: scale(1.04);
+}
+
+.draw-access-badge:disabled {
+  cursor: default;
+  opacity: 0.9;
+}

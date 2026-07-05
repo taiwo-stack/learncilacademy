@@ -8,6 +8,7 @@ import SubjectsPage from './pages/SubjectsPage';
 import StudentDashboard from './pages/StudentDashboard';
 import TutorDashboard from './pages/TutorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import Whiteboard from './pages/Whiteboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import './styles/global.css';
 
@@ -15,8 +16,10 @@ function AppContent() {
   const [currentUser, setCurrentUser] = useState({ role: 'guest' });
   const location = useLocation();
 
-  // Hide the footer on dashboard pages for a cleaner web app dashboard workspace feel
-  const isDashboard = ['/student', '/tutor', '/admin'].some(path => 
+  const isWhiteboard = location.pathname.startsWith('/whiteboard');
+  
+  // Hide the footer on dashboard and whiteboard pages for a cleaner web app dashboard workspace feel
+  const isDashboardOrWhiteboard = ['/student', '/tutor', '/admin', '/whiteboard'].some(path => 
     location.pathname.startsWith(path)
   );
 
@@ -26,11 +29,12 @@ function AppContent() {
 
   return (
     <>
-      <Header currentUser={currentUser} onLogout={handleLogout} />
+      {!isWhiteboard && <Header currentUser={currentUser} onLogout={handleLogout} />}
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/subjects" element={<SubjectsPage />} />
         <Route path="/login" element={<Login onLoginSuccess={setCurrentUser} />} />
+        <Route path="/whiteboard" element={<Whiteboard />} />
         <Route 
           path="/student" 
           element={
@@ -56,7 +60,7 @@ function AppContent() {
           } 
         />
       </Routes>
-      {!isDashboard && !location.pathname.startsWith('/login') && <Footer />}
+      {!isDashboardOrWhiteboard && !location.pathname.startsWith('/login') && <Footer />}
     </>
   );
 }
