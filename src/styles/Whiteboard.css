@@ -1272,3 +1272,308 @@
   cursor: default;
   opacity: 0.9;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   VIDEO GRID OVERLAY
+═══════════════════════════════════════════════════════════ */
+
+.video-grid-overlay {
+  position: absolute;
+  bottom: 90px;
+  right: 20px;
+  z-index: 200;
+  width: 300px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(12, 12, 20, 0.92);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+
+.video-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  flex-shrink: 0;
+}
+
+.video-grid-title {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #a5b4fc;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.video-grid-close {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.video-grid-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.video-grid-tiles {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(70vh - 44px);
+  scrollbar-width: none;
+}
+.video-grid-tiles::-webkit-scrollbar { display: none; }
+
+/* ─── Individual Video Tile ─────────────────────────────── */
+.video-tile {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.video-tile.local-tile {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.video-tile-stream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1); /* mirror local camera */
+}
+
+.video-tile.local-tile .video-tile-stream {
+  /* keep local mirrored, remote not */
+}
+
+/* Non-mirrored for remote */
+.video-tile:not(.local-tile) .video-tile-stream {
+  transform: scaleX(1);
+}
+
+.video-tile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+
+.video-tile-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 10px 6px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.75));
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.video-tile-icons {
+  display: flex;
+  gap: 4px;
+  font-size: 0.65rem;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MIC LEVEL INDICATOR RING
+═══════════════════════════════════════════════════════════ */
+
+.mic-level-wrapper {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mic-level-ring {
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mic-level-wrapper .whiteboard-btn-icon {
+  position: relative;
+  z-index: 2;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PARTICIPANT STRIP (Right Side)
+═══════════════════════════════════════════════════════════ */
+
+.participant-strip {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  z-index: 150;
+  width: 112px;
+  max-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.participant-strip-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 2px;
+  pointer-events: none;
+}
+
+.participant-strip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: calc(65vh - 22px);
+  width: 100%;
+  align-items: center;
+  scrollbar-width: none;
+  pointer-events: all;
+}
+.participant-strip-list::-webkit-scrollbar { display: none; }
+
+/* ─── Individual Participant Tile ───────────────────────── */
+.pstrip-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: default;
+  transition: transform 0.2s ease;
+}
+.pstrip-tile:hover {
+  transform: scale(1.06);
+}
+
+.pstrip-media {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pstrip-tile.speaking .pstrip-media {
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3), 0 0 14px rgba(52, 211, 153, 0.25);
+}
+
+.pstrip-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.pstrip-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+/* Animated speaking ring pulse */
+.pstrip-speaking-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(52, 211, 153, 0.6);
+  animation: pstrip-pulse 1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pstrip-pulse {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  50%  { transform: scale(1.12); opacity: 0.3; }
+  100% { transform: scale(1);    opacity: 0.8; }
+}
+
+.pstrip-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  text-align: center;
+  max-width: 104px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.pstrip-icons {
+  display: flex;
+  gap: 4px;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.pstrip-icon.off {
+  opacity: 0.4;
+}

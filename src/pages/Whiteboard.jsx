@@ -34,7 +34,10 @@ import {
   Mic,
   MicOff,
   Copy,
-  Volume2
+  Volume2,
+  Video,
+  VideoOff,
+  MonitorPlay
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import '../styles/Whiteboard.css';
@@ -85,9 +88,29 @@ export default function Whiteboard() {
   const activeDrawingsRef = useRef({}); // { userId: { points, color, width, isHighlighter } }
   const participantsRef = useRef({}); // Mirror participants state for draw loop access
   const localStreamRef = useRef(null);
+  const localVideoRef = useRef(null); // <video> element for local camera preview
+  const remoteVideoRefs = useRef({}); // { peerId: HTMLVideoElement }
+
+  // Video call states
+  const [isVideoOn, setIsVideoOn] = useState(false);
+  const [showVideoGrid, setShowVideoGrid] = useState(false);
+  const [remoteVideoStreams, setRemoteVideoStreams] = useState({}); // { peerId: MediaStream }
+
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Audio level analysis
+  const audioCtxRef = useRef(null);          // shared AudioContext
+  const localAnalyserRef = useRef(null);     // AnalyserNode for local mic
+  const remoteAnalysersRef = useRef({});     // { peerId: AnalyserNode }
+  const levelRafRef = useRef(null);          // requestAnimationFrame ID for level loop
+  const [micLevel, setMicLevel] = useState(0);         // 0-100 RMS level for local mic
+  const [speakingPeers, setSpeakingPeers] = useState(new Set()); // set of peerId strings
+
+  // Participant strip (right side)
+  const [showParticipantStrip, setShowParticipantStrip] = useState(true);
+
 
   // Layout & Settings State
   const [theme, setTheme] = useState('dark'); // 'light' | 'dark'
@@ -234,6 +257,7 @@ export default function Whiteboard() {
       hasDrawAccess: isHost ? true : hasDrawAccess,
       color: userColor.current,
       isMicOn: isMicOn,
+      isVideoOn: isVideoOn,
       cursor: null,
       ...updates
     });
@@ -294,6 +318,7 @@ export default function Whiteboard() {
           hasDrawAccess: isHost ? true : hasDrawAccess,
           color: userColor.current,
           isMicOn: isMicOn,
+          isVideoOn: isVideoOn,
           cursor: null
         });
         triggerToast(`Connected to room! Welcome ${name}.`);
@@ -470,17 +495,34 @@ export default function Whiteboard() {
     }
   };
 
-  // WebRTC Audio Stream Helpers
-  const getLocalStream = async () => {
-    if (localStreamRef.current) return localStreamRef.current;
+  // WebRTC Audio + Video Stream Helpers
+  const getLocalStream = async (constraints = {}) => {
+    // If existing stream already has the right tracks, reuse it
+    if (localStreamRef.current) {
+      const hasMic = localStreamRef.current.getAudioTracks().length > 0;
+      const hasCam = localStreamRef.current.getVideoTracks().length > 0;
+      const needsMic = constraints.audio !== false;
+      const needsCam = constraints.video !== false && !!constraints.video;
+      if ((hasMic || !needsMic) && (hasCam || !needsCam)) {
+        return localStreamRef.current;
+      }
+      // Stop and re-acquire with new constraints
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
       return stream;
     } catch (e) {
-      console.error("Audio recording input failed", e);
-      triggerToast("Microphone access failed! Please allow microphone access.");
-      setIsMicOn(false);
+      console.error("Media capture failed", e);
+      if (constraints.video) {
+        triggerToast("Camera access failed! Please allow camera permissions.");
+        setIsVideoOn(false);
+      } else {
+        triggerToast("Microphone access failed! Please allow microphone access.");
+        setIsMicOn(false);
+      }
       return null;
     }
   };
@@ -490,21 +532,111 @@ export default function Whiteboard() {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
     }
+    // Clear local video preview
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
   };
 
-  const syncVoicePeers = async (presenceMap) => {
-    if (!isMicOn) return;
-    const stream = await getLocalStream();
+  // ─── Audio Level Helpers ─────────────────────────────────────────
+  const getAudioContext = () => {
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtxRef.current;
+  };
+
+  const createAnalyserForStream = (stream) => {
+    const ctx = getAudioContext();
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.7;
+    source.connect(analyser);
+    return analyser;
+  };
+
+  const getRMS = (analyser) => {
+    const buf = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    return Math.sqrt(sum / buf.length);
+  };
+
+  const startLevelLoop = () => {
+    if (levelRafRef.current) return; // already running
+    const SPEAKING_THRESHOLD = 0.015;
+    const tick = () => {
+      // Local mic level
+      if (localAnalyserRef.current) {
+        const rms = getRMS(localAnalyserRef.current);
+        setMicLevel(Math.min(100, Math.round(rms * 600)));
+      }
+      // Remote peer speaking detection
+      const talking = new Set();
+      Object.entries(remoteAnalysersRef.current).forEach(([pid, analyser]) => {
+        if (getRMS(analyser) > SPEAKING_THRESHOLD) talking.add(pid);
+      });
+      setSpeakingPeers(talking);
+      levelRafRef.current = requestAnimationFrame(tick);
+    };
+    levelRafRef.current = requestAnimationFrame(tick);
+  };
+
+  const stopLevelLoop = () => {
+    if (levelRafRef.current) {
+      cancelAnimationFrame(levelRafRef.current);
+      levelRafRef.current = null;
+    }
+    setMicLevel(0);
+    setSpeakingPeers(new Set());
+  };
+
+  const attachRemoteAnalyser = (peerId, stream) => {
+    if (remoteAnalysersRef.current[peerId]) return;
+    try {
+      remoteAnalysersRef.current[peerId] = createAnalyserForStream(stream);
+      startLevelLoop();
+    } catch (_) {}
+  };
+
+
+  const syncMediaPeers = async (presenceMap) => {
+    if (!isMicOn && !isVideoOn) return;
+    const constraints = {
+      audio: isMicOn,
+      video: isVideoOn ? { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } } : false
+    };
+    const stream = await getLocalStream(constraints);
     if (!stream) return;
+
+    // Wire local video preview
+    if (isVideoOn && localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+    }
 
     Object.keys(presenceMap).forEach(peerId => {
       if (peerId === localUserId.current) return;
       if (!peerConnectionsRef.current[peerId]) {
         const isInitiator = localUserId.current > peerId;
         createPeerConnection(peerId, isInitiator);
+      } else {
+        // Add new tracks to existing connections if renegotiation needed
+        const pc = peerConnectionsRef.current[peerId];
+        stream.getTracks().forEach(track => {
+          const senders = pc.getSenders();
+          const alreadySending = senders.some(s => s.track && s.track.kind === track.kind);
+          if (!alreadySending) {
+            pc.addTrack(track, stream);
+          }
+        });
       }
     });
   };
+
+  // Keep backward-compat alias
+  const syncVoicePeers = syncMediaPeers;
 
   const createPeerConnection = async (peerId, isInitiator) => {
     if (peerConnectionsRef.current[peerId]) return;
@@ -533,14 +665,34 @@ export default function Whiteboard() {
     };
 
     pc.ontrack = (e) => {
-      let audio = document.getElementById('peer-audio-' + peerId);
-      if (!audio) {
-        audio = document.createElement('audio');
-        audio.id = 'peer-audio-' + peerId;
-        audio.autoplay = true;
-        document.body.appendChild(audio);
+      const stream = e.streams[0];
+      if (!stream) return;
+
+      // Separate audio and video tracks
+      const hasVideo = stream.getVideoTracks().length > 0;
+
+      if (hasVideo) {
+        // Update React state to trigger video grid render
+        setRemoteVideoStreams(prev => ({ ...prev, [peerId]: stream }));
+        setShowVideoGrid(true);
+
+        // Wire video element ref if already mounted
+        if (remoteVideoRefs.current[peerId]) {
+          remoteVideoRefs.current[peerId].srcObject = stream;
+        }
+      } else {
+        // Audio-only — use invisible audio element
+        let audio = document.getElementById('peer-audio-' + peerId);
+        if (!audio) {
+          audio = document.createElement('audio');
+          audio.id = 'peer-audio-' + peerId;
+          audio.autoplay = true;
+          document.body.appendChild(audio);
+        }
+        audio.srcObject = stream;
+        // Attach audio analyser for speaking detection
+        attachRemoteAnalyser(peerId, stream);
       }
-      audio.srcObject = e.streams[0];
     };
 
     if (isInitiator) {
@@ -606,26 +758,94 @@ export default function Whiteboard() {
   const closeAllPeerConnections = () => {
     Object.keys(peerConnectionsRef.current).forEach(peerId => {
       peerConnectionsRef.current[peerId].close();
-      const el = document.getElementById('peer-audio-' + peerId);
-      if (el) el.remove();
+      const audioEl = document.getElementById('peer-audio-' + peerId);
+      if (audioEl) audioEl.remove();
     });
     peerConnectionsRef.current = {};
+    remoteAnalysersRef.current = {};
+    setRemoteVideoStreams({});
   };
 
   const toggleMicrophone = async () => {
     const nextState = !isMicOn;
     setIsMicOn(nextState);
-    
+
     if (nextState) {
-      const stream = await getLocalStream();
-      if (stream && isCollaborating) {
-        syncVoicePeers(participants);
-        updatePresenceState({ isMicOn: true });
+      const constraints = {
+        audio: true,
+        video: isVideoOn ? { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } } : false
+      };
+      const stream = await getLocalStream(constraints);
+      if (stream) {
+        stream.getAudioTracks().forEach(t => { t.enabled = true; });
+        // Set up local audio analyser for the level indicator
+        if (!localAnalyserRef.current) {
+          try {
+            localAnalyserRef.current = createAnalyserForStream(stream);
+          } catch (_) {}
+        }
+        startLevelLoop();
+        if (isCollaborating) {
+          syncMediaPeers(participants);
+          updatePresenceState({ isMicOn: true });
+        }
       }
     } else {
-      stopLocalStream();
-      closeAllPeerConnections();
+      // Disable audio tracks (keep video if on)
+      if (localStreamRef.current) {
+        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+      }
+      localAnalyserRef.current = null;
+      if (!isVideoOn) {
+        stopLocalStream();
+        closeAllPeerConnections();
+      }
+      stopLevelLoop();
       updatePresenceState({ isMicOn: false });
+    }
+  };
+
+
+  const toggleCamera = async () => {
+    const nextState = !isVideoOn;
+    setIsVideoOn(nextState);
+    setShowVideoGrid(nextState || Object.keys(remoteVideoStreams).length > 0);
+
+    if (nextState) {
+      const constraints = {
+        audio: isMicOn,
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } }
+      };
+      const stream = await getLocalStream(constraints);
+      if (stream) {
+        // Wire local video preview element
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+        if (isCollaborating) {
+          // Need to renegotiate: close existing PCs so they restart with video tracks
+          closeAllPeerConnections();
+          syncMediaPeers(participants);
+        }
+        updatePresenceState({ isVideoOn: true });
+        triggerToast('Camera ON — peers can now see you.');
+      }
+    } else {
+      // Stop video tracks only
+      if (localStreamRef.current) {
+        localStreamRef.current.getVideoTracks().forEach(t => { t.stop(); });
+        // Remove stopped video tracks from the stream
+        localStreamRef.current.getVideoTracks().forEach(t => localStreamRef.current.removeTrack(t));
+      }
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
+      if (!isMicOn) {
+        stopLocalStream();
+        closeAllPeerConnections();
+      }
+      updatePresenceState({ isVideoOn: false });
+      triggerToast('Camera OFF.');
     }
   };
 
@@ -2139,25 +2359,97 @@ export default function Whiteboard() {
                 <span>Classroom ({Object.keys(participants).length})</span>
               </button>
 
-              <button 
-                className={`whiteboard-btn-icon ${isMicOn ? 'active' : ''}`} 
-                style={{ 
-                  background: isMicOn ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  color: isMicOn ? '#34d399' : '#f87171',
-                  borderColor: isMicOn ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+              {/* Mic button with audio level ring */}
+              <div className="mic-level-wrapper" data-tooltip={isMicOn ? "Mute Microphone" : "Unmute Microphone"}>
+                {isMicOn && (
+                  <svg className="mic-level-ring" viewBox="0 0 44 44" width="44" height="44">
+                    <circle
+                      cx="22" cy="22" r="19"
+                      fill="none"
+                      stroke="rgba(52,211,153,0.25)"
+                      strokeWidth="2.5"
+                    />
+                    <circle
+                      cx="22" cy="22" r="19"
+                      fill="none"
+                      stroke="#34d399"
+                      strokeWidth="2.5"
+                      strokeDasharray={`${(micLevel / 100) * 119.4} 119.4`}
+                      strokeLinecap="round"
+                      transform="rotate(-90 22 22)"
+                      style={{ transition: 'stroke-dasharray 0.05s linear' }}
+                    />
+                  </svg>
+                )}
+                <button 
+                  className={`whiteboard-btn-icon ${isMicOn ? 'active' : ''}`} 
+                  style={{ 
+                    background: isMicOn ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                    color: isMicOn ? '#34d399' : '#f87171',
+                    borderColor: isMicOn ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px'
+                  }}
+                  onClick={toggleMicrophone}
+                >
+                  {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
+                </button>
+              </div>
+
+              <button
+                className={`whiteboard-btn-icon ${isVideoOn ? 'active' : ''}`}
+                style={{
+                  background: isVideoOn ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  color: isVideoOn ? '#34d399' : '#f87171',
+                  borderColor: isVideoOn ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px'
                 }}
-                onClick={toggleMicrophone}
-                data-tooltip={isMicOn ? "Mute Microphone" : "Unmute Microphone"}
+                onClick={toggleCamera}
+                data-tooltip={isVideoOn ? "Turn Camera Off" : "Turn Camera On"}
               >
-                {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
+                {isVideoOn ? <Video size={18} /> : <VideoOff size={18} />}
+              </button>
+
+              <button
+                className={`whiteboard-btn-icon`}
+                style={{
+                  background: showVideoGrid ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.05)',
+                  color: showVideoGrid ? '#818cf8' : 'rgba(255,255,255,0.5)',
+                  borderColor: showVideoGrid ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255,255,255,0.1)',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px'
+                }}
+                onClick={() => setShowVideoGrid(prev => !prev)}
+                data-tooltip={showVideoGrid ? "Hide Video Grid" : "Show Video Grid"}
+              >
+                <MonitorPlay size={18} />
+              </button>
+
+              <button
+                className={`whiteboard-btn-icon`}
+                style={{
+                  background: showParticipantStrip ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.05)',
+                  color: showParticipantStrip ? '#818cf8' : 'rgba(255,255,255,0.5)',
+                  borderColor: showParticipantStrip ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255,255,255,0.1)',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px'
+                }}
+                onClick={() => setShowParticipantStrip(prev => !prev)}
+                data-tooltip={showParticipantStrip ? "Hide Participant Strip" : "Show Participant Strip"}
+              >
+                <Users size={18} />
               </button>
             </>
           )}
 
+
           <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 5px' }} />
+
 
           <button 
             className="whiteboard-btn-icon" 
@@ -2250,8 +2542,165 @@ export default function Whiteboard() {
           </div>
         )}
 
+        {/* ─── Floating Video Grid Overlay ─────────────────────────────── */}
+        {showVideoGrid && isCollaborating && (
+          <div className="video-grid-overlay">
+            <div className="video-grid-header">
+              <span className="video-grid-title">
+                <MonitorPlay size={13} style={{ marginRight: 5 }} />
+                Live Video
+              </span>
+              <button className="video-grid-close" onClick={() => setShowVideoGrid(false)} title="Hide Video Grid">✕</button>
+            </div>
+
+            <div className="video-grid-tiles">
+              {/* Local Camera Tile */}
+              <div className="video-tile local-tile">
+                {isVideoOn ? (
+                  <video
+                    ref={localVideoRef}
+                    className="video-tile-stream"
+                    autoPlay
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <div className="video-tile-avatar" style={{ background: userColor.current }}>
+                    {(userName || 'Y').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="video-tile-label">
+                  {userName || 'You'} (You)
+                  <span className="video-tile-icons">
+                    {isMicOn ? '🎤' : '🔇'}
+                    {isVideoOn ? '📷' : '📷🚫'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Remote Participant Tiles */}
+              {Object.entries(participants).map(([peerId, pData]) => {
+                if (peerId === localUserId.current) return null;
+                const remoteStream = remoteVideoStreams[peerId];
+                const pColor = pData?.color || '#6366f1';
+                const pName = pData?.userName || 'Participant';
+                const pMicOn = pData?.isMicOn;
+                const pVideoOn = pData?.isVideoOn;
+
+                return (
+                  <div key={peerId} className="video-tile">
+                    {remoteStream ? (
+                      <video
+                        ref={(el) => {
+                          if (el) {
+                            remoteVideoRefs.current[peerId] = el;
+                            if (el.srcObject !== remoteStream) el.srcObject = remoteStream;
+                          }
+                        }}
+                        className="video-tile-stream"
+                        autoPlay
+                        playsInline
+                      />
+                    ) : (
+                      <div className="video-tile-avatar" style={{ background: pColor }}>
+                        {pName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="video-tile-label">
+                      {pName}
+                      <span className="video-tile-icons">
+                        {pMicOn ? '🎤' : '🔇'}
+                        {pVideoOn ? '📷' : '📷🚫'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Right-Side Participant Strip ─────────────────────────────── */}
+        {isCollaborating && showParticipantStrip && (() => {
+          // Build participant list: local user first, then speaking peers, then rest
+          const allPeers = Object.entries(participants);
+          const sorted = [
+            // Local user entry
+            [localUserId.current, {
+              userName: userName || 'You',
+              color: userColor.current,
+              isMicOn,
+              isVideoOn,
+              isLocal: true
+            }],
+            // Remote peers sorted: speaking first
+            ...allPeers
+              .filter(([pid]) => pid !== localUserId.current)
+              .sort(([a], [b]) => {
+                const aSpeak = speakingPeers.has(a) ? 0 : 1;
+                const bSpeak = speakingPeers.has(b) ? 0 : 1;
+                return aSpeak - bSpeak;
+              })
+          ];
+
+          return (
+            <div className="participant-strip">
+              <div className="participant-strip-label">Participants</div>
+              <div className="participant-strip-list">
+                {sorted.map(([peerId, pData]) => {
+                  const pColor = pData?.color || '#6366f1';
+                  const pName = pData?.userName || 'User';
+                  const pMicOn = pData?.isMicOn;
+                  const pVideoOn = pData?.isVideoOn;
+                  const isLocal = pData?.isLocal;
+                  const isSpeaking = speakingPeers.has(peerId) || (isLocal && micLevel > 5);
+                  const remoteStream = !isLocal && remoteVideoStreams[peerId];
+
+                  return (
+                    <div
+                      key={peerId}
+                      className={`pstrip-tile ${isSpeaking ? 'speaking' : ''}`}
+                      title={pName + (isLocal ? ' (You)' : '')}
+                    >
+                      <div className="pstrip-media">
+                        {isLocal && isVideoOn ? (
+                          <video
+                            ref={localVideoRef}
+                            className="pstrip-video"
+                            autoPlay muted playsInline
+                          />
+                        ) : remoteStream ? (
+                          <video
+                            ref={(el) => {
+                              if (el) {
+                                remoteVideoRefs.current[peerId] = el;
+                                if (el.srcObject !== remoteStream) el.srcObject = remoteStream;
+                              }
+                            }}
+                            className="pstrip-video"
+                            autoPlay playsInline
+                          />
+                        ) : (
+                          <div className="pstrip-avatar" style={{ background: pColor }}>
+                            {pName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {/* Speaking indicator pulse */}
+                        {isSpeaking && <div className="pstrip-speaking-ring" />}
+                      </div>
+                      <div className="pstrip-name">{isLocal ? 'You' : pName.split(' ')[0]}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Floating Left Toolbar */}
+
         {isToolbarCollapsed ? (
+
           <button 
             className="whiteboard-floating-trigger toolbar-trigger"
             onClick={() => setIsToolbarCollapsed(false)}
