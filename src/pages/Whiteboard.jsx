@@ -104,6 +104,9 @@ export default function Whiteboard({ user }) {
   const localVideoGridRef = useRef(null); // Local camera preview in Floating Video Grid
   const localVideoStripRef = useRef(null); // Local camera preview in Right Participant Strip
   const remoteVideoRefs = useRef({}); // { peerId: HTMLVideoElement }
+  const currentStrokeRef = useRef(null);
+  const handleBroadcastEventRef = useRef(null);
+  const presenceSyncHandlerRef = useRef(null);
 
   // Video call states
   const [isVideoOn, setIsVideoOn] = useState(false);
@@ -397,31 +400,18 @@ export default function Whiteboard({ user }) {
 
     channelRef.current = channel;
 
-    // Track participant joins/leaves
+    // Track participant joins/leaves using dynamic ref to avoid stale closures
     channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState();
-      const mapped = {};
-      Object.keys(state).forEach(key => {
-        mapped[key] = state[key][0];
-      });
-      setParticipants(mapped);
-      participantsRef.current = mapped;
-      
-      // Clean up active drawing trails of users who left so they don't get stuck on screen
-      Object.keys(activeDrawingsRef.current).forEach(userId => {
-        if (!mapped[userId]) {
-          delete activeDrawingsRef.current[userId];
-        }
-      });
-
-      // Update WebRTC voice streams when new peers join
-      syncVoicePeers(mapped);
-      drawCanvas();
+      if (presenceSyncHandlerRef.current) {
+        presenceSyncHandlerRef.current();
+      }
     });
 
-    // Handle broadcast signals
+    // Handle broadcast signals using fresh ref to avoid stale closures
     channel.on('broadcast', { event: '*' }, ({ event, payload }) => {
-      handleBroadcastEvent(event, payload);
+      if (handleBroadcastEventRef.current) {
+        handleBroadcastEventRef.current(event, payload);
+      }
     });
 
     await channel.subscribe(async (status) => {
@@ -732,6 +722,8 @@ export default function Whiteboard({ user }) {
             const activePage = payload.pages[payload.currentPageIndex];
             if (activePage) {
               setElements(activePage.elements || []);
+              setUndoStack(activePage.undoStack || []);
+              setRedoStack(activePage.redoStack || []);
             }
             drawCanvas();
             triggerToast("Whiteboard sync complete!");
@@ -742,6 +734,31 @@ export default function Whiteboard({ user }) {
       default:
         break;
     }
+  };
+
+  handleBroadcastEventRef.current = handleBroadcastEvent;
+
+  presenceSyncHandlerRef.current = () => {
+    const channel = channelRef.current;
+    if (!channel) return;
+    const state = channel.presenceState();
+    const mapped = {};
+    Object.keys(state).forEach(key => {
+      mapped[key] = state[key][0];
+    });
+    setParticipants(mapped);
+    participantsRef.current = mapped;
+    
+    // Clean up active drawing trails of users who left so they don't get stuck on screen
+    Object.keys(activeDrawingsRef.current).forEach(userId => {
+      if (!mapped[userId]) {
+        delete activeDrawingsRef.current[userId];
+      }
+    });
+
+    // Update WebRTC voice streams when new peers join
+    syncVoicePeers(mapped);
+    drawCanvas();
   };
 
   // WebRTC Audio + Video Stream Helpers
@@ -1584,13 +1601,15 @@ export default function Whiteboard({ user }) {
     if (activeTool === 'pen') {
       setIsDrawing(true);
       const firstPoint = { x, y, pressure: e.pressure || 0.5 };
-      setCurrentStroke({
+      const newStroke = {
         id: Date.now().toString(),
         type: 'stroke',
         points: [firstPoint],
         color: activeColor,
         width: strokeWidth
-      });
+      };
+      currentStrokeRef.current = newStroke;
+      setCurrentStroke(newStroke);
       return;
     }
 
@@ -1598,14 +1617,16 @@ export default function Whiteboard({ user }) {
     if (activeTool === 'highlighter') {
       setIsDrawing(true);
       const firstPoint = { x, y, pressure: e.pressure || 0.5 };
-      setCurrentStroke({
+      const newStroke = {
         id: Date.now().toString(),
         type: 'stroke',
         points: [firstPoint],
         color: activeColor,
         width: strokeWidth * 2.5, // Highlighter is thicker
         isHighlighter: true
-      });
+      };
+      currentStrokeRef.current = newStroke;
+      setCurrentStroke(newStroke);
       return;
     }
 
@@ -1751,19 +1772,19 @@ export default function Whiteboard({ user }) {
       return;
     }
 
-    // PEN / HIGHLIGHTER: Add points with jitter smoothing filter
-    if (['pen', 'highlighter'].includes(activeTool) && currentStroke) {
+    // PEN / HIGHLIGHTER: Add points with jitter smoothing filter using currentStrokeRef to prevent stale state coordinate loss
+    if (['pen', 'highlighter'].includes(activeTool) && currentStrokeRef.current) {
       const rawPoint = { x, y, pressure: e.pressure || 0.5 };
-      const smoothed = getSmoothedPoint(rawPoint, currentStroke.points);
+      const smoothed = getSmoothedPoint(rawPoint, currentStrokeRef.current.points);
       
-      const nextPoints = [...currentStroke.points, smoothed];
-      setCurrentStroke(prev => ({
-        ...prev,
-        points: nextPoints
-      }));
+      const nextPoints = [...currentStrokeRef.current.points, smoothed];
+      currentStrokeRef.current.points = nextPoints;
 
+      // Update state to trigger local redraw
+      setCurrentStroke({ ...currentStrokeRef.current });
+      
       // Broadcast live drawing points
-      broadcastDrawingStroke(nextPoints, currentStroke.color, currentStroke.width, currentStroke.isHighlighter);
+      broadcastDrawingStroke(nextPoints, currentStrokeRef.current.color, currentStrokeRef.current.width, currentStrokeRef.current.isHighlighter);
       return;
     }
 
@@ -1819,13 +1840,15 @@ export default function Whiteboard({ user }) {
       return;
     }
 
-    if (['pen', 'highlighter'].includes(activeTool) && currentStroke) {
+    if (['pen', 'highlighter'].includes(activeTool) && currentStrokeRef.current) {
+      const finalStroke = currentStrokeRef.current;
       // Only keep if the stroke actually contains points
-      if (currentStroke.points.length > 0) {
-        pushToHistory([...elements, currentStroke]);
+      if (finalStroke.points.length > 0) {
+        pushToHistory([...elements, finalStroke]);
         // Broadcast finished drawing stroke
-        broadcastDrawingEnd(currentStroke);
+        broadcastDrawingEnd(finalStroke);
       }
+      currentStrokeRef.current = null;
       setCurrentStroke(null);
       return;
     }
