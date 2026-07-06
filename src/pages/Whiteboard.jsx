@@ -91,7 +91,8 @@ export default function Whiteboard({ user }) {
   const activeDrawingsRef = useRef({}); // { userId: { points, color, width, isHighlighter } }
   const participantsRef = useRef({}); // Mirror participants state for draw loop access
   const localStreamRef = useRef(null);
-  const localVideoRef = useRef(null); // <video> element for local camera preview
+  const localVideoGridRef = useRef(null); // Local camera preview in Floating Video Grid
+  const localVideoStripRef = useRef(null); // Local camera preview in Right Participant Strip
   const remoteVideoRefs = useRef({}); // { peerId: HTMLVideoElement }
 
   // Video call states
@@ -253,10 +254,15 @@ export default function Whiteboard({ user }) {
     }
   }, [theme]);
 
-  // Re-wire local camera stream whenever a video panel is shown/hidden
+  // Re-wire local camera stream to both separate components whenever panels toggle
   useEffect(() => {
-    if (isVideoOn && localStreamRef.current && localVideoRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
+    if (isVideoOn && localStreamRef.current) {
+      if (localVideoGridRef.current && localVideoGridRef.current.srcObject !== localStreamRef.current) {
+        localVideoGridRef.current.srcObject = localStreamRef.current;
+      }
+      if (localVideoStripRef.current && localVideoStripRef.current.srcObject !== localStreamRef.current) {
+        localVideoStripRef.current.srcObject = localStreamRef.current;
+      }
     }
   }, [showParticipantStrip, showVideoGrid, isVideoOn]);
 
@@ -384,6 +390,13 @@ export default function Whiteboard({ user }) {
       setParticipants(mapped);
       participantsRef.current = mapped;
       
+      // Clean up active drawing trails of users who left so they don't get stuck on screen
+      Object.keys(activeDrawingsRef.current).forEach(userId => {
+        if (!mapped[userId]) {
+          delete activeDrawingsRef.current[userId];
+        }
+      });
+
       // Update WebRTC voice streams when new peers join
       syncVoicePeers(mapped);
       drawCanvas();
@@ -562,11 +575,7 @@ export default function Whiteboard({ user }) {
 
       case 'drawing-end':
         delete activeDrawingsRef.current[payload.userId];
-        setElements(prev => {
-          const next = [...prev, payload.element];
-          updateCurrentPageElements(next);
-          return next;
-        });
+        setElements(prev => [...prev, payload.element]);
         break;
 
       case 'element-update':
@@ -715,6 +724,25 @@ export default function Whiteboard({ user }) {
 
   // WebRTC Audio + Video Stream Helpers
   const getLocalStream = async (constraints = {}) => {
+    // Inject voice-optimized audio constraints to prevent breaking and feedback echo
+    const optimizedConstraints = { ...constraints };
+    if (optimizedConstraints.audio) {
+      optimizedConstraints.audio = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        latency: 0.005
+      };
+    }
+    if (optimizedConstraints.video) {
+      // Standard definition ideal resolution to prevent bandwidth lags & glitching
+      optimizedConstraints.video = {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 20 }
+      };
+    }
+
     // If existing stream already has the right tracks, reuse it
     if (localStreamRef.current) {
       const hasMic = localStreamRef.current.getAudioTracks().length > 0;
@@ -729,7 +757,7 @@ export default function Whiteboard({ user }) {
       localStreamRef.current = null;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(optimizedConstraints);
       localStreamRef.current = stream;
       return stream;
     } catch (e) {
@@ -750,9 +778,12 @@ export default function Whiteboard({ user }) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
     }
-    // Clear local video preview
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = null;
+    // Clear both local video previews
+    if (localVideoGridRef.current) {
+      localVideoGridRef.current.srcObject = null;
+    }
+    if (localVideoStripRef.current) {
+      localVideoStripRef.current.srcObject = null;
     }
   };
 
@@ -830,6 +861,23 @@ export default function Whiteboard({ user }) {
   };
 
   const syncMediaPeers = async (presenceMap) => {
+    // 1. Clean up old connections for peers who are no longer in presence
+    Object.keys(peerConnectionsRef.current).forEach(peerId => {
+      if (!presenceMap[peerId]) {
+        try {
+          peerConnectionsRef.current[peerId].close();
+        } catch (_) {}
+        delete peerConnectionsRef.current[peerId];
+        delete iceCandidateQueuesRef.current[peerId];
+        delete remoteVideoRefs.current[peerId];
+        setRemoteVideoStreams(prev => {
+          const next = { ...prev };
+          delete next[peerId];
+          return next;
+        });
+      }
+    });
+
     if (!isMicOn && !isVideoOn) return;
     const constraints = {
       audio: isMicOn,
@@ -2866,7 +2914,7 @@ export default function Whiteboard({ user }) {
                 {/* Always mount video element — just hide it when camera is off */}
                 <video
                   ref={(el) => {
-                    localVideoRef.current = el;
+                    localVideoGridRef.current = el;
                     if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
                   }}
                   className="video-tile-stream"
@@ -2980,7 +3028,7 @@ export default function Whiteboard({ user }) {
                           <>
                             <video
                               ref={(el) => {
-                                localVideoRef.current = el;
+                                localVideoStripRef.current = el;
                                 if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
                               }}
                               className="pstrip-video"
@@ -3047,319 +3095,315 @@ export default function Whiteboard({ user }) {
         })()}
 
         {/* Floating Left Toolbar */}
-
-        {isToolbarCollapsed ? (
-
-          <button 
-            className="whiteboard-floating-trigger toolbar-trigger"
-            onClick={() => setIsToolbarCollapsed(false)}
-            data-tooltip="Expand Toolbar"
-          >
-            <ChevronRight size={20} />
-          </button>
-        ) : (
-          <div 
-            className="whiteboard-toolbar"
-            style={(!isHost && isCollaborating && !hasDrawAccess) ? { opacity: 0.35, pointerEvents: 'none' } : {}}
-          >
+        {(!isHost && isCollaborating && !hasDrawAccess) ? null : (
+          isToolbarCollapsed ? (
             <button 
-              className={`toolbar-btn ${activeTool === 'select' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('select'); setSelectedElement(null); }}
-              data-tooltip="Select & Move Objects"
+              className="whiteboard-floating-trigger toolbar-trigger"
+              onClick={() => setIsToolbarCollapsed(false)}
+              data-tooltip="Expand Toolbar"
             >
-              <MousePointer size={20} />
+              <ChevronRight size={20} />
             </button>
-            
-            <button 
-              className={`toolbar-btn ${activeTool === 'pen' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('pen'); setSelectedElement(null); }}
-              data-tooltip="Smart Handwriting Ink"
-            >
-              <Pencil size={20} />
-            </button>
+          ) : (
+            <div className="whiteboard-toolbar">
+              <button 
+                className={`toolbar-btn ${activeTool === 'select' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('select'); setSelectedElement(null); }}
+                data-tooltip="Select & Move Objects"
+              >
+                <MousePointer size={20} />
+              </button>
+              
+              <button 
+                className={`toolbar-btn ${activeTool === 'pen' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('pen'); setSelectedElement(null); }}
+                data-tooltip="Smart Handwriting Ink"
+              >
+                <Pencil size={20} />
+              </button>
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'eraser' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('eraser'); setSelectedElement(null); }}
-              data-tooltip="Stroke Eraser"
-            >
-              <Eraser size={20} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'eraser' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('eraser'); setSelectedElement(null); }}
+                data-tooltip="Stroke Eraser"
+              >
+                <Eraser size={20} />
+              </button>
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'highlighter' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('highlighter'); setSelectedElement(null); }}
-              data-tooltip="Fluorescent Highlighter"
-            >
-              <Highlighter size={20} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'highlighter' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('highlighter'); setSelectedElement(null); }}
+                data-tooltip="Fluorescent Highlighter"
+              >
+                <Highlighter size={20} />
+              </button>
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'laser' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('laser'); setSelectedElement(null); }}
-              data-tooltip="Glowing Laser Pointer"
-            >
-              <Zap size={20} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'laser' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('laser'); setSelectedElement(null); }}
+                data-tooltip="Glowing Laser Pointer"
+              >
+                <Zap size={20} />
+              </button>
 
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'line' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('line'); setSelectedElement(null); }}
-              data-tooltip="Draw Straight Line"
-            >
-              <Minus size={20} style={{ transform: 'rotate(-45deg)' }} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'line' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('line'); setSelectedElement(null); }}
+                data-tooltip="Draw Straight Line"
+              >
+                <Minus size={20} style={{ transform: 'rotate(-45deg)' }} />
+              </button>
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'arrow' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('arrow'); setSelectedElement(null); }}
-              data-tooltip="Draw Annotation Arrow"
-            >
-              <ArrowUpRight size={20} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'arrow' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('arrow'); setSelectedElement(null); }}
+                data-tooltip="Draw Annotation Arrow"
+              >
+                <ArrowUpRight size={20} />
+              </button>
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'rectangle' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('rectangle'); setSelectedElement(null); }}
-              data-tooltip="Draw Rectangle"
-            >
-              <Square size={20} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'rectangle' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('rectangle'); setSelectedElement(null); }}
+                data-tooltip="Draw Rectangle"
+              >
+                <Square size={20} />
+              </button>
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'circle' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('circle'); setSelectedElement(null); }}
-              data-tooltip="Draw Circle"
-            >
-              <Circle size={20} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'circle' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('circle'); setSelectedElement(null); }}
+                data-tooltip="Draw Circle"
+              >
+                <Circle size={20} />
+              </button>
 
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
 
-            <button 
-              className={`toolbar-btn ${activeTool === 'text' ? 'active' : ''}`} 
-              onClick={() => { setActiveTool('text'); setSelectedElement(null); }}
-              data-tooltip="Insert Typography Label"
-            >
-              <Type size={20} />
-            </button>
+              <button 
+                className={`toolbar-btn ${activeTool === 'text' ? 'active' : ''}`} 
+                onClick={() => { setActiveTool('text'); setSelectedElement(null); }}
+                data-tooltip="Insert Typography Label"
+              >
+                <Type size={20} />
+              </button>
 
-            <button 
-              className="toolbar-btn" 
-              onClick={() => fileInputRef.current.click()}
-              data-tooltip="Insert Picture/Image"
-            >
-              <ImageIcon size={20} />
-            </button>
+              <button 
+                className="toolbar-btn" 
+                onClick={() => fileInputRef.current.click()}
+                data-tooltip="Insert Picture/Image"
+              >
+                <ImageIcon size={20} />
+              </button>
 
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
 
-            <button 
-              className="toolbar-btn collapse-btn"
-              onClick={() => setIsToolbarCollapsed(true)}
-              data-tooltip="Collapse Toolbar"
-              style={{ color: '#f87171' }}
-            >
-              <ChevronLeft size={20} />
-            </button>
-          </div>
+              <button 
+                className="toolbar-btn collapse-btn"
+                onClick={() => setIsToolbarCollapsed(true)}
+                data-tooltip="Collapse Toolbar"
+                style={{ color: '#f87171' }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+            </div>
+          )
         )}
 
         {/* Floating Right Properties Panel */}
-        {isPropertiesCollapsed ? (
-          <button 
-            className="whiteboard-floating-trigger properties-trigger"
-            onClick={() => setIsPropertiesCollapsed(false)}
-            data-tooltip="Expand Options"
-          >
-            <ChevronLeft size={20} />
-          </button>
-        ) : (
-          <div 
-            className="whiteboard-properties"
-            style={(!isHost && isCollaborating && !hasDrawAccess) ? { opacity: 0.35, pointerEvents: 'none' } : {}}
-          >
-            <div className="properties-panel-header" style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '10px' }}>
-              <span className="prop-title" style={{ margin: 0 }}>Properties</span>
-            </div>
-
-            {/* Scrollable Settings Content */}
-            <div className="properties-panel-content">
-              {/* Colors Selection */}
-              <div className="prop-section">
-                <span className="prop-title">Pen & Ink Palette</span>
-                <div className="color-palette">
-                  {PRESET_COLORS.map(color => (
-                    <button 
-                      key={color}
-                      className={`color-swatch ${activeColor.toLowerCase() === color.toLowerCase() ? 'active' : ''}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setActiveColor(color)}
-                    />
-                  ))}
-                </div>
-                
-                <div className="custom-color-input-wrapper">
-                  <input 
-                    type="color" 
-                    className="custom-color-picker"
-                    value={activeColor}
-                    onChange={(e) => setActiveColor(e.target.value)}
-                  />
-                  <input 
-                    type="text" 
-                    className="custom-color-hex"
-                    value={activeColor.toUpperCase()}
-                    onChange={(e) => setActiveColor(e.target.value)}
-                  />
-                </div>
+        {(!isHost && isCollaborating && !hasDrawAccess) ? null : (
+          isPropertiesCollapsed ? (
+            <button 
+              className="whiteboard-floating-trigger properties-trigger"
+              onClick={() => setIsPropertiesCollapsed(false)}
+              data-tooltip="Expand Options"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          ) : (
+            <div className="whiteboard-properties">
+              <div className="properties-panel-header" style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '10px' }}>
+                <span className="prop-title" style={{ margin: 0 }}>Properties</span>
               </div>
 
-              {/* Width / Size Settings */}
-              <div className="prop-section">
-                <span className="prop-title">Line / Text Size</span>
-                <div className="brush-sizes">
-                  {[2, 4, 8, 16].map(size => (
-                    <button 
-                      key={size}
-                      className={`brush-size-btn ${strokeWidth === size ? 'active' : ''}`}
-                      onClick={() => {
-                        setStrokeWidth(size);
-                        setFontSize(size + 16); // Sync font size logically
-                      }}
-                    >
-                      {size}px
-                    </button>
-                  ))}
-                </div>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="50" 
-                  className="brush-width-slider"
-                  value={strokeWidth}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setStrokeWidth(val);
-                    setFontSize(val + 16);
-                  }}
-                />
-              </div>
-
-              {/* Shape Fill Modes */}
-              {['rectangle', 'circle'].includes(activeTool) && (
+              {/* Scrollable Settings Content */}
+              <div className="properties-panel-content">
+                {/* Colors Selection */}
                 <div className="prop-section">
-                  <span className="prop-title">Shape Fill mode</span>
-                  <div className="fill-modes">
-                    {['none', 'semi', 'solid'].map(mode => (
-                      <button
-                        key={mode}
-                        className={`fill-mode-btn ${fillMode === mode ? 'active' : ''}`}
-                        onClick={() => setFillMode(mode)}
+                  <span className="prop-title">Pen & Ink Palette</span>
+                  <div className="color-palette">
+                    {PRESET_COLORS.map(color => (
+                      <button 
+                        key={color}
+                        className={`color-swatch ${activeColor.toLowerCase() === color.toLowerCase() ? 'active' : ''}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setActiveColor(color)}
+                      />
+                    ))}
+                  </div>
+                  
+                  <div className="custom-color-input-wrapper">
+                    <input 
+                      type="color" 
+                      className="custom-color-picker"
+                      value={activeColor}
+                      onChange={(e) => setActiveColor(e.target.value)}
+                    />
+                    <input 
+                      type="text" 
+                      className="custom-color-hex"
+                      value={activeColor.toUpperCase()}
+                      onChange={(e) => setActiveColor(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Width / Size Settings */}
+                <div className="prop-section">
+                  <span className="prop-title">Line / Text Size</span>
+                  <div className="brush-sizes">
+                    {[2, 4, 8, 16].map(size => (
+                      <button 
+                        key={size}
+                        className={`brush-size-btn ${strokeWidth === size ? 'active' : ''}`}
+                        onClick={() => {
+                          setStrokeWidth(size);
+                          setFontSize(size + 16); // Sync font size logically
+                        }}
                       >
-                        {mode}
+                        {size}px
+                      </button>
+                    ))}
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="50" 
+                    className="brush-width-slider"
+                    value={strokeWidth}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setStrokeWidth(val);
+                      setFontSize(val + 16);
+                    }}
+                  />
+                </div>
+
+                {/* Shape Fill Modes */}
+                {['rectangle', 'circle'].includes(activeTool) && (
+                  <div className="prop-section">
+                    <span className="prop-title">Shape Fill mode</span>
+                    <div className="fill-modes">
+                      {['none', 'semi', 'solid'].map(mode => (
+                        <button
+                          key={mode}
+                          className={`fill-mode-btn ${fillMode === mode ? 'active' : ''}`}
+                          onClick={() => setFillMode(mode)}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Backdrop/Grid Selector */}
+                <div className="prop-section">
+                  <span className="prop-title">Backdrop Canvas Grid</span>
+                  <div className="backdrop-grid">
+                    {['blank', 'dots', 'lines', 'graph'].map(type => (
+                      <button
+                        key={type}
+                        className={`backdrop-btn ${gridType === type ? 'active' : ''}`}
+                        onClick={() => setGridType(type)}
+                      >
+                        {type === 'lines' ? 'Notebook' : type === 'graph' ? 'Math Grid' : type}
                       </button>
                     ))}
                   </div>
                 </div>
-              )}
 
-              {/* Backdrop/Grid Selector */}
-              <div className="prop-section">
-                <span className="prop-title">Backdrop Canvas Grid</span>
-                <div className="backdrop-grid">
-                  {['blank', 'dots', 'lines', 'graph'].map(type => (
-                    <button
-                      key={type}
-                      className={`backdrop-btn ${gridType === type ? 'active' : ''}`}
-                      onClick={() => setGridType(type)}
+                {/* Advanced Canvas Settings */}
+                <div className="prop-section">
+                  <span className="prop-title">Canvas Options</span>
+                  <div className="canvas-settings-list">
+                    <label className="canvas-setting-item">
+                      <input 
+                        type="checkbox" 
+                        checked={snapToGrid} 
+                        onChange={(e) => setSnapToGrid(e.target.checked)} 
+                        className="canvas-setting-checkbox"
+                      />
+                      <span className="setting-label-text">Snap to Grid (24px)</span>
+                    </label>
+                    <label className="canvas-setting-item">
+                      <input 
+                        type="checkbox" 
+                        checked={isPressureSensitive} 
+                        onChange={(e) => setIsPressureSensitive(e.target.checked)} 
+                        className="canvas-setting-checkbox"
+                      />
+                      <span className="setting-label-text">Pressure Sensitive</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Theme Color Picker */}
+                <div className="prop-section">
+                  <span className="prop-title">Board Theme</span>
+                  <div className="theme-toggle-container">
+                    <button 
+                      className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
+                      onClick={() => setTheme('dark')}
                     >
-                      {type === 'lines' ? 'Notebook' : type === 'graph' ? 'Math Grid' : type}
+                      <Moon size={14} />
+                      <span>Blackboard</span>
                     </button>
-                  ))}
+                    <button 
+                      className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
+                      onClick={() => setTheme('light')}
+                    >
+                      <Sun size={14} />
+                      <span>Whiteboard</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Delete Element option in properties panel when selected */}
+                {selectedElement && (
+                  <div className="prop-section" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '15px' }}>
+                    <span className="prop-title">Manage Selected Element</span>
+                    <button
+                      className="whiteboard-btn danger"
+                      style={{ width: '100%', justifyContent: 'center', marginTop: '5px' }}
+                      onClick={() => {
+                        const remaining = elements.filter(el => el.id !== selectedElement.id);
+                        pushToHistory(remaining);
+                        setSelectedElement(null);
+                      }}
+                    >
+                      <Trash size={16} />
+                      <span>Delete Element</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Advanced Canvas Settings */}
-              <div className="prop-section">
-                <span className="prop-title">Canvas Options</span>
-                <div className="canvas-settings-list">
-                  <label className="canvas-setting-item">
-                    <input 
-                      type="checkbox" 
-                      checked={snapToGrid} 
-                      onChange={(e) => setSnapToGrid(e.target.checked)} 
-                      className="canvas-setting-checkbox"
-                    />
-                    <span className="setting-label-text">Snap to Grid (24px)</span>
-                  </label>
-                  <label className="canvas-setting-item">
-                    <input 
-                      type="checkbox" 
-                      checked={isPressureSensitive} 
-                      onChange={(e) => setIsPressureSensitive(e.target.checked)} 
-                      className="canvas-setting-checkbox"
-                    />
-                    <span className="setting-label-text">Pressure Sensitive</span>
-                  </label>
-                </div>
+              {/* Non-scrollable Fixed Footer for collapse button */}
+              <div className="properties-panel-footer">
+                <button
+                  className="whiteboard-btn-icon"
+                  style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.25)', color: '#f87171', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={() => setIsPropertiesCollapsed(true)}
+                  title="Collapse Options"
+                >
+                  <ChevronRight size={20} />
+                </button>
               </div>
-
-              {/* Theme Color Picker */}
-              <div className="prop-section">
-                <span className="prop-title">Board Theme</span>
-                <div className="theme-toggle-container">
-                  <button 
-                    className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-                    onClick={() => setTheme('dark')}
-                  >
-                    <Moon size={14} />
-                    <span>Blackboard</span>
-                  </button>
-                  <button 
-                    className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-                    onClick={() => setTheme('light')}
-                  >
-                    <Sun size={14} />
-                    <span>Whiteboard</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Delete Element option in properties panel when selected */}
-              {selectedElement && (
-                <div className="prop-section" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '15px' }}>
-                  <span className="prop-title">Manage Selected Element</span>
-                  <button
-                    className="whiteboard-btn danger"
-                    style={{ width: '100%', justifyContent: 'center', marginTop: '5px' }}
-                    onClick={() => {
-                      const remaining = elements.filter(el => el.id !== selectedElement.id);
-                      pushToHistory(remaining);
-                      setSelectedElement(null);
-                    }}
-                  >
-                    <Trash size={16} />
-                    <span>Delete Element</span>
-                  </button>
-                </div>
-              )}
             </div>
-
-            {/* Non-scrollable Fixed Footer for collapse button */}
-            <div className="properties-panel-footer">
-              <button
-                className="whiteboard-btn-icon"
-                style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.25)', color: '#f87171', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                onClick={() => setIsPropertiesCollapsed(true)}
-                title="Collapse Options"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
+          )
         )}
 
         {/* Center Canvas Zoom Slider */}
