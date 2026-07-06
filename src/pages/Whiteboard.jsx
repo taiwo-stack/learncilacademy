@@ -147,11 +147,24 @@ export default function Whiteboard() {
   const [pointerType, setPointerType] = useState('mouse');
   const [pointerPressure, setPointerPressure] = useState(0);
 
-  // Multi-page Slide State
-  const [pages, setPages] = useState([
-    { id: 'page-1', elements: [], undoStack: [], redoStack: [] }
-  ]);
+  // Multi-page Slide State — persisted to localStorage per room
+  const STORAGE_KEY = () => {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room') || 'solo';
+    return `wb-pages-${room}`;
+  };
+
+  const loadPersistedPages = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY());
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return [{ id: 'page-1', elements: [], undoStack: [], redoStack: [] }];
+  };
+
+  const [pages, setPages] = useState(loadPersistedPages);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+
 
   // Active slide state (mirrors current page elements and history)
   const [elements, setElements] = useState([]);
@@ -177,6 +190,27 @@ export default function Whiteboard() {
       return prev;
     });
   }, [elements, undoStack, redoStack, currentPageIndex]);
+
+  // Persist pages to localStorage on every change (debounced to avoid thrashing)
+  useEffect(() => {
+    try {
+      // Strip undo/redo stacks from storage to keep payload small
+      const toStore = pages.map(p => ({ id: p.id, elements: p.elements }));
+      localStorage.setItem(STORAGE_KEY(), JSON.stringify(toStore));
+    } catch (_) {}
+  }, [pages]);
+
+  // On first mount: load persisted elements into active drawing state
+  useEffect(() => {
+    const persisted = loadPersistedPages();
+    const firstPage = persisted[0];
+    if (firstPage?.elements?.length) {
+      setElements(firstPage.elements);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -215,6 +249,15 @@ export default function Whiteboard() {
       setActiveColor('#000000');
     }
   }, [theme]);
+
+  // Re-wire local camera stream whenever a video panel is shown/hidden
+  useEffect(() => {
+    if (isVideoOn && localStreamRef.current && localVideoRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [showParticipantStrip, showVideoGrid, isVideoOn]);
+
+
 
   // Toast notifications
   const [toastMessage, setToastMessage] = useState('');
@@ -2558,7 +2601,10 @@ export default function Whiteboard() {
               <div className="video-tile local-tile">
                 {isVideoOn ? (
                   <video
-                    ref={localVideoRef}
+                    ref={(el) => {
+                      localVideoRef.current = el;
+                      if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
+                    }}
                     className="video-tile-stream"
                     autoPlay
                     muted
@@ -2665,7 +2711,10 @@ export default function Whiteboard() {
                       <div className="pstrip-media">
                         {isLocal && isVideoOn ? (
                           <video
-                            ref={localVideoRef}
+                            ref={(el) => {
+                              localVideoRef.current = el;
+                              if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
+                            }}
                             className="pstrip-video"
                             autoPlay muted playsInline
                           />

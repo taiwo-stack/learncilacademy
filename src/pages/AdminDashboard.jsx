@@ -16,7 +16,7 @@ import {
 import { 
   Users, Calendar, UserCheck, Mail, Plus, Trash2, AlertCircle, Layers, X,
   BookOpen, FolderMinus, Link2, BookOpenCheck, Settings, Eye, Paperclip, Clock,
-  ArrowUp, ArrowDown, Edit, MessageSquare
+  ArrowUp, ArrowDown, Edit, MessageSquare, MonitorPlay
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
@@ -888,6 +888,11 @@ export default function AdminDashboard() {
           </li>
           <li className={`sidebar-item ${activeTab === 'chatmonitor' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('chatmonitor')}><MessageSquare size={18} /> Chat Monitor</button>
+          </li>
+          <li className="sidebar-item" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+            <button onClick={() => window.open('/whiteboard', '_blank')} style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>
+              <MonitorPlay size={18} /> Launch Whiteboard ↗
+            </button>
           </li>
         </ul>
       </aside>

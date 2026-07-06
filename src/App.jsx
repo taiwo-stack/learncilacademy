@@ -13,7 +13,15 @@ import ProtectedRoute from './components/ProtectedRoute';
 import './styles/global.css';
 
 function AppContent() {
-  const [currentUser, setCurrentUser] = useState({ role: 'guest' });
+  // Persist session across refreshes via sessionStorage
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'guest' };
+    } catch {
+      return { role: 'guest' };
+    }
+  });
   const location = useLocation();
 
   const isWhiteboard = location.pathname.startsWith('/whiteboard');
@@ -24,7 +32,13 @@ function AppContent() {
   );
 
   const handleLogout = () => {
+    sessionStorage.removeItem('currentUser');
     setCurrentUser({ role: 'guest' });
+  };
+
+  const handleLoginSuccess = (user) => {
+    sessionStorage.setItem('currentUser', JSON.stringify(user));
+    setCurrentUser(user);
   };
 
   return (
@@ -33,8 +47,15 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/subjects" element={<SubjectsPage />} />
-        <Route path="/login" element={<Login onLoginSuccess={setCurrentUser} />} />
-        <Route path="/whiteboard" element={<Whiteboard />} />
+        <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
+        <Route 
+          path="/whiteboard" 
+          element={
+            <ProtectedRoute allowedRoles={['tutor', 'admin']} user={currentUser} allowRoomParticipant={true}>
+              <Whiteboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/student" 
           element={

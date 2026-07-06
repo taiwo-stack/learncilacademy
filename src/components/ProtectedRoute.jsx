@@ -1,11 +1,21 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 /**
  * ProtectedRoute Wrapper
  * Restricts access to authenticated users matching specific roles.
  */
-export default function ProtectedRoute({ children, allowedRoles, user }) {
+export default function ProtectedRoute({ children, allowedRoles, user, allowRoomParticipant }) {
+  const location = useLocation();
+
+  // If allowRoomParticipant is enabled and we have a room parameter in the URL, bypass auth checks
+  if (allowRoomParticipant) {
+    const params = new URLSearchParams(location.search);
+    if (params.has('room')) {
+      return children;
+    }
+  }
+
   if (!user || user.role === 'guest') {
     // If not logged in, redirect to login page
     return <Navigate to="/login" replace />;
@@ -18,3 +28,4 @@ export default function ProtectedRoute({ children, allowedRoles, user }) {
 
   return children;
 }
+

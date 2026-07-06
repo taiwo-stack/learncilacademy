@@ -13,7 +13,7 @@ import {
 import { 
   Calendar, User, Clock, AlertCircle, Save, Check, X, 
   MessageSquare, Plus, CheckSquare, Megaphone, Trash2, Send,
-  BookOpen, FileText, Upload
+  BookOpen, FileText, Upload, MonitorPlay
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 
@@ -548,6 +548,11 @@ export default function TutorDashboard({ user }) {
           </li>
           <li className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('settings')}><Save size={18} /> Profile Settings</button>
+          </li>
+          <li className="sidebar-item" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+            <button onClick={() => window.open('/whiteboard', '_blank')} style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>
+              <MonitorPlay size={18} /> Launch Whiteboard ↗
+            </button>
           </li>
         </ul>
       </aside>
