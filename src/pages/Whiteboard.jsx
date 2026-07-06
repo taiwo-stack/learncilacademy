@@ -83,7 +83,17 @@ export default function Whiteboard({ user }) {
   const [isHandRaised, setIsHandRaised] = useState(false);
 
   // Connection & Media Refs
-  const localUserId = useRef('user-' + Math.random().toString(36).substr(2, 9));
+  const localUserId = useRef((() => {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room') || 'default-room';
+    const key = `wb-uid-${room}`;
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = 'user-' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem(key, id);
+    }
+    return id;
+  })());
   const userColor = useRef(AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]);
   const channelRef = useRef(null);
   const peerConnectionsRef = useRef({}); // { peerId: RTCPeerConnection }
@@ -291,10 +301,16 @@ export default function Whiteboard({ user }) {
       setIsHost(false);
       setHasDrawAccess(false);
       
+      const storedName = localStorage.getItem(`wb-name-${roomParam}`);
       if (user && user.full_name) {
         // Logged-in student: auto-join immediately with their name!
         setTimeout(() => {
           startCollaboration(roomParam, user.full_name, false);
+        }, 100);
+      } else if (storedName) {
+        // Guest who already filled out their name before refresh: auto-join!
+        setTimeout(() => {
+          startCollaboration(roomParam, storedName, false);
         }, 100);
       } else {
         // Anonymous guest: ask for name in modal
@@ -361,6 +377,7 @@ export default function Whiteboard({ user }) {
     setRoomId(id);
     setIsCollaborating(true);
     setShowNameModal(false);
+    localStorage.setItem(`wb-name-${id}`, name);
     if (asHost !== null) {
       setIsHost(asHost);
       setHasDrawAccess(asHost ? true : hasDrawAccess);
@@ -574,8 +591,13 @@ export default function Whiteboard({ user }) {
         break;
 
       case 'drawing-end':
-        delete activeDrawingsRef.current[payload.userId];
         setElements(prev => [...prev, payload.element]);
+        // Delay active drawing ref cleanup slightly to overlap with React state commit
+        // and prevent concurrent cursor-move updates from wiping the stroke off canvas
+        setTimeout(() => {
+          delete activeDrawingsRef.current[payload.userId];
+          drawCanvas();
+        }, 80);
         break;
 
       case 'element-update':
