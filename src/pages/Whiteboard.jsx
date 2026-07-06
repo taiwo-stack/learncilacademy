@@ -107,6 +107,7 @@ export default function Whiteboard({ user }) {
   const currentStrokeRef = useRef(null);
   const handleBroadcastEventRef = useRef(null);
   const presenceSyncHandlerRef = useRef(null);
+  const pointsSentCountRef = useRef(0);
 
   // Video call states
   const [isVideoOn, setIsVideoOn] = useState(false);
@@ -468,7 +469,7 @@ export default function Whiteboard({ user }) {
   };
 
   const lastDrawingBroadcastRef = useRef(0);
-  const broadcastDrawingStroke = (points, color, width, isHighlighter) => {
+  const broadcastDrawingStroke = (newPoints, color, width, isHighlighter) => {
     if (!channelRef.current) return;
     const now = Date.now();
     if (now - lastDrawingBroadcastRef.current < 16) return; // ~60fps throttle for instant sync
@@ -477,7 +478,7 @@ export default function Whiteboard({ user }) {
     channelRef.current.send({
       type: 'broadcast',
       event: 'drawing-stroke',
-      payload: { userId: localUserId.current, points, color, width, isHighlighter }
+      payload: { userId: localUserId.current, newPoints, color, width, isHighlighter }
     });
   };
 
@@ -570,13 +571,19 @@ export default function Whiteboard({ user }) {
   const handleBroadcastEvent = (event, payload) => {
     switch (event) {
       case 'drawing-stroke':
-        activeDrawingsRef.current[payload.userId] = {
-          type: 'stroke',
-          points: payload.points,
-          color: payload.color,
-          width: payload.width,
-          isHighlighter: payload.isHighlighter
-        };
+        if (!activeDrawingsRef.current[payload.userId]) {
+          activeDrawingsRef.current[payload.userId] = {
+            type: 'stroke',
+            points: [],
+            color: payload.color,
+            width: payload.width,
+            isHighlighter: payload.isHighlighter
+          };
+        }
+        // Append newly arrived delta points
+        if (payload.newPoints && Array.isArray(payload.newPoints)) {
+          activeDrawingsRef.current[payload.userId].points.push(...payload.newPoints);
+        }
         drawCanvas();
         break;
 
@@ -715,17 +722,24 @@ export default function Whiteboard({ user }) {
         break;
 
       case 'board-state-response':
+        console.log("Receiver: board-state-response event received", payload);
         if (payload.targetUserId === 'all' || payload.targetUserId === localUserId.current) {
           if (!isHost) {
+            console.log("Receiver: Updating pages to:", payload.pages, "and index to:", payload.currentPageIndex);
             setPages(payload.pages);
             setCurrentPageIndex(payload.currentPageIndex);
             const activePage = payload.pages[payload.currentPageIndex];
             if (activePage) {
+              console.log("Receiver: Setting elements to active page elements:", activePage.elements);
               setElements(activePage.elements || []);
               setUndoStack(activePage.undoStack || []);
               setRedoStack(activePage.redoStack || []);
+            } else {
+              console.warn("Receiver: Active page not found at index", payload.currentPageIndex);
             }
-            drawCanvas();
+            requestAnimationFrame(() => {
+              drawCanvas();
+            });
             triggerToast("Whiteboard sync complete!");
           }
         }
@@ -1609,6 +1623,7 @@ export default function Whiteboard({ user }) {
         width: strokeWidth
       };
       currentStrokeRef.current = newStroke;
+      pointsSentCountRef.current = 1;
       setCurrentStroke(newStroke);
       return;
     }
@@ -1626,6 +1641,7 @@ export default function Whiteboard({ user }) {
         isHighlighter: true
       };
       currentStrokeRef.current = newStroke;
+      pointsSentCountRef.current = 1;
       setCurrentStroke(newStroke);
       return;
     }
@@ -1783,8 +1799,12 @@ export default function Whiteboard({ user }) {
       // Update state to trigger local redraw
       setCurrentStroke({ ...currentStrokeRef.current });
       
-      // Broadcast live drawing points
-      broadcastDrawingStroke(nextPoints, currentStrokeRef.current.color, currentStrokeRef.current.width, currentStrokeRef.current.isHighlighter);
+      // Slice and broadcast only newly added points since last broadcast to prevent WebSocket congestion
+      const unsentPoints = nextPoints.slice(pointsSentCountRef.current);
+      if (unsentPoints.length > 0) {
+        broadcastDrawingStroke(unsentPoints, currentStrokeRef.current.color, currentStrokeRef.current.width, currentStrokeRef.current.isHighlighter);
+        pointsSentCountRef.current = nextPoints.length;
+      }
       return;
     }
 
