@@ -10,6 +10,7 @@ import {
   ArrowUpRight, 
   Square, 
   Circle, 
+  Hand,
   Type, 
   Image as ImageIcon, 
   Undo2, 
@@ -65,26 +66,28 @@ const generateRandomName = () => {
 };
 const AVATAR_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#ef4444', '#14b8a6'];
 
-export default function Whiteboard() {
+export default function Whiteboard({ user }) {
   const navigate = useNavigate();
 
   // Collaboration States
   const [roomId, setRoomId] = useState(null);
   const [isCollaborating, setIsCollaborating] = useState(false);
   const [isHost, setIsHost] = useState(false);
-  const [hasDrawAccess, setHasDrawAccess] = useState(true);
+  const [hasDrawAccess, setHasDrawAccess] = useState(false); // Guests start LOCKED. Host sets true via startCollaboration.
   const [userName, setUserName] = useState('');
   const [showNameModal, setShowNameModal] = useState(false);
   const [participants, setParticipants] = useState({});
   const [isMicOn, setIsMicOn] = useState(false);
   const [showCollabSidebar, setShowCollabSidebar] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isHandRaised, setIsHandRaised] = useState(false);
 
   // Connection & Media Refs
   const localUserId = useRef('user-' + Math.random().toString(36).substr(2, 9));
   const userColor = useRef(AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]);
   const channelRef = useRef(null);
   const peerConnectionsRef = useRef({}); // { peerId: RTCPeerConnection }
+  const iceCandidateQueuesRef = useRef({}); // { peerId: RTCIceCandidate[] }
   const activeDrawingsRef = useRef({}); // { userId: { points, color, width, isHighlighter } }
   const participantsRef = useRef({}); // Mirror participants state for draw loop access
   const localStreamRef = useRef(null);
@@ -270,15 +273,47 @@ export default function Whiteboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
-    if (roomParam) {
+    
+    // Check if user is tutor/admin, or previously registered as host for this room
+    const userIsTutorOrAdmin = user && (user.role === 'tutor' || user.role === 'admin');
+    const isHostStored = roomParam ? localStorage.getItem(`wb-host-${roomParam}`) === 'true' : true;
+    const clientIsHost = !roomParam || userIsTutorOrAdmin || isHostStored;
+
+    if (roomParam && !clientIsHost) {
+      // Guest joining via shared link
       setRoomId(roomParam);
       setIsHost(false);
-      setHasDrawAccess(false); // Guest default read-only
-      setShowNameModal(true); // Ask guest for name
+      setHasDrawAccess(false);
+      
+      if (user && user.full_name) {
+        // Logged-in student: auto-join immediately with their name!
+        setTimeout(() => {
+          startCollaboration(roomParam, user.full_name, false);
+        }, 100);
+      } else {
+        // Anonymous guest: ask for name in modal
+        setShowNameModal(true);
+      }
     } else {
-      setIsHost(true);
-      setHasDrawAccess(true);
-      setUserName('Host Tutor');
+      // Host: auto-join the room immediately
+      const activeRoom = roomParam || 'room-' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem(`wb-host-${activeRoom}`, 'true');
+      
+      let defaultName = 'Tutor';
+      if (user) {
+        if (user.role === 'admin') {
+          defaultName = user.full_name || 'Admin';
+        } else if (user.role === 'tutor') {
+          defaultName = user.full_name || 'Tutor';
+        } else if (user.full_name) {
+          defaultName = user.full_name;
+        }
+      }
+
+      // Use setTimeout to allow supabase import to settle before subscribing
+      setTimeout(() => {
+        startCollaboration(activeRoom, defaultName, true);
+      }, 100);
     }
 
     return () => {
@@ -289,7 +324,8 @@ export default function Whiteboard() {
         channelRef.current.unsubscribe();
       }
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const updatePresenceState = async (updates = {}) => {
     if (!channelRef.current) return;
@@ -306,17 +342,23 @@ export default function Whiteboard() {
     });
   };
 
-  const startCollaboration = async (id, chosenName) => {
+  const startCollaboration = async (id, chosenName, asHost = null) => {
     if (!supabase) {
       alert("Supabase configuration not detected. Multiplayer collaboration is unavailable.");
       return;
     }
+
+    const hostMode = asHost !== null ? asHost : isHost;
 
     const name = chosenName || userName || generateRandomName();
     setUserName(name);
     setRoomId(id);
     setIsCollaborating(true);
     setShowNameModal(false);
+    if (asHost !== null) {
+      setIsHost(asHost);
+      setHasDrawAccess(asHost ? true : hasDrawAccess);
+    }
 
     // Update browser URL query parameter without page reload
     const newurl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${id}`;
@@ -342,7 +384,7 @@ export default function Whiteboard() {
       setParticipants(mapped);
       participantsRef.current = mapped;
       
-      // Update WebRTC voice streams
+      // Update WebRTC voice streams when new peers join
       syncVoicePeers(mapped);
       drawCanvas();
     });
@@ -357,21 +399,42 @@ export default function Whiteboard() {
         await channel.track({
           userId: localUserId.current,
           userName: name,
-          isHost: isHost,
-          hasDrawAccess: isHost ? true : hasDrawAccess,
+          isHost: hostMode,
+          hasDrawAccess: hostMode ? true : hasDrawAccess,
           color: userColor.current,
           isMicOn: isMicOn,
           isVideoOn: isVideoOn,
+          handRaised: isHandRaised,
           cursor: null
         });
         triggerToast(`Connected to room! Welcome ${name}.`);
+
+        // Sync board state from the host on join
+        if (!hostMode) {
+          channel.send({
+            type: 'broadcast',
+            event: 'request-board-state',
+            payload: { senderUserId: localUserId.current }
+          });
+        } else {
+          // Broadcast state to any existing peers
+          channel.send({
+            type: 'broadcast',
+            event: 'board-state-response',
+            payload: {
+              targetUserId: 'all',
+              pages: pages,
+              currentPageIndex: currentPageIndex
+            }
+          });
+        }
       }
     });
   };
 
   const initiateRoomCollab = () => {
     const roomUuid = 'room-' + Math.random().toString(36).substr(2, 9);
-    startCollaboration(roomUuid, userName || 'Host Tutor');
+    startCollaboration(roomUuid, userName || 'Host Tutor', true);
   };
 
   const updateCurrentPageElements = (newElements) => {
@@ -384,8 +447,13 @@ export default function Whiteboard() {
     });
   };
 
+  const lastDrawingBroadcastRef = useRef(0);
   const broadcastDrawingStroke = (points, color, width, isHighlighter) => {
     if (!channelRef.current) return;
+    const now = Date.now();
+    if (now - lastDrawingBroadcastRef.current < 16) return; // ~60fps throttle for instant sync
+    lastDrawingBroadcastRef.current = now;
+
     channelRef.current.send({
       type: 'broadcast',
       event: 'drawing-stroke',
@@ -441,10 +509,16 @@ export default function Whiteboard() {
   const toggleParticipantDrawAccess = (peerId, currentAccess) => {
     if (!isHost || !channelRef.current) return;
     const nextAccess = !currentAccess;
+    
+    // Auto-lower student's hand when granting draw access
     channelRef.current.send({
       type: 'broadcast',
       event: 'access-changed',
-      payload: { targetUserId: peerId, hasDrawAccess: nextAccess }
+      payload: { 
+        targetUserId: peerId, 
+        hasDrawAccess: nextAccess,
+        lowerHand: nextAccess
+      }
     });
     
     // Also trigger local state indicator redraw
@@ -452,9 +526,25 @@ export default function Whiteboard() {
       const next = { ...prev };
       if (next[peerId]) {
         next[peerId].hasDrawAccess = nextAccess;
+        if (nextAccess) next[peerId].handRaised = false;
       }
       return next;
     });
+  };
+
+  const toggleRaiseHand = async () => {
+    const nextState = !isHandRaised;
+    setIsHandRaised(nextState);
+    if (isCollaborating) {
+      updatePresenceState({ handRaised: nextState });
+      if (nextState) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'hand-raised',
+          payload: { userId: localUserId.current, userName: userName }
+        });
+      }
+    }
   };
 
   const handleBroadcastEvent = (event, payload) => {
@@ -504,8 +594,41 @@ export default function Whiteboard() {
       case 'access-changed':
         if (payload.targetUserId === localUserId.current) {
           setHasDrawAccess(payload.hasDrawAccess);
-          updatePresenceState({ hasDrawAccess: payload.hasDrawAccess });
+          const updates = { hasDrawAccess: payload.hasDrawAccess };
+          if (payload.lowerHand) {
+            setIsHandRaised(false);
+            updates.handRaised = false;
+          }
+          updatePresenceState(updates);
           triggerToast(payload.hasDrawAccess ? "Drawing access GRANTED by host!" : "Drawing access REVOKED by host.");
+        }
+        break;
+
+      case 'hand-raised':
+        if (isHost) {
+          triggerToast(`✋ ${payload.userName} raised their hand!`);
+          try {
+            // Subtle, high-quality pop chime using Web Audio API
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 note
+            osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.12); // A5 note
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.22);
+          } catch (_) {}
+        }
+        break;
+
+      case 'lower-hand-request':
+        if (payload.targetUserId === localUserId.current) {
+          setIsHandRaised(false);
+          updatePresenceState({ handRaised: false });
+          triggerToast("Tutor lowered your hand.");
         }
         break;
 
@@ -530,6 +653,58 @@ export default function Whiteboard() {
       case 'webrtc-ice':
         if (payload.targetUserId === localUserId.current) {
           handleWebRTCIce(payload.candidate, payload.senderUserId);
+        }
+        break;
+
+      case 'peer-reconnect':
+        const peerId = payload.senderUserId;
+        if (peerConnectionsRef.current[peerId]) {
+          try {
+            peerConnectionsRef.current[peerId].close();
+          } catch (_) {}
+          delete peerConnectionsRef.current[peerId];
+        }
+        setRemoteVideoStreams(prev => {
+          const next = { ...prev };
+          delete next[peerId];
+          return next;
+        });
+        if (remoteAnalysersRef.current[peerId]) {
+          delete remoteAnalysersRef.current[peerId];
+        }
+        const audioEl = document.getElementById('peer-audio-' + peerId);
+        if (audioEl) audioEl.remove();
+
+        // Create fresh connection
+        createPeerConnection(peerId, localUserId.current > peerId);
+        break;
+
+      case 'request-board-state':
+        if (isHost && channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'board-state-response',
+            payload: {
+              targetUserId: payload.senderUserId,
+              pages: pages,
+              currentPageIndex: currentPageIndex
+            }
+          });
+        }
+        break;
+
+      case 'board-state-response':
+        if (payload.targetUserId === 'all' || payload.targetUserId === localUserId.current) {
+          if (!isHost) {
+            setPages(payload.pages);
+            setCurrentPageIndex(payload.currentPageIndex);
+            const activePage = payload.pages[payload.currentPageIndex];
+            if (activePage) {
+              setElements(activePage.elements || []);
+            }
+            drawCanvas();
+            triggerToast("Whiteboard sync complete!");
+          }
         }
         break;
 
@@ -645,6 +820,15 @@ export default function Whiteboard() {
   };
 
 
+  const broadcastReconnect = () => {
+    if (!channelRef.current) return;
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'peer-reconnect',
+      payload: { senderUserId: localUserId.current }
+    });
+  };
+
   const syncMediaPeers = async (presenceMap) => {
     if (!isMicOn && !isVideoOn) return;
     const constraints = {
@@ -654,38 +838,24 @@ export default function Whiteboard() {
     const stream = await getLocalStream(constraints);
     if (!stream) return;
 
-    // Wire local video preview
-    if (isVideoOn && localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
-    }
-
     Object.keys(presenceMap).forEach(peerId => {
       if (peerId === localUserId.current) return;
-      if (!peerConnectionsRef.current[peerId]) {
-        const isInitiator = localUserId.current > peerId;
-        createPeerConnection(peerId, isInitiator);
-      } else {
-        // Add new tracks to existing connections if renegotiation needed
-        const pc = peerConnectionsRef.current[peerId];
-        stream.getTracks().forEach(track => {
-          const senders = pc.getSenders();
-          const alreadySending = senders.some(s => s.track && s.track.kind === track.kind);
-          if (!alreadySending) {
-            pc.addTrack(track, stream);
-          }
-        });
-      }
+      const isInitiator = localUserId.current > peerId;
+      createPeerConnection(peerId, isInitiator);
     });
   };
 
-  // Keep backward-compat alias
   const syncVoicePeers = syncMediaPeers;
 
   const createPeerConnection = async (peerId, isInitiator) => {
     if (peerConnectionsRef.current[peerId]) return;
 
     const pcConfig = {
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ]
     };
 
     const pc = new RTCPeerConnection(pcConfig);
@@ -711,20 +881,12 @@ export default function Whiteboard() {
       const stream = e.streams[0];
       if (!stream) return;
 
-      // Separate audio and video tracks
       const hasVideo = stream.getVideoTracks().length > 0;
 
       if (hasVideo) {
-        // Update React state to trigger video grid render
         setRemoteVideoStreams(prev => ({ ...prev, [peerId]: stream }));
         setShowVideoGrid(true);
-
-        // Wire video element ref if already mounted
-        if (remoteVideoRefs.current[peerId]) {
-          remoteVideoRefs.current[peerId].srcObject = stream;
-        }
       } else {
-        // Audio-only — use invisible audio element
         let audio = document.getElementById('peer-audio-' + peerId);
         if (!audio) {
           audio = document.createElement('audio');
@@ -733,7 +895,6 @@ export default function Whiteboard() {
           document.body.appendChild(audio);
         }
         audio.srcObject = stream;
-        // Attach audio analyser for speaking detection
         attachRemoteAnalyser(peerId, stream);
       }
     };
@@ -755,6 +916,21 @@ export default function Whiteboard() {
     }
   };
 
+  const processQueuedIceCandidates = async (senderUserId) => {
+    const pc = peerConnectionsRef.current[senderUserId];
+    const queue = iceCandidateQueuesRef.current[senderUserId];
+    if (pc && queue) {
+      while (queue.length > 0) {
+        const candidate = queue.shift();
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.error("Error setting queued ICE candidate", e);
+        }
+      }
+    }
+  };
+
   const handleWebRTCOffer = async (offer, senderUserId) => {
     if (!peerConnectionsRef.current[senderUserId]) {
       await createPeerConnection(senderUserId, false);
@@ -762,6 +938,7 @@ export default function Whiteboard() {
     const pc = peerConnectionsRef.current[senderUserId];
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      await processQueuedIceCandidates(senderUserId);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       if (channelRef.current) {
@@ -781,6 +958,7 @@ export default function Whiteboard() {
     if (pc) {
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        await processQueuedIceCandidates(senderUserId);
       } catch (e) {
         console.error("Error setting WebRTC remote answer", e);
       }
@@ -789,23 +967,34 @@ export default function Whiteboard() {
 
   const handleWebRTCIce = async (candidate, senderUserId) => {
     const pc = peerConnectionsRef.current[senderUserId];
-    if (pc) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {
-        console.error("Error setting ICE candidate description", e);
+    if (!pc) return;
+
+    if (!pc.remoteDescription) {
+      if (!iceCandidateQueuesRef.current[senderUserId]) {
+        iceCandidateQueuesRef.current[senderUserId] = [];
       }
+      iceCandidateQueuesRef.current[senderUserId].push(candidate);
+      return;
+    }
+
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (e) {
+      console.error("Error setting ICE candidate description", e);
     }
   };
 
   const closeAllPeerConnections = () => {
     Object.keys(peerConnectionsRef.current).forEach(peerId => {
-      peerConnectionsRef.current[peerId].close();
+      try {
+        peerConnectionsRef.current[peerId].close();
+      } catch (_) {}
       const audioEl = document.getElementById('peer-audio-' + peerId);
       if (audioEl) audioEl.remove();
     });
     peerConnectionsRef.current = {};
     remoteAnalysersRef.current = {};
+    iceCandidateQueuesRef.current = {};
     setRemoteVideoStreams({});
   };
 
@@ -821,7 +1010,6 @@ export default function Whiteboard() {
       const stream = await getLocalStream(constraints);
       if (stream) {
         stream.getAudioTracks().forEach(t => { t.enabled = true; });
-        // Set up local audio analyser for the level indicator
         if (!localAnalyserRef.current) {
           try {
             localAnalyserRef.current = createAnalyserForStream(stream);
@@ -829,12 +1017,16 @@ export default function Whiteboard() {
         }
         startLevelLoop();
         if (isCollaborating) {
-          syncMediaPeers(participants);
+          closeAllPeerConnections();
+          broadcastReconnect();
+          Object.keys(participantsRef.current).forEach(peerId => {
+            if (peerId === localUserId.current) return;
+            createPeerConnection(peerId, localUserId.current > peerId);
+          });
           updatePresenceState({ isMicOn: true });
         }
       }
     } else {
-      // Disable audio tracks (keep video if on)
       if (localStreamRef.current) {
         localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
       }
@@ -842,12 +1034,12 @@ export default function Whiteboard() {
       if (!isVideoOn) {
         stopLocalStream();
         closeAllPeerConnections();
+        broadcastReconnect();
       }
       stopLevelLoop();
       updatePresenceState({ isMicOn: false });
     }
   };
-
 
   const toggleCamera = async () => {
     const nextState = !isVideoOn;
@@ -861,31 +1053,26 @@ export default function Whiteboard() {
       };
       const stream = await getLocalStream(constraints);
       if (stream) {
-        // Wire local video preview element
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
         if (isCollaborating) {
-          // Need to renegotiate: close existing PCs so they restart with video tracks
           closeAllPeerConnections();
-          syncMediaPeers(participants);
+          broadcastReconnect();
+          Object.keys(participantsRef.current).forEach(peerId => {
+            if (peerId === localUserId.current) return;
+            createPeerConnection(peerId, localUserId.current > peerId);
+          });
         }
         updatePresenceState({ isVideoOn: true });
         triggerToast('Camera ON — peers can now see you.');
       }
     } else {
-      // Stop video tracks only
       if (localStreamRef.current) {
         localStreamRef.current.getVideoTracks().forEach(t => { t.stop(); });
-        // Remove stopped video tracks from the stream
         localStreamRef.current.getVideoTracks().forEach(t => localStreamRef.current.removeTrack(t));
-      }
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null;
       }
       if (!isMicOn) {
         stopLocalStream();
         closeAllPeerConnections();
+        broadcastReconnect();
       }
       updatePresenceState({ isVideoOn: false });
       triggerToast('Camera OFF.');
@@ -939,6 +1126,8 @@ export default function Whiteboard() {
 
   // Helper to determine canvas cursor styling dynamically
   const getCanvasCursor = () => {
+    // If participant is locked out, show not-allowed cursor
+    if (isCollaborating && !isHost && !hasDrawAccess) return 'not-allowed';
     if (isPanning) return 'grabbing';
     if (activeTool === 'select') {
       if (hoveredResizeHandle) return 'se-resize';
@@ -947,7 +1136,7 @@ export default function Whiteboard() {
     }
     if (activeTool === 'eraser') return 'cell';
     if (activeTool === 'text') return 'text';
-    if (activeTool === 'laser') return 'none'; // Draw custom pointer core instead
+    if (activeTool === 'laser') return 'none';
     return 'crosshair';
   };
 
@@ -2343,7 +2532,7 @@ export default function Whiteboard() {
           <button 
             className="whiteboard-btn-icon" 
             onClick={handleUndo} 
-            disabled={undoStack.length === 0}
+            disabled={undoStack.length === 0 || (isCollaborating && !hasDrawAccess)}
             data-tooltip="Undo (Ctrl+Z)"
           >
             <Undo2 size={18} />
@@ -2351,7 +2540,7 @@ export default function Whiteboard() {
           <button 
             className="whiteboard-btn-icon" 
             onClick={handleRedo} 
-            disabled={redoStack.length === 0}
+            disabled={redoStack.length === 0 || (isCollaborating && !hasDrawAccess)}
             data-tooltip="Redo (Ctrl+Y)"
           >
             <Redo2 size={18} />
@@ -2372,7 +2561,8 @@ export default function Whiteboard() {
           <button 
             className="whiteboard-btn danger" 
             onClick={() => setShowClearModal(true)}
-            data-tooltip="Wipe canvas board"
+            disabled={elements.length === 0 || (isCollaborating && !isHost)}
+            data-tooltip={isHost ? "Wipe canvas board" : "Only the tutor can clear the board"}
           >
             <Trash2 size={16} />
             <span>Clear</span>
@@ -2487,6 +2677,24 @@ export default function Whiteboard() {
               >
                 <Users size={18} />
               </button>
+
+              {!isHost && (
+                <button
+                  className={`whiteboard-btn-icon`}
+                  style={{
+                    background: isHandRaised ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)',
+                    color: isHandRaised ? '#fbbf24' : 'rgba(255,255,255,0.5)',
+                    borderColor: isHandRaised ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.1)',
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px'
+                  }}
+                  onClick={toggleRaiseHand}
+                  data-tooltip={isHandRaised ? "Lower Hand" : "Raise Hand"}
+                >
+                  <Hand size={18} style={isHandRaised ? { transform: 'scale(1.15)', transition: 'all 0.2s' } : {}} />
+                </button>
+              )}
             </>
           )}
 
@@ -2531,6 +2739,62 @@ export default function Whiteboard() {
             drawCanvas();
           }}
         />
+
+        {/* Read-Only Banner: shown to participants who don't have draw access */}
+        {isCollaborating && !isHost && !hasDrawAccess && (
+          <div style={{
+            position: 'absolute',
+            bottom: '70px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(15, 15, 20, 0.88)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            borderRadius: '12px',
+            padding: '10px 20px',
+            color: '#fca5a5',
+            fontSize: '0.85rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            zIndex: 200,
+            pointerEvents: 'none',
+            userSelect: 'none',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+          }}>
+            <span style={{ fontSize: '1rem' }}>🔒</span>
+            <span>View Only — waiting for the tutor to grant you drawing access</span>
+          </div>
+        )}
+
+        {/* Granted access banner — briefly shown when host grants access */}
+        {isCollaborating && !isHost && hasDrawAccess && (
+          <div style={{
+            position: 'absolute',
+            bottom: '70px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(15, 15, 20, 0.88)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(16, 185, 129, 0.4)',
+            borderRadius: '12px',
+            padding: '10px 20px',
+            color: '#6ee7b7',
+            fontSize: '0.85rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            zIndex: 200,
+            pointerEvents: 'none',
+            userSelect: 'none',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+          }}>
+            <span style={{ fontSize: '1rem' }}>✏️</span>
+            <span>Drawing access granted — you can now draw on the board</span>
+          </div>
+        )}
 
         {/* Floating Delete Button for active selected element */}
         {selectedBounds && activeTool === 'select' && (
@@ -2599,18 +2863,19 @@ export default function Whiteboard() {
             <div className="video-grid-tiles">
               {/* Local Camera Tile */}
               <div className="video-tile local-tile">
-                {isVideoOn ? (
-                  <video
-                    ref={(el) => {
-                      localVideoRef.current = el;
-                      if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
-                    }}
-                    className="video-tile-stream"
-                    autoPlay
-                    muted
-                    playsInline
-                  />
-                ) : (
+                {/* Always mount video element — just hide it when camera is off */}
+                <video
+                  ref={(el) => {
+                    localVideoRef.current = el;
+                    if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
+                  }}
+                  className="video-tile-stream"
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{ display: isVideoOn ? 'block' : 'none' }}
+                />
+                {!isVideoOn && (
                   <div className="video-tile-avatar" style={{ background: userColor.current }}>
                     {(userName || 'Y').charAt(0).toUpperCase()}
                   </div>
@@ -2618,8 +2883,7 @@ export default function Whiteboard() {
                 <div className="video-tile-label">
                   {userName || 'You'} (You)
                   <span className="video-tile-icons">
-                    {isMicOn ? '🎤' : '🔇'}
-                    {isVideoOn ? '📷' : '📷🚫'}
+                    {isMicOn ? <span style={{ color: '#34d399', fontSize: '0.7rem' }}>● MIC</span> : <span style={{ opacity: 0.4, fontSize: '0.7rem' }}>MUTED</span>}
                   </span>
                 </div>
               </div>
@@ -2677,6 +2941,7 @@ export default function Whiteboard() {
               color: userColor.current,
               isMicOn,
               isVideoOn,
+              handRaised: isHandRaised,
               isLocal: true
             }],
             // Remote peers sorted: speaking first
@@ -2698,6 +2963,7 @@ export default function Whiteboard() {
                   const pName = pData?.userName || 'User';
                   const pMicOn = pData?.isMicOn;
                   const pVideoOn = pData?.isVideoOn;
+                  const handRaised = pData?.handRaised;
                   const isLocal = pData?.isLocal;
                   const isSpeaking = speakingPeers.has(peerId) || (isLocal && micLevel > 5);
                   const remoteStream = !isLocal && remoteVideoStreams[peerId];
@@ -2709,16 +2975,26 @@ export default function Whiteboard() {
                       title={pName + (isLocal ? ' (You)' : '')}
                     >
                       <div className="pstrip-media">
-                        {isLocal && isVideoOn ? (
-                          <video
-                            ref={(el) => {
-                              localVideoRef.current = el;
-                              if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
-                            }}
-                            className="pstrip-video"
-                            autoPlay muted playsInline
-                          />
-                        ) : remoteStream ? (
+                        {/* Always mount local video element, show/hide based on state */}
+                        {isLocal && (
+                          <>
+                            <video
+                              ref={(el) => {
+                                localVideoRef.current = el;
+                                if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
+                              }}
+                              className="pstrip-video"
+                              autoPlay muted playsInline
+                              style={{ display: isVideoOn ? 'block' : 'none' }}
+                            />
+                            {!isVideoOn && (
+                              <div className="pstrip-avatar" style={{ background: pColor }}>
+                                {pName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {!isLocal && remoteStream && (
                           <video
                             ref={(el) => {
                               if (el) {
@@ -2729,13 +3005,37 @@ export default function Whiteboard() {
                             className="pstrip-video"
                             autoPlay playsInline
                           />
-                        ) : (
+                        )}
+                        {!isLocal && !remoteStream && (
                           <div className="pstrip-avatar" style={{ background: pColor }}>
                             {pName.charAt(0).toUpperCase()}
                           </div>
                         )}
                         {/* Speaking indicator pulse */}
                         {isSpeaking && <div className="pstrip-speaking-ring" />}
+
+                        {/* Hand raised indicator badge */}
+                        {handRaised && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            background: '#f59e0b',
+                            color: '#fff',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.7rem',
+                            border: '1.5px solid #121212',
+                            zIndex: 10,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                          }} title="Hand Raised">
+                            ✋
+                          </div>
+                        )}
                       </div>
                       <div className="pstrip-name">{isLocal ? 'You' : pName.split(' ')[0]}</div>
                     </div>
@@ -2758,7 +3058,10 @@ export default function Whiteboard() {
             <ChevronRight size={20} />
           </button>
         ) : (
-          <div className="whiteboard-toolbar">
+          <div 
+            className="whiteboard-toolbar"
+            style={(!isHost && isCollaborating && !hasDrawAccess) ? { opacity: 0.35, pointerEvents: 'none' } : {}}
+          >
             <button 
               className={`toolbar-btn ${activeTool === 'select' ? 'active' : ''}`} 
               onClick={() => { setActiveTool('select'); setSelectedElement(null); }}
@@ -2874,7 +3177,10 @@ export default function Whiteboard() {
             <ChevronLeft size={20} />
           </button>
         ) : (
-          <div className="whiteboard-properties">
+          <div 
+            className="whiteboard-properties"
+            style={(!isHost && isCollaborating && !hasDrawAccess) ? { opacity: 0.35, pointerEvents: 'none' } : {}}
+          >
             <div className="properties-panel-header" style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '10px' }}>
               <span className="prop-title" style={{ margin: 0 }}>Properties</span>
             </div>
@@ -3075,8 +3381,8 @@ export default function Whiteboard() {
           <button 
             className="slide-btn" 
             onClick={handlePrevPage} 
-            disabled={currentPageIndex === 0}
-            title="Previous Page"
+            disabled={currentPageIndex === 0 || (isCollaborating && !isHost)}
+            title={isHost ? "Previous Page" : "Only the tutor can change slides"}
           >
             <ChevronLeft size={16} />
           </button>
@@ -3088,12 +3394,13 @@ export default function Whiteboard() {
           <button 
             className="slide-btn" 
             onClick={handleNextPage} 
-            title={currentPageIndex === pages.length - 1 ? "Add New Page" : "Next Page"}
+            disabled={isCollaborating && !isHost}
+            title={isHost ? (currentPageIndex === pages.length - 1 ? "Add New Page" : "Next Page") : "Only the tutor can change slides"}
           >
             {currentPageIndex === pages.length - 1 ? '+' : <ChevronRight size={16} />}
           </button>
 
-          {pages.length > 1 && (
+          {pages.length > 1 && isHost && (
             <button 
               className="slide-btn" 
               onClick={handleDeletePage}
@@ -3189,13 +3496,33 @@ export default function Whiteboard() {
                 
                 return (
                   <div key={peer.userId} className="participant-card">
-                    <div className="participant-avatar" style={{ backgroundColor: peer.color || '#6366f1' }}>
+                    <div className="participant-avatar" style={{ backgroundColor: peer.color || '#6366f1', position: 'relative' }}>
                       {initials}
+                      {peer.handRaised && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '-4px',
+                          right: '-4px',
+                          background: '#f59e0b',
+                          color: '#fff',
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.65rem',
+                          border: '1.5px solid #1e1e24',
+                          boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                        }} title="Hand Raised">
+                          ✋
+                        </div>
+                      )}
                     </div>
                     
                     <div className="participant-info">
                       <span className="participant-name">{peer.userName} {isLocal && '(You)'}</span>
-                      <span className="participant-role">{isPeerHost ? 'Host / Tutor' : 'Guest Student'}</span>
+                      <span className="participant-role">{isPeerHost ? '👑 Host / Tutor' : 'Student'}</span>
                     </div>
                     
                     <div className="participant-actions">
@@ -3203,15 +3530,72 @@ export default function Whiteboard() {
                         {peer.isMicOn ? <Mic size={14} style={{ color: '#10b981' }} /> : <MicOff size={14} style={{ color: 'rgba(255,255,255,0.3)' }} />}
                       </span>
 
-                      {!isPeerHost && (
+                      {!isPeerHost && isHost && peer.handRaised && (
+                        <button 
+                          onClick={() => {
+                            // Lower student's hand
+                            channelRef.current.send({
+                              type: 'broadcast',
+                              event: 'lower-hand-request',
+                              payload: { targetUserId: peer.userId }
+                            });
+                            // Also update local state
+                            setParticipants(prev => {
+                              const next = { ...prev };
+                              if (next[peer.userId]) next[peer.userId].handRaised = false;
+                              return next;
+                            });
+                          }}
+                          style={{
+                            background: 'rgba(245, 158, 11, 0.2)',
+                            border: '1px solid rgba(245, 158, 11, 0.5)',
+                            color: '#fbbf24',
+                            borderRadius: '6px',
+                            padding: '4px 8px',
+                            fontSize: '0.72rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            marginRight: '5px',
+                            transition: 'all 0.2s'
+                          }}
+                          title="Lower hand"
+                        >
+                          Lower Hand
+                        </button>
+                      )}
+
+                      {!isPeerHost && isHost && (
                         <button 
                           className={`draw-access-badge ${hasPeerAccess ? 'granted' : 'locked'}`}
-                          disabled={!isHost} // Only host can toggle draw access for others
                           onClick={() => toggleParticipantDrawAccess(peer.userId, hasPeerAccess)}
-                          title={isHost ? (hasPeerAccess ? "Click to revoke drawing" : "Click to grant drawing") : (hasPeerAccess ? "Has drawing access" : "No drawing access")}
+                          title={hasPeerAccess ? "Click to revoke drawing access" : "Click to grant drawing access"}
+                          style={{
+                            background: hasPeerAccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.15)',
+                            border: `1px solid ${hasPeerAccess ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.4)'}`,
+                            color: hasPeerAccess ? '#6ee7b7' : '#fca5a5',
+                            borderRadius: '6px',
+                            padding: '4px 9px',
+                            fontSize: '0.72rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
                         >
-                          {hasPeerAccess ? 'Can Draw' : 'Locked'}
+                          {hasPeerAccess ? '✏️ Can Draw' : '🔒 Locked'}
                         </button>
+                      )}
+                      {!isPeerHost && !isHost && (
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: '600',
+                          color: hasPeerAccess ? '#6ee7b7' : 'rgba(255,255,255,0.3)',
+                          padding: '3px 8px',
+                          borderRadius: '5px',
+                          background: hasPeerAccess ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${hasPeerAccess ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)'}`
+                        }}>
+                          {hasPeerAccess ? '✏️ Drawing' : '🔒 Watching'}
+                        </span>
                       )}
                     </div>
                   </div>

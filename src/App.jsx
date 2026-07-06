@@ -52,7 +52,7 @@ function AppContent() {
           path="/whiteboard" 
           element={
             <ProtectedRoute allowedRoles={['tutor', 'admin']} user={currentUser} allowRoomParticipant={true}>
-              <Whiteboard />
+              <Whiteboard user={currentUser} />
             </ProtectedRoute>
           } 
         />
