@@ -1367,9 +1367,6 @@
   transform: scaleX(-1); /* mirror local camera */
 }
 
-.video-tile.local-tile .video-tile-stream {
-  /* keep local mirrored, remote not */
-}
 
 /* Non-mirrored for remote */
 .video-tile:not(.local-tile) .video-tile-stream {
