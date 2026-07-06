@@ -301,7 +301,7 @@ export default function Whiteboard({ user }) {
     
     // Check if user is tutor/admin, or previously registered as host for this room
     const userIsTutorOrAdmin = user && (user.role === 'tutor' || user.role === 'admin');
-    const isHostStored = roomParam ? localStorage.getItem(`wb-host-${roomParam}`) === 'true' : true;
+    const isHostStored = roomParam ? sessionStorage.getItem(`wb-host-${roomParam}`) === 'true' : true;
     const clientIsHost = !roomParam || userIsTutorOrAdmin || isHostStored;
 
     if (roomParam && !clientIsHost) {
@@ -328,7 +328,7 @@ export default function Whiteboard({ user }) {
     } else {
       // Host: auto-join the room immediately
       const activeRoom = roomParam || 'room-' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem(`wb-host-${activeRoom}`, 'true');
+      sessionStorage.setItem(`wb-host-${activeRoom}`, 'true');
       
       let defaultName = 'Tutor';
       if (user) {
