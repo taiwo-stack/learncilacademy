@@ -191,6 +191,11 @@ export default function Whiteboard({ user }) {
 
   // Sync active page elements & history to pages array whenever they update
   useEffect(() => {
+    // Only update pages from elements state if this client is the host OR has drawing access.
+    // If they are a read-only student, the host is the sole source of truth for pages,
+    // and we should not sync elements back to pages locally to avoid race conditions.
+    if (!isHost && !hasDrawAccess) return;
+
     setPages(prev => {
       if (prev[currentPageIndex] && 
           (prev[currentPageIndex].elements !== elements ||
@@ -207,7 +212,7 @@ export default function Whiteboard({ user }) {
       }
       return prev;
     });
-  }, [elements, undoStack, redoStack, currentPageIndex]);
+  }, [elements, undoStack, redoStack, currentPageIndex, isHost, hasDrawAccess]);
 
   // Persist pages to localStorage on every change (debounced to avoid thrashing)
   useEffect(() => {
