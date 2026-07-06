@@ -3781,7 +3781,7 @@ export default function Whiteboard({ user }) {
                 onChange={(e) => setUserName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && userName.trim() !== '') {
-                    startCollaboration(roomId, userName.trim());
+                    startCollaboration(roomId, userName.trim(), false);
                   }
                 }}
               />
@@ -3791,7 +3791,7 @@ export default function Whiteboard({ user }) {
                 className="whiteboard-btn" 
                 onClick={() => {
                   const defaultName = generateRandomName();
-                  startCollaboration(roomId, defaultName);
+                  startCollaboration(roomId, defaultName, false);
                 }}
               >
                 Quick Join
@@ -3799,7 +3799,7 @@ export default function Whiteboard({ user }) {
               <button 
                 className="whiteboard-btn primary" 
                 disabled={userName.trim() === ''}
-                onClick={() => startCollaboration(roomId, userName.trim())}
+                onClick={() => startCollaboration(roomId, userName.trim(), false)}
               >
                 Join Classroom
               </button>
