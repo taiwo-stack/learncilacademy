@@ -299,10 +299,9 @@ export default function Whiteboard({ user }) {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
     
-    // Check if user is tutor/admin, or previously registered as host for this room
+    // Deterministic Host Role check: a client is the host if there is no roomParam (creating a room) OR if they are a logged-in tutor/admin
     const userIsTutorOrAdmin = user && (user.role === 'tutor' || user.role === 'admin');
-    const isHostStored = roomParam ? sessionStorage.getItem(`wb-host-${roomParam}`) === 'true' : true;
-    const clientIsHost = !roomParam || userIsTutorOrAdmin || isHostStored;
+    const clientIsHost = !roomParam || userIsTutorOrAdmin;
 
     if (roomParam && !clientIsHost) {
       // Guest joining via shared link
