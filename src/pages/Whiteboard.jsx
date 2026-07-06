@@ -1158,14 +1158,18 @@ export default function Whiteboard({ user }) {
     });
   };
 
-  // Adjust canvas bounds on window resize
+  // Adjust canvas bounds on window resize (guarded to prevent backing store clears during drawing)
   useEffect(() => {
     const handleResize = () => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
-      drawCanvas();
+      if (!canvas || !canvas.parentElement) return;
+      const newWidth = canvas.parentElement.clientWidth;
+      const newHeight = canvas.parentElement.clientHeight;
+      if (canvas.width !== newWidth || canvas.height !== newHeight) {
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        drawCanvas();
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -1394,11 +1398,25 @@ export default function Whiteboard({ user }) {
     setPages(nextPages);
 
     // 3. Move to new page
-    setCurrentPageIndex(updatedPages.length);
+    const nextIndex = updatedPages.length;
+    setCurrentPageIndex(nextIndex);
     setElements([]);
     setUndoStack([]);
     setRedoStack([]);
     setSelectedElement(null);
+
+    // 4. Broadcast the new pages layout and active page index
+    if (isCollaborating && isHost && channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'board-state-response',
+        payload: {
+          targetUserId: 'all',
+          pages: nextPages,
+          currentPageIndex: nextIndex
+        }
+      });
+    }
   };
 
   const navigatePages = (targetIndex) => {
@@ -1422,12 +1440,16 @@ export default function Whiteboard({ user }) {
     setRedoStack(targetPage.redoStack || []);
     setSelectedElement(null);
 
-    // Broadcast page-change if host
+    // Broadcast page-change and pages layout if host
     if (isCollaborating && isHost && channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
-        event: 'page-change',
-        payload: { pageIndex: targetIndex }
+        event: 'board-state-response',
+        payload: {
+          targetUserId: 'all',
+          pages: updatedPages,
+          currentPageIndex: targetIndex
+        }
       });
     }
   };
@@ -1460,6 +1482,19 @@ export default function Whiteboard({ user }) {
     setUndoStack(targetPage.undoStack || []);
     setRedoStack(targetPage.redoStack || []);
     setSelectedElement(null);
+
+    // Broadcast deletion and new pages layout to peers
+    if (isCollaborating && isHost && channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'board-state-response',
+        payload: {
+          targetUserId: 'all',
+          pages: updatedPages,
+          currentPageIndex: newIdx
+        }
+      });
+    }
   };
 
   // Pointer Down event handler
@@ -2024,6 +2059,7 @@ export default function Whiteboard({ user }) {
 
     // Helper: Draw elements (strokes, shapes, text, images)
     const renderElement = (el) => {
+      if (!el) return;
       ctx.strokeStyle = el.color;
       ctx.fillStyle = el.color;
       ctx.lineWidth = el.width;
