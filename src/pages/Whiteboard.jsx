@@ -117,6 +117,7 @@ export default function Whiteboard({ user }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const pdfInputRef = useRef(null); // Separate file input for PDF uploads
 
   // Audio level analysis
   const audioCtxRef = useRef(null);          // shared AudioContext
@@ -191,10 +192,10 @@ export default function Whiteboard({ user }) {
 
   // Sync active page elements & history to pages array whenever they update
   useEffect(() => {
-    // Only update pages from elements state if this client is the host OR has drawing access.
-    // If they are a read-only student, the host is the sole source of truth for pages,
-    // and we should not sync elements back to pages locally to avoid race conditions.
-    if (!isHost && !hasDrawAccess) return;
+    // Only update pages from elements state if this client is the host.
+    // If they are a student (even with drawing access), they should not sync elements back to pages locally
+    // to avoid race conditions and overwriting the host's page state.
+    if (!isHost) return;
 
     setPages(prev => {
       if (prev[currentPageIndex] && 
@@ -212,7 +213,7 @@ export default function Whiteboard({ user }) {
       }
       return prev;
     });
-  }, [elements, undoStack, redoStack, currentPageIndex, isHost, hasDrawAccess]);
+  }, [elements, undoStack, redoStack, currentPageIndex, isHost]);
 
   // Persist pages to localStorage on every change (debounced to avoid thrashing)
   useEffect(() => {
@@ -252,6 +253,10 @@ export default function Whiteboard({ user }) {
   // Modal Dialogs
   const [showClearModal, setShowClearModal] = useState(false);
 
+  // PDF / Presentation Upload State
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0 });
+
   // Cache loaded images in memory to prevent canvas redraw flashing
   const imageCache = useRef({});
 
@@ -262,6 +267,24 @@ export default function Whiteboard({ user }) {
     return () => {
       document.body.style.overflow = originalOverflow;
     };
+  }, []);
+
+  // Load PDF.js dynamically from CDN
+  useEffect(() => {
+    if (!window.pdfjsLib) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.async = true;
+      script.onload = () => {
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          console.log("PDF.js library loaded successfully!");
+        }
+      };
+      document.body.appendChild(script);
+    } else {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
   }, []);
 
   // Sync background state with color defaults
@@ -474,9 +497,9 @@ export default function Whiteboard({ user }) {
 
   const lastDrawingBroadcastRef = useRef(0);
   const broadcastDrawingStroke = (newPoints, color, width, isHighlighter) => {
-    if (!channelRef.current) return;
+    if (!channelRef.current) return false;
     const now = Date.now();
-    if (now - lastDrawingBroadcastRef.current < 16) return; // ~60fps throttle for instant sync
+    if (now - lastDrawingBroadcastRef.current < 16) return false; // ~60fps throttle for instant sync
     lastDrawingBroadcastRef.current = now;
 
     channelRef.current.send({
@@ -484,6 +507,7 @@ export default function Whiteboard({ user }) {
       event: 'drawing-stroke',
       payload: { userId: localUserId.current, newPoints, color, width, isHighlighter }
     });
+    return true;
   };
 
   const broadcastDrawingEnd = (element) => {
@@ -615,11 +639,20 @@ export default function Whiteboard({ user }) {
 
       case 'page-change':
         if (!isHost) {
-          setCurrentPageIndex(payload.pageIndex);
-          const page = pages[payload.pageIndex];
-          if (page) {
-            setElements(page.elements || []);
+          console.log("Receiver: page-change event received", payload);
+          if (payload.pages) {
+            setPages(payload.pages);
           }
+          setCurrentPageIndex(payload.pageIndex);
+          const targetPage = payload.pages ? payload.pages[payload.pageIndex] : pages[payload.pageIndex];
+          if (targetPage) {
+            setElements(targetPage.elements || []);
+            setUndoStack(targetPage.undoStack || []);
+            setRedoStack(targetPage.redoStack || []);
+          }
+          requestAnimationFrame(() => {
+            drawCanvas();
+          });
         }
         break;
 
@@ -935,14 +968,17 @@ export default function Whiteboard({ user }) {
       }
     });
 
-    if (!isMicOn && !isVideoOn) return;
-    const constraints = {
-      audio: isMicOn,
-      video: isVideoOn ? { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } } : false
-    };
-    const stream = await getLocalStream(constraints);
-    if (!stream) return;
+    // Try to acquire local stream if either mic or camera is active
+    if (isMicOn || isVideoOn) {
+      const constraints = {
+        audio: isMicOn,
+        video: isVideoOn ? { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } } : false
+      };
+      await getLocalStream(constraints);
+    }
 
+    // Always establish peer connection with all participants, even if we are not sending media,
+    // so we can receive their media tracks.
     Object.keys(presenceMap).forEach(peerId => {
       if (peerId === localUserId.current) return;
       const isInitiator = localUserId.current > peerId;
@@ -987,19 +1023,25 @@ export default function Whiteboard({ user }) {
       if (!stream) return;
 
       const hasVideo = stream.getVideoTracks().length > 0;
+      const hasAudio = stream.getAudioTracks().length > 0;
 
       if (hasVideo) {
         setRemoteVideoStreams(prev => ({ ...prev, [peerId]: stream }));
         setShowVideoGrid(true);
-      } else {
+      }
+
+      if (hasAudio) {
         let audio = document.getElementById('peer-audio-' + peerId);
         if (!audio) {
           audio = document.createElement('audio');
           audio.id = 'peer-audio-' + peerId;
           audio.autoplay = true;
+          audio.style.display = 'none';
           document.body.appendChild(audio);
         }
-        audio.srcObject = stream;
+        if (audio.srcObject !== stream) {
+          audio.srcObject = stream;
+        }
         attachRemoteAnalyser(peerId, stream);
       }
     };
@@ -1444,11 +1486,10 @@ export default function Whiteboard({ user }) {
     if (isCollaborating && isHost && channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
-        event: 'board-state-response',
+        event: 'page-change',
         payload: {
-          targetUserId: 'all',
           pages: nextPages,
-          currentPageIndex: nextIndex
+          pageIndex: nextIndex
         }
       });
     }
@@ -1479,11 +1520,10 @@ export default function Whiteboard({ user }) {
     if (isCollaborating && isHost && channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
-        event: 'board-state-response',
+        event: 'page-change',
         payload: {
-          targetUserId: 'all',
           pages: updatedPages,
-          currentPageIndex: targetIndex
+          pageIndex: targetIndex
         }
       });
     }
@@ -1522,11 +1562,10 @@ export default function Whiteboard({ user }) {
     if (isCollaborating && isHost && channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
-        event: 'board-state-response',
+        event: 'page-change',
         payload: {
-          targetUserId: 'all',
           pages: updatedPages,
-          currentPageIndex: newIdx
+          pageIndex: newIdx
         }
       });
     }
@@ -1806,8 +1845,10 @@ export default function Whiteboard({ user }) {
       // Slice and broadcast only newly added points since last broadcast to prevent WebSocket congestion
       const unsentPoints = nextPoints.slice(pointsSentCountRef.current);
       if (unsentPoints.length > 0) {
-        broadcastDrawingStroke(unsentPoints, currentStrokeRef.current.color, currentStrokeRef.current.width, currentStrokeRef.current.isHighlighter);
-        pointsSentCountRef.current = nextPoints.length;
+        const sent = broadcastDrawingStroke(unsentPoints, currentStrokeRef.current.color, currentStrokeRef.current.width, currentStrokeRef.current.isHighlighter);
+        if (sent) {
+          pointsSentCountRef.current = nextPoints.length;
+        }
       }
       return;
     }
@@ -2023,6 +2064,116 @@ export default function Whiteboard({ user }) {
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
+  };
+
+  // PDF / Presentation Upload Handler
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') {
+      triggerToast('Please upload a valid PDF file.');
+      return;
+    }
+
+    // Reset the input so the same file can be re-selected if needed
+    if (pdfInputRef.current) pdfInputRef.current.value = '';
+
+    if (!window.pdfjsLib) {
+      triggerToast('PDF engine is still loading. Please try again in a moment.');
+      return;
+    }
+
+    setIsProcessingPdf(true);
+    setPdfProgress({ current: 0, total: 0 });
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const totalPages = pdfDoc.numPages;
+
+      setPdfProgress({ current: 0, total: totalPages });
+      triggerToast(`Importing ${totalPages} page PDF. Please wait...`);
+
+      const newSlidePages = [];
+
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        setPdfProgress({ current: pageNum, total: totalPages });
+
+        const page = await pdfDoc.getPage(pageNum);
+
+        // Render at a scale that fills a ~1200px wide canvas for good quality
+        const unscaledViewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(1200 / unscaledViewport.width, 900 / unscaledViewport.height);
+        const viewport = page.getViewport({ scale });
+
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = Math.round(viewport.width);
+        offscreenCanvas.height = Math.round(viewport.height);
+        const ctx = offscreenCanvas.getContext('2d');
+
+        // Fill with white background before rendering
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+        await page.render({
+          canvasContext: ctx,
+          viewport
+        }).promise;
+
+        const dataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.85);
+
+        // Pre-cache the rendered image
+        const imgObj = new Image();
+        imgObj.src = dataUrl;
+        imageCache.current[dataUrl] = imgObj;
+
+        // Position slide image at center of canvas coordinate space
+        const slideImageElement = {
+          id: `pdf-slide-${Date.now()}-${pageNum}`,
+          type: 'image',
+          src: dataUrl,
+          x: 0,
+          y: 0,
+          width: offscreenCanvas.width,
+          height: offscreenCanvas.height,
+          locked: true // Prevent accidental moving of the slide background
+        };
+
+        newSlidePages.push({
+          id: `pdf-page-${Date.now()}-${pageNum}`,
+          elements: [slideImageElement],
+          undoStack: [],
+          redoStack: []
+        });
+      }
+
+      // Replace all existing pages with the newly imported PDF slides
+      setPages(newSlidePages);
+      setCurrentPageIndex(0);
+      setElements(newSlidePages[0].elements);
+      setUndoStack([]);
+      setRedoStack([]);
+      setSelectedElement(null);
+
+      // Broadcast the newly imported PDF deck to all participants
+      if (isCollaborating && isHost && channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'page-change',
+          payload: {
+            pages: newSlidePages,
+            pageIndex: 0
+          }
+        });
+      }
+
+      triggerToast(`✅ PDF imported successfully! ${totalPages} slides loaded.`);
+    } catch (err) {
+      console.error('PDF import failed:', err);
+      triggerToast('❌ Failed to import PDF. Please try again.');
+    } finally {
+      setIsProcessingPdf(false);
+      setPdfProgress({ current: 0, total: 0 });
+    }
   };
 
   // Image Drag & Drop File Handlers
@@ -2711,6 +2862,26 @@ export default function Whiteboard({ user }) {
             <span>Export Board</span>
           </button>
 
+          {/* PDF / Presentation Upload — Host only */}
+          {isHost && (
+            <button
+              className="whiteboard-btn"
+              style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                color: '#34d399',
+                borderColor: 'rgba(16, 185, 129, 0.3)',
+                opacity: isProcessingPdf ? 0.6 : 1,
+                cursor: isProcessingPdf ? 'not-allowed' : 'pointer'
+              }}
+              onClick={() => !isProcessingPdf && pdfInputRef.current?.click()}
+              data-tooltip="Upload a PDF presentation and sync to all students"
+              disabled={isProcessingPdf}
+            >
+              <MonitorPlay size={16} />
+              <span>{isProcessingPdf ? `Importing ${pdfProgress.current}/${pdfProgress.total}…` : 'Upload Deck'}</span>
+            </button>
+          )}
+
           <button 
             className="whiteboard-btn danger" 
             onClick={() => setShowClearModal(true)}
@@ -3128,7 +3299,7 @@ export default function Whiteboard({ user }) {
                       title={pName + (isLocal ? ' (You)' : '')}
                     >
                       <div className="pstrip-media">
-                        {/* Always mount local video element, show/hide based on state */}
+                        {/* Render local video or avatar based on state */}
                         {isLocal && (
                           <>
                             <video
@@ -3138,16 +3309,16 @@ export default function Whiteboard({ user }) {
                               }}
                               className="pstrip-video"
                               autoPlay muted playsInline
-                              style={{ display: isVideoOn ? 'block' : 'none' }}
+                              style={{ display: (isVideoOn && !showVideoGrid) ? 'block' : 'none' }}
                             />
-                            {!isVideoOn && (
+                            {(!isVideoOn || showVideoGrid) && (
                               <div className="pstrip-avatar" style={{ background: pColor }}>
                                 {pName.charAt(0).toUpperCase()}
                               </div>
                             )}
                           </>
                         )}
-                        {!isLocal && remoteStream && (
+                        {!isLocal && remoteStream && !showVideoGrid ? (
                           <video
                             ref={(el) => {
                               if (el) {
@@ -3158,8 +3329,8 @@ export default function Whiteboard({ user }) {
                             className="pstrip-video"
                             autoPlay playsInline
                           />
-                        )}
-                        {!isLocal && !remoteStream && (
+                        ) : null}
+                        {!isLocal && (!remoteStream || showVideoGrid) && (
                           <div className="pstrip-avatar" style={{ background: pColor }}>
                             {pName.charAt(0).toUpperCase()}
                           </div>
@@ -3588,6 +3759,80 @@ export default function Whiteboard({ user }) {
         accept="image/*"
         onChange={handleImageUpload}
       />
+
+      {/* Hidden PDF file loader */}
+      <input
+        type="file"
+        ref={pdfInputRef}
+        className="hidden-file-input"
+        accept="application/pdf"
+        onChange={handlePdfUpload}
+      />
+
+      {/* PDF Import Progress Overlay */}
+      {isProcessingPdf && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(10, 10, 15, 0.78)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '18px'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            borderRadius: '20px',
+            border: '1px solid rgba(99,102,241,0.3)',
+            padding: '40px 56px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '22px',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+            minWidth: '360px'
+          }}>
+            {/* Animated spinner */}
+            <div style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              border: '3px solid rgba(99,102,241,0.2)',
+              borderTop: '3px solid #6366f1',
+              animation: 'spin 0.9s linear infinite'
+            }} />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '6px' }}>
+                Importing Presentation
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
+                {pdfProgress.total > 0
+                  ? `Rendering page ${pdfProgress.current} of ${pdfProgress.total}…`
+                  : 'Loading PDF file…'}
+              </div>
+            </div>
+            {/* Progress bar */}
+            {pdfProgress.total > 0 && (
+              <div style={{ width: '100%', background: 'rgba(255,255,255,0.08)', borderRadius: '100px', height: '7px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  borderRadius: '100px',
+                  background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+                  width: `${(pdfProgress.current / pdfProgress.total) * 100}%`,
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+            )}
+            <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
+              Please wait — slides will sync to all participants automatically
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Wipe confirmation Dialog modal */}
       {showClearModal && (
