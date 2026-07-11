@@ -1,4 +1,4 @@
-# FoundaXia (LearnCil Academy)
+# FoundaXia (Academy)
 
 FoundaXia is an elite one-on-one virtual learning and Academy management platform designed for K-12 students. It bridges the gap between students, parents, tutors, and administrators by offering real-time course scheduling, comprehensive Learning Management System (LMS) dashboards, interactive grading, direct parent-tutor messaging, and a high-fidelity collaborative virtual whiteboard classroom equipped with WebRTC voice/video calling capabilities.
 
