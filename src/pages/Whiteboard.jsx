@@ -3280,4 +3280,6 @@ export default function Whiteboard({ user }) {
     </div>
   );
 }
+// Harmless comment to trigger IDE diagnostics refresh
+
 
