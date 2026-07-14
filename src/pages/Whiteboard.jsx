@@ -1,70 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MousePointer, 
-  Pencil, 
-  Eraser, 
-  Highlighter,
-  Zap,
-  Minus, 
-  ArrowUpRight, 
-  Square, 
-  Circle, 
-  Hand,
-  Type, 
-  Image as ImageIcon, 
-  Undo2, 
-  Redo2, 
-  ZoomIn, 
-  ZoomOut, 
-  Maximize, 
-  Trash2, 
-  Download, 
-  Maximize2, 
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  Settings,
-  Grid,
-  Sun,
-  Moon,
-  Trash,
-  Share2,
-  Users,
-  Mic,
-  MicOff,
-  Copy,
-  Volume2,
-  Video,
-  VideoOff,
-  MonitorPlay
-} from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Trash2, ChevronLeft, ChevronRight, ChevronDown, Image as ImageIcon, MonitorPlay } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import '../styles/Whiteboard.css';
 
-// Curated designer color palette for professional online teaching
-const PRESET_COLORS = [
-  '#ffffff', // Pure White
-  '#1e293b', // Slate Charcoal
-  '#6366f1', // Premium Indigo
-  '#3b82f6', // Bright Sky Blue
-  '#10b981', // Emerald Green
-  '#eab308', // Lemon Yellow
-  '#f97316', // Coral Orange
-  '#f43f5e', // Rose Crimson
-  '#a855f7', // Amethyst Purple
-  '#06b6d4'  // Deep Teal
-];
-
-const ANIMAL_NAMES = ['Fox', 'Owl', 'Koala', 'Panda', 'Dolphin', 'Tiger', 'Rabbit', 'Eagle', 'Cheetah', 'Falcon'];
-const ADJECTIVES = ['Creative', 'Smart', 'Curious', 'Active', 'Friendly', 'Joyful', 'Bright', 'Clever'];
-const generateRandomName = () => {
-  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-  const animal = ANIMAL_NAMES[Math.floor(Math.random() * ANIMAL_NAMES.length)];
-  return `${adj} ${animal}`;
-};
-const AVATAR_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#ef4444', '#14b8a6'];
+// â”€â”€ Whiteboard Sub-Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+import WhiteboardHeader from '../components/whiteboard/WhiteboardHeader';
+import WhiteboardToolbar from '../components/whiteboard/WhiteboardToolbar';
+import WhiteboardProperties from '../components/whiteboard/WhiteboardProperties';
+import CollaborationSidebar from '../components/whiteboard/CollaborationSidebar';
+import ParticipantStrip from '../components/whiteboard/ParticipantStrip';
+import NameModal from '../components/whiteboard/NameModal';
+import WipeBoardModal from '../components/whiteboard/WipeBoardModal';
+import { AVATAR_COLORS, generateRandomName } from '../components/whiteboard/constants';
 
 export default function Whiteboard({ user }) {
   const navigate = useNavigate();
@@ -166,7 +114,7 @@ export default function Whiteboard({ user }) {
   const [pointerType, setPointerType] = useState('mouse');
   const [pointerPressure, setPointerPressure] = useState(0);
 
-  // Multi-page Slide State — persisted to localStorage per room
+  // Multi-page Slide State â€” persisted to localStorage per room
   const STORAGE_KEY = () => {
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room') || 'solo';
@@ -322,9 +270,9 @@ export default function Whiteboard({ user }) {
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
     
-    // Deterministic Host Role check: a client is the host if there is no roomParam (creating a room) OR if they are a logged-in tutor/admin
-    const userIsTutorOrAdmin = user && (user.role === 'tutor' || user.role === 'admin');
-    const clientIsHost = !roomParam || userIsTutorOrAdmin;
+    // Deterministic Host Role check: a client is the host if they are the room creator and not a student
+    const isRoomCreator = !roomParam || sessionStorage.getItem(`wb-host-${roomParam}`) === 'true';
+    const clientIsHost = isRoomCreator && !(user && user.role === 'student');
 
     if (roomParam && !clientIsHost) {
       // Guest joining via shared link
@@ -671,7 +619,7 @@ export default function Whiteboard({ user }) {
 
       case 'hand-raised':
         if (isHost) {
-          triggerToast(`✋ ${payload.userName} raised their hand!`);
+          triggerToast(`âœ‹ ${payload.userName} raised their hand!`);
           try {
             // Subtle, high-quality pop chime using Web Audio API
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -820,8 +768,8 @@ export default function Whiteboard({ user }) {
       optimizedConstraints.audio = {
         echoCancellation: true,
         noiseSuppression: true,
-        autoGainControl: true,
-        latency: 0.005
+        autoGainControl: true
+        // Removed strict 5ms latency parameter which causes OverconstrainedError on many systems
       };
     }
     if (optimizedConstraints.video) {
@@ -837,26 +785,61 @@ export default function Whiteboard({ user }) {
     if (localStreamRef.current) {
       const hasMic = localStreamRef.current.getAudioTracks().length > 0;
       const hasCam = localStreamRef.current.getVideoTracks().length > 0;
-      const needsMic = constraints.audio !== false;
+      const needsMic = constraints.audio !== false && !!constraints.audio;
       const needsCam = constraints.video !== false && !!constraints.video;
       if ((hasMic || !needsMic) && (hasCam || !needsCam)) {
         return localStreamRef.current;
       }
-      // Stop and re-acquire with new constraints
-      localStreamRef.current.getTracks().forEach(t => t.stop());
-      localStreamRef.current = null;
     }
+
+    // Try to acquire the new stream first before stopping/overwriting the working stream!
     try {
       const stream = await navigator.mediaDevices.getUserMedia(optimizedConstraints);
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => t.stop());
+      }
       localStreamRef.current = stream;
       return stream;
     } catch (e) {
-      console.error("Media capture failed", e);
+      console.error("Media capture failed with full constraints, attempting fallback...", e);
+      
+      // Fallback Strategy: If requesting both failed, try to acquire them individually
+      if (optimizedConstraints.audio && optimizedConstraints.video) {
+        // Try audio-only first if audio is active
+        try {
+          const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: optimizedConstraints.audio });
+          if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(t => t.stop());
+          }
+          localStreamRef.current = audioOnlyStream;
+          triggerToast("Camera failed. Started Audio only.");
+          setIsVideoOn(false);
+          return audioOnlyStream;
+        } catch (audioErr) {
+          console.error("Audio fallback failed too", audioErr);
+        }
+
+        // Try video-only next if audio-only failed
+        try {
+          const videoOnlyStream = await navigator.mediaDevices.getUserMedia({ video: optimizedConstraints.video });
+          if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(t => t.stop());
+          }
+          localStreamRef.current = videoOnlyStream;
+          triggerToast("Microphone failed. Started Camera only.");
+          setIsMicOn(false);
+          return videoOnlyStream;
+        } catch (videoErr) {
+          console.error("Video fallback failed too", videoErr);
+        }
+      }
+
+      // If simple/single constraint failed, or fallbacks failed, notify specific permission issue
       if (constraints.video) {
-        triggerToast("Camera access failed! Please allow camera permissions.");
+        triggerToast("Camera access failed! Please check device/permissions.");
         setIsVideoOn(false);
       } else {
-        triggerToast("Microphone access failed! Please allow microphone access.");
+        triggerToast("Microphone access failed! Please check device/permissions.");
         setIsMicOn(false);
       }
       return null;
@@ -877,7 +860,7 @@ export default function Whiteboard({ user }) {
     }
   };
 
-  // ─── Audio Level Helpers ─────────────────────────────────────────
+  // â”€â”€â”€ Audio Level Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getAudioContext = () => {
     if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -1042,6 +1025,9 @@ export default function Whiteboard({ user }) {
         if (audio.srcObject !== stream) {
           audio.srcObject = stream;
         }
+        audio.play().catch(err => {
+          console.warn("Autoplay blocked or audio play failed; user interaction may be required:", err);
+        });
         attachRemoteAnalyser(peerId, stream);
       }
     };
@@ -1209,7 +1195,7 @@ export default function Whiteboard({ user }) {
           });
         }
         updatePresenceState({ isVideoOn: true });
-        triggerToast('Camera ON — peers can now see you.');
+        triggerToast('Camera ON â€” peers can now see you.');
       }
     } else {
       if (localStreamRef.current) {
@@ -2166,10 +2152,10 @@ export default function Whiteboard({ user }) {
         });
       }
 
-      triggerToast(`✅ PDF imported successfully! ${totalPages} slides loaded.`);
+      triggerToast(`âœ… PDF imported successfully! ${totalPages} slides loaded.`);
     } catch (err) {
       console.error('PDF import failed:', err);
-      triggerToast('❌ Failed to import PDF. Please try again.');
+      triggerToast('âŒ Failed to import PDF. Please try again.');
     } finally {
       setIsProcessingPdf(false);
       setPdfProgress({ current: 0, total: 0 });
@@ -2240,6 +2226,31 @@ export default function Whiteboard({ user }) {
     ctx.fill();
   };
 
+  // Mirror state variables in refs to prevent stale closure bugs in drawCanvas and async event callbacks
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+
+  const panRef = useRef(pan);
+  panRef.current = pan;
+
+  const currentShapeRef = useRef(currentShape);
+  currentShapeRef.current = currentShape;
+
+  const activeToolRef = useRef(activeTool);
+  activeToolRef.current = activeTool;
+
+  const selectedElementRef = useRef(selectedElement);
+  selectedElementRef.current = selectedElement;
+
+  const isPressureSensitiveRef = useRef(isPressureSensitive);
+  isPressureSensitiveRef.current = isPressureSensitive;
+
+  const isCollaboratingRef = useRef(isCollaborating);
+  isCollaboratingRef.current = isCollaborating;
+
   // Canvas Vector Drawing Renderer
   const drawCanvas = () => {
     const canvas = canvasRef.current;
@@ -2252,8 +2263,8 @@ export default function Whiteboard({ user }) {
     ctx.save();
     
     // Transform coordinates using viewport pan and zoom
-    ctx.translate(pan.x, pan.y);
-    ctx.scale(zoom, zoom);
+    ctx.translate(panRef.current.x, panRef.current.y);
+    ctx.scale(zoomRef.current, zoomRef.current);
 
     // Helper: Draw elements (strokes, shapes, text, images)
     const renderElement = (el) => {
@@ -2293,7 +2304,7 @@ export default function Whiteboard({ user }) {
           }
           ctx.stroke();
           ctx.restore();
-        } else if (isPressureSensitive) {
+        } else if (isPressureSensitiveRef.current) {
           // Draw pressure-sensitive segmented stroke
           for (let i = 0; i < pts.length - 1; i++) {
             const p1 = pts[i];
@@ -2406,9 +2417,9 @@ export default function Whiteboard({ user }) {
     };
 
     // 1. Draw saved highlighters (rendered first to stay behind handwriting and text)
-    elements.filter(el => el.isHighlighter).forEach(renderElement);
-    if (currentStroke && currentStroke.isHighlighter) {
-      renderElement(currentStroke);
+    elementsRef.current.filter(el => el.isHighlighter).forEach(renderElement);
+    if (currentStrokeRef.current && currentStrokeRef.current.isHighlighter) {
+      renderElement(currentStrokeRef.current);
     }
     // Draw active multiplayer highlighter strokes
     Object.values(activeDrawingsRef.current).forEach(stroke => {
@@ -2418,12 +2429,12 @@ export default function Whiteboard({ user }) {
     });
 
     // 2. Draw normal elements (pen, shapes, text, images)
-    elements.filter(el => !el.isHighlighter).forEach(renderElement);
-    if (currentStroke && !currentStroke.isHighlighter) {
-      renderElement(currentStroke);
+    elementsRef.current.filter(el => !el.isHighlighter).forEach(renderElement);
+    if (currentStrokeRef.current && !currentStrokeRef.current.isHighlighter) {
+      renderElement(currentStrokeRef.current);
     }
-    if (currentShape) {
-      renderElement(currentShape);
+    if (currentShapeRef.current) {
+      renderElement(currentShapeRef.current);
     }
     // Draw active multiplayer normal strokes
     Object.values(activeDrawingsRef.current).forEach(stroke => {
@@ -2433,11 +2444,11 @@ export default function Whiteboard({ user }) {
     });
 
     // 3. Draw bounding box and handles if an element is selected
-    if (activeTool === 'select' && selectedElement) {
-      const el = elements.find(item => item.id === selectedElement.id);
+    if (activeToolRef.current === 'select' && selectedElementRef.current) {
+      const el = elementsRef.current.find(item => item.id === selectedElementRef.current.id);
       if (el) {
         ctx.strokeStyle = '#6366f1';
-        ctx.lineWidth = 1.5 / zoom;
+        ctx.lineWidth = 1.5 / zoomRef.current;
         ctx.setLineDash([4, 4]);
 
         let minX, minY, w, h;
@@ -2475,7 +2486,7 @@ export default function Whiteboard({ user }) {
           ctx.fillStyle = '#6366f1';
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 1.5;
-          const handleSize = 8 / zoom;
+          const handleSize = 8 / zoomRef.current;
           ctx.fillRect(minX + w + 4 - handleSize / 2, minY + h + 4 - handleSize / 2, handleSize, handleSize);
           ctx.strokeRect(minX + w + 4 - handleSize / 2, minY + h + 4 - handleSize / 2, handleSize, handleSize);
         }
@@ -2519,7 +2530,7 @@ export default function Whiteboard({ user }) {
     }
     
     // 5. Draw laser pointer cursor hover dot
-    if (activeTool === 'laser' && laserPointerPos.current.over) {
+    if (activeToolRef.current === 'laser' && laserPointerPos.current.over) {
       ctx.save();
       ctx.beginPath();
       ctx.arc(laserPointerPos.current.x, laserPointerPos.current.y, 6, 0, 2 * Math.PI);
@@ -2536,9 +2547,9 @@ export default function Whiteboard({ user }) {
       ctx.fill();
       ctx.restore();
     }
-
+ 
     // 6. Draw other participants' cursors
-    if (isCollaborating) {
+    if (isCollaboratingRef.current) {
       Object.values(participantsRef.current || {}).forEach(peer => {
         if (peer.userId === localUserId.current || !peer.cursor) return;
         
@@ -2813,230 +2824,42 @@ export default function Whiteboard({ user }) {
         </div>
       )}
 
-      {/* Header Panel */}
-      <header className={`whiteboard-header ${isHeaderCollapsed ? 'collapsed' : ''}`}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button className="whiteboard-btn-icon" onClick={() => navigate(-1)} data-tooltip="Go Back">
-            <ChevronLeft size={20} />
-          </button>
-          
-          <div className="whiteboard-logo-container" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <img src="/images/logo_icon.png" alt="Foundaxia Logo" className="whiteboard-logo-icon" />
-            <img src="/images/logo_text.png" alt="Foundaxia Text" className="whiteboard-logo-text" />
-          </div>
-          
-          <div className="whiteboard-title-block">
-            <span style={{ fontWeight: 600, fontSize: '1.05rem', letterSpacing: '0.2px' }}>Interactive Canvas</span>
-            <span className="whiteboard-badge">Online Classroom</span>
-          </div>
-        </div>
+      {/* â”€â”€ Header Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <WhiteboardHeader
+        isHeaderCollapsed={isHeaderCollapsed}
+        setIsHeaderCollapsed={setIsHeaderCollapsed}
+        navigate={navigate}
+        undoStack={undoStack}
+        redoStack={redoStack}
+        handleUndo={handleUndo}
+        handleRedo={handleRedo}
+        isCollaborating={isCollaborating}
+        hasDrawAccess={hasDrawAccess}
+        isHost={isHost}
+        elements={elements}
+        handleExport={handleExport}
+        isProcessingPdf={isProcessingPdf}
+        pdfProgress={pdfProgress}
+        pdfInputRef={pdfInputRef}
+        setShowClearModal={setShowClearModal}
+        initiateRoomCollab={initiateRoomCollab}
+        showCollabSidebar={showCollabSidebar}
+        setShowCollabSidebar={setShowCollabSidebar}
+        participants={participants}
+        isMicOn={isMicOn}
+        toggleMicrophone={toggleMicrophone}
+        micLevel={micLevel}
+        isVideoOn={isVideoOn}
+        toggleCamera={toggleCamera}
+        showVideoGrid={showVideoGrid}
+        setShowVideoGrid={setShowVideoGrid}
+        showParticipantStrip={showParticipantStrip}
+        setShowParticipantStrip={setShowParticipantStrip}
+        isHandRaised={isHandRaised}
+        toggleRaiseHand={toggleRaiseHand}
+      />
 
-        {/* Undo/Redo & Save Buttons */}
-        <div className="whiteboard-top-controls">
-          <button 
-            className="whiteboard-btn-icon" 
-            onClick={handleUndo} 
-            disabled={undoStack.length === 0 || (isCollaborating && !hasDrawAccess)}
-            data-tooltip="Undo (Ctrl+Z)"
-          >
-            <Undo2 size={18} />
-          </button>
-          <button 
-            className="whiteboard-btn-icon" 
-            onClick={handleRedo} 
-            disabled={redoStack.length === 0 || (isCollaborating && !hasDrawAccess)}
-            data-tooltip="Redo (Ctrl+Y)"
-          >
-            <Redo2 size={18} />
-          </button>
-
-          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 5px' }} />
-
-          <button 
-            className="whiteboard-btn primary" 
-            onClick={handleExport}
-            disabled={elements.length === 0}
-            data-tooltip="Export classroom notes"
-          >
-            <Download size={16} />
-            <span>Export Board</span>
-          </button>
-
-          {/* PDF / Presentation Upload — Host only */}
-          {isHost && (
-            <button
-              className="whiteboard-btn"
-              style={{
-                background: 'rgba(16, 185, 129, 0.12)',
-                color: '#34d399',
-                borderColor: 'rgba(16, 185, 129, 0.3)',
-                opacity: isProcessingPdf ? 0.6 : 1,
-                cursor: isProcessingPdf ? 'not-allowed' : 'pointer'
-              }}
-              onClick={() => !isProcessingPdf && pdfInputRef.current?.click()}
-              data-tooltip="Upload a PDF presentation and sync to all students"
-              disabled={isProcessingPdf}
-            >
-              <MonitorPlay size={16} />
-              <span>{isProcessingPdf ? `Importing ${pdfProgress.current}/${pdfProgress.total}…` : 'Upload Deck'}</span>
-            </button>
-          )}
-
-          <button 
-            className="whiteboard-btn danger" 
-            onClick={() => setShowClearModal(true)}
-            disabled={elements.length === 0 || (isCollaborating && !isHost)}
-            data-tooltip={isHost ? "Wipe canvas board" : "Only the tutor can clear the board"}
-          >
-            <Trash2 size={16} />
-            <span>Clear</span>
-          </button>
-
-          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 5px' }} />
-
-          {!isCollaborating ? (
-            <button 
-              className="whiteboard-btn" 
-              style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.3)' }}
-              onClick={initiateRoomCollab}
-              data-tooltip="Invite students to collaborate"
-            >
-              <Share2 size={16} />
-              <span>Invite / Collaborate</span>
-            </button>
-          ) : (
-            <>
-              <button 
-                className={`whiteboard-btn ${showCollabSidebar ? 'primary' : ''}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                onClick={() => setShowCollabSidebar(prev => !prev)}
-                data-tooltip="View online participants"
-              >
-                <Users size={16} />
-                <span>Classroom ({Object.keys(participants).length})</span>
-              </button>
-
-              {/* Mic button with audio level ring */}
-              <div className="mic-level-wrapper" data-tooltip={isMicOn ? "Mute Microphone" : "Unmute Microphone"}>
-                {isMicOn && (
-                  <svg className="mic-level-ring" viewBox="0 0 44 44" width="44" height="44">
-                    <circle
-                      cx="22" cy="22" r="19"
-                      fill="none"
-                      stroke="rgba(52,211,153,0.25)"
-                      strokeWidth="2.5"
-                    />
-                    <circle
-                      cx="22" cy="22" r="19"
-                      fill="none"
-                      stroke="#34d399"
-                      strokeWidth="2.5"
-                      strokeDasharray={`${(micLevel / 100) * 119.4} 119.4`}
-                      strokeLinecap="round"
-                      transform="rotate(-90 22 22)"
-                      style={{ transition: 'stroke-dasharray 0.05s linear' }}
-                    />
-                  </svg>
-                )}
-                <button 
-                  className={`whiteboard-btn-icon ${isMicOn ? 'active' : ''}`} 
-                  style={{ 
-                    background: isMicOn ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                    color: isMicOn ? '#34d399' : '#f87171',
-                    borderColor: isMicOn ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '10px'
-                  }}
-                  onClick={toggleMicrophone}
-                >
-                  {isMicOn ? <Mic size={18} /> : <MicOff size={18} />}
-                </button>
-              </div>
-
-              <button
-                className={`whiteboard-btn-icon ${isVideoOn ? 'active' : ''}`}
-                style={{
-                  background: isVideoOn ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  color: isVideoOn ? '#34d399' : '#f87171',
-                  borderColor: isVideoOn ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px'
-                }}
-                onClick={toggleCamera}
-                data-tooltip={isVideoOn ? "Turn Camera Off" : "Turn Camera On"}
-              >
-                {isVideoOn ? <Video size={18} /> : <VideoOff size={18} />}
-              </button>
-
-              <button
-                className={`whiteboard-btn-icon`}
-                style={{
-                  background: showVideoGrid ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.05)',
-                  color: showVideoGrid ? '#818cf8' : 'rgba(255,255,255,0.5)',
-                  borderColor: showVideoGrid ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255,255,255,0.1)',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px'
-                }}
-                onClick={() => setShowVideoGrid(prev => !prev)}
-                data-tooltip={showVideoGrid ? "Hide Video Grid" : "Show Video Grid"}
-              >
-                <MonitorPlay size={18} />
-              </button>
-
-              <button
-                className={`whiteboard-btn-icon`}
-                style={{
-                  background: showParticipantStrip ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.05)',
-                  color: showParticipantStrip ? '#818cf8' : 'rgba(255,255,255,0.5)',
-                  borderColor: showParticipantStrip ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255,255,255,0.1)',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px'
-                }}
-                onClick={() => setShowParticipantStrip(prev => !prev)}
-                data-tooltip={showParticipantStrip ? "Hide Participant Strip" : "Show Participant Strip"}
-              >
-                <Users size={18} />
-              </button>
-
-              {!isHost && (
-                <button
-                  className={`whiteboard-btn-icon`}
-                  style={{
-                    background: isHandRaised ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)',
-                    color: isHandRaised ? '#fbbf24' : 'rgba(255,255,255,0.5)',
-                    borderColor: isHandRaised ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.1)',
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '10px'
-                  }}
-                  onClick={toggleRaiseHand}
-                  data-tooltip={isHandRaised ? "Lower Hand" : "Raise Hand"}
-                >
-                  <Hand size={18} style={isHandRaised ? { transform: 'scale(1.15)', transition: 'all 0.2s' } : {}} />
-                </button>
-              )}
-            </>
-          )}
-
-
-          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 5px' }} />
-
-
-          <button 
-            className="whiteboard-btn-icon" 
-            onClick={() => setIsHeaderCollapsed(true)}
-            data-tooltip="Collapse Header"
-          >
-            <ChevronUp size={18} />
-          </button>
-        </div>
-      </header>
-
-      {/* Main Workspace Frame */}
+      {/* â”€â”€ Main Workspace Frame â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className={`whiteboard-workspace ${isHeaderCollapsed ? 'fullscreen' : ''}`}>
         {/* Floating Expand Header Tab */}
         {isHeaderCollapsed && (
@@ -3048,7 +2871,8 @@ export default function Whiteboard({ user }) {
             <ChevronDown size={16} />
           </button>
         )}
-        {/* Canvas Element */}
+
+        {/* â”€â”€ Canvas Element â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <canvas
           ref={canvasRef}
           className={`whiteboard-canvas theme-${theme} grid-${gridType} ${isPanning ? 'grabbing' : ''}`}
@@ -3064,63 +2888,37 @@ export default function Whiteboard({ user }) {
           }}
         />
 
-        {/* Read-Only Banner: shown to participants who don't have draw access */}
+        {/* Read-Only Banner */}
         {isCollaborating && !isHost && !hasDrawAccess && (
           <div style={{
-            position: 'absolute',
-            bottom: '70px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(15, 15, 20, 0.88)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: '12px',
-            padding: '10px 20px',
-            color: '#fca5a5',
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            zIndex: 200,
-            pointerEvents: 'none',
-            userSelect: 'none',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+            position: 'absolute', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(15, 15, 20, 0.88)', backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '12px',
+            padding: '10px 20px', color: '#fca5a5', fontSize: '0.85rem', fontWeight: '600',
+            display: 'flex', alignItems: 'center', gap: '10px', zIndex: 200,
+            pointerEvents: 'none', userSelect: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
           }}>
-            <span style={{ fontSize: '1rem' }}>🔒</span>
-            <span>View Only — waiting for the tutor to grant you drawing access</span>
+            <span style={{ fontSize: '1rem' }}>ðŸ”’</span>
+            <span>View Only â€” waiting for the tutor to grant you drawing access</span>
           </div>
         )}
 
-        {/* Granted access banner — briefly shown when host grants access */}
+        {/* Granted Access Banner */}
         {isCollaborating && !isHost && hasDrawAccess && (
           <div style={{
-            position: 'absolute',
-            bottom: '70px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(15, 15, 20, 0.88)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(16, 185, 129, 0.4)',
-            borderRadius: '12px',
-            padding: '10px 20px',
-            color: '#6ee7b7',
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            zIndex: 200,
-            pointerEvents: 'none',
-            userSelect: 'none',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+            position: 'absolute', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(15, 15, 20, 0.88)', backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '12px',
+            padding: '10px 20px', color: '#6ee7b7', fontSize: '0.85rem', fontWeight: '600',
+            display: 'flex', alignItems: 'center', gap: '10px', zIndex: 200,
+            pointerEvents: 'none', userSelect: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
           }}>
-            <span style={{ fontSize: '1rem' }}>✏️</span>
-            <span>Drawing access granted — you can now draw on the board</span>
+            <span style={{ fontSize: '1rem' }}>âœï¸</span>
+            <span>Drawing access granted â€” you can now draw on the board</span>
           </div>
         )}
 
-        {/* Floating Delete Button for active selected element */}
+        {/* Floating Delete Button for selected element */}
         {selectedBounds && activeTool === 'select' && (
           <button
             className="whiteboard-floating-delete-btn"
@@ -3173,7 +2971,7 @@ export default function Whiteboard({ user }) {
           </div>
         )}
 
-        {/* ─── Floating Video Grid Overlay ─────────────────────────────── */}
+        {/* â”€â”€ Floating Video Grid Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {showVideoGrid && isCollaborating && (
           <div className="video-grid-overlay">
             <div className="video-grid-header">
@@ -3181,22 +2979,19 @@ export default function Whiteboard({ user }) {
                 <MonitorPlay size={13} style={{ marginRight: 5 }} />
                 Live Video
               </span>
-              <button className="video-grid-close" onClick={() => setShowVideoGrid(false)} title="Hide Video Grid">✕</button>
+              <button className="video-grid-close" onClick={() => setShowVideoGrid(false)} title="Hide Video Grid">âœ•</button>
             </div>
 
             <div className="video-grid-tiles">
               {/* Local Camera Tile */}
               <div className="video-tile local-tile">
-                {/* Always mount video element — just hide it when camera is off */}
                 <video
                   ref={(el) => {
                     localVideoGridRef.current = el;
                     if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
                   }}
                   className="video-tile-stream"
-                  autoPlay
-                  muted
-                  playsInline
+                  autoPlay muted playsInline
                   style={{ display: isVideoOn ? 'block' : 'none' }}
                 />
                 {!isVideoOn && (
@@ -3207,7 +3002,7 @@ export default function Whiteboard({ user }) {
                 <div className="video-tile-label">
                   {userName || 'You'} (You)
                   <span className="video-tile-icons">
-                    {isMicOn ? <span style={{ color: '#34d399', fontSize: '0.7rem' }}>● MIC</span> : <span style={{ opacity: 0.4, fontSize: '0.7rem' }}>MUTED</span>}
+                    {isMicOn ? <span style={{ color: '#34d399', fontSize: '0.7rem' }}>â— MIC</span> : <span style={{ opacity: 0.4, fontSize: '0.7rem' }}>MUTED</span>}
                   </span>
                 </div>
               </div>
@@ -3232,8 +3027,7 @@ export default function Whiteboard({ user }) {
                           }
                         }}
                         className="video-tile-stream"
-                        autoPlay
-                        playsInline
+                        autoPlay playsInline
                       />
                     ) : (
                       <div className="video-tile-avatar" style={{ background: pColor }}>
@@ -3243,8 +3037,8 @@ export default function Whiteboard({ user }) {
                     <div className="video-tile-label">
                       {pName}
                       <span className="video-tile-icons">
-                        {pMicOn ? '🎤' : '🔇'}
-                        {pVideoOn ? '📷' : '📷🚫'}
+                        {pMicOn ? 'ðŸŽ¤' : 'ðŸ”‡'}
+                        {pVideoOn ? 'ðŸ“·' : 'ðŸ“·ðŸš«'}
                       </span>
                     </div>
                   </div>
@@ -3254,435 +3048,70 @@ export default function Whiteboard({ user }) {
           </div>
         )}
 
-        {/* ─── Right-Side Participant Strip ─────────────────────────────── */}
-        {isCollaborating && showParticipantStrip && (() => {
-          // Build participant list: local user first, then speaking peers, then rest
-          const allPeers = Object.entries(participants);
-          const sorted = [
-            // Local user entry
-            [localUserId.current, {
-              userName: userName || 'You',
-              color: userColor.current,
-              isMicOn,
-              isVideoOn,
-              handRaised: isHandRaised,
-              isLocal: true
-            }],
-            // Remote peers sorted: speaking first
-            ...allPeers
-              .filter(([pid]) => pid !== localUserId.current)
-              .sort(([a], [b]) => {
-                const aSpeak = speakingPeers.has(a) ? 0 : 1;
-                const bSpeak = speakingPeers.has(b) ? 0 : 1;
-                return aSpeak - bSpeak;
-              })
-          ];
+        {/* â”€â”€ Right-Side Participant Strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <ParticipantStrip
+          isCollaborating={isCollaborating}
+          showParticipantStrip={showParticipantStrip}
+          participants={participants}
+          localUserId={localUserId.current}
+          userName={userName}
+          userColor={userColor.current}
+          isMicOn={isMicOn}
+          isVideoOn={isVideoOn}
+          isHandRaised={isHandRaised}
+          speakingPeers={speakingPeers}
+          micLevel={micLevel}
+          remoteVideoStreams={remoteVideoStreams}
+          remoteVideoRefs={remoteVideoRefs}
+          localVideoStripRef={localVideoStripRef}
+          localStreamRef={localStreamRef}
+          showVideoGrid={showVideoGrid}
+        />
 
-          return (
-            <div className="participant-strip">
-              <div className="participant-strip-label">Participants</div>
-              <div className="participant-strip-list">
-                {sorted.map(([peerId, pData]) => {
-                  const pColor = pData?.color || '#6366f1';
-                  const pName = pData?.userName || 'User';
-                  const pMicOn = pData?.isMicOn;
-                  const pVideoOn = pData?.isVideoOn;
-                  const handRaised = pData?.handRaised;
-                  const isLocal = pData?.isLocal;
-                  const isSpeaking = speakingPeers.has(peerId) || (isLocal && micLevel > 5);
-                  const remoteStream = !isLocal && remoteVideoStreams[peerId];
+        {/* â”€â”€ Floating Left Toolbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <WhiteboardToolbar
+          isToolbarCollapsed={isToolbarCollapsed}
+          setIsToolbarCollapsed={setIsToolbarCollapsed}
+          activeTool={activeTool}
+          setActiveTool={setActiveTool}
+          setSelectedElement={setSelectedElement}
+          fileInputRef={fileInputRef}
+          isCollaborating={isCollaborating}
+          hasDrawAccess={hasDrawAccess}
+          isHost={isHost}
+        />
 
-                  return (
-                    <div
-                      key={peerId}
-                      className={`pstrip-tile ${isSpeaking ? 'speaking' : ''}`}
-                      title={pName + (isLocal ? ' (You)' : '')}
-                    >
-                      <div className="pstrip-media">
-                        {/* Render local video or avatar based on state */}
-                        {isLocal && (
-                          <>
-                            <video
-                              ref={(el) => {
-                                localVideoStripRef.current = el;
-                                if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
-                              }}
-                              className="pstrip-video"
-                              autoPlay muted playsInline
-                              style={{ display: (isVideoOn && !showVideoGrid) ? 'block' : 'none' }}
-                            />
-                            {(!isVideoOn || showVideoGrid) && (
-                              <div className="pstrip-avatar" style={{ background: pColor }}>
-                                {pName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                          </>
-                        )}
-                        {!isLocal && remoteStream && !showVideoGrid ? (
-                          <video
-                            ref={(el) => {
-                              if (el) {
-                                remoteVideoRefs.current[peerId] = el;
-                                if (el.srcObject !== remoteStream) el.srcObject = remoteStream;
-                              }
-                            }}
-                            className="pstrip-video"
-                            autoPlay playsInline
-                          />
-                        ) : null}
-                        {!isLocal && (!remoteStream || showVideoGrid) && (
-                          <div className="pstrip-avatar" style={{ background: pColor }}>
-                            {pName.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        {/* Speaking indicator pulse */}
-                        {isSpeaking && <div className="pstrip-speaking-ring" />}
+        {/* â”€â”€ Floating Right Properties Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <WhiteboardProperties
+          isPropertiesCollapsed={isPropertiesCollapsed}
+          setIsPropertiesCollapsed={setIsPropertiesCollapsed}
+          isCollaborating={isCollaborating}
+          hasDrawAccess={hasDrawAccess}
+          isHost={isHost}
+          activeColor={activeColor}
+          setActiveColor={setActiveColor}
+          strokeWidth={strokeWidth}
+          setStrokeWidth={setStrokeWidth}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          activeTool={activeTool}
+          fillMode={fillMode}
+          setFillMode={setFillMode}
+          gridType={gridType}
+          setGridType={setGridType}
+          snapToGrid={snapToGrid}
+          setSnapToGrid={setSnapToGrid}
+          isPressureSensitive={isPressureSensitive}
+          setIsPressureSensitive={setIsPressureSensitive}
+          theme={theme}
+          setTheme={setTheme}
+          selectedElement={selectedElement}
+          setSelectedElement={setSelectedElement}
+          elements={elements}
+          pushToHistory={pushToHistory}
+        />
 
-                        {/* Hand raised indicator badge */}
-                        {handRaised && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '4px',
-                            right: '4px',
-                            background: '#f59e0b',
-                            color: '#fff',
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.7rem',
-                            border: '1.5px solid #121212',
-                            zIndex: 10,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                          }} title="Hand Raised">
-                            ✋
-                          </div>
-                        )}
-                      </div>
-                      <div className="pstrip-name">{isLocal ? 'You' : pName.split(' ')[0]}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Floating Left Toolbar */}
-        {(!isHost && isCollaborating && !hasDrawAccess) ? null : (
-          isToolbarCollapsed ? (
-            <button 
-              className="whiteboard-floating-trigger toolbar-trigger"
-              onClick={() => setIsToolbarCollapsed(false)}
-              data-tooltip="Expand Toolbar"
-            >
-              <ChevronRight size={20} />
-            </button>
-          ) : (
-            <div className="whiteboard-toolbar">
-              <button 
-                className={`toolbar-btn ${activeTool === 'select' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('select'); setSelectedElement(null); }}
-                data-tooltip="Select & Move Objects"
-              >
-                <MousePointer size={20} />
-              </button>
-              
-              <button 
-                className={`toolbar-btn ${activeTool === 'pen' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('pen'); setSelectedElement(null); }}
-                data-tooltip="Smart Handwriting Ink"
-              >
-                <Pencil size={20} />
-              </button>
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'eraser' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('eraser'); setSelectedElement(null); }}
-                data-tooltip="Stroke Eraser"
-              >
-                <Eraser size={20} />
-              </button>
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'highlighter' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('highlighter'); setSelectedElement(null); }}
-                data-tooltip="Fluorescent Highlighter"
-              >
-                <Highlighter size={20} />
-              </button>
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'laser' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('laser'); setSelectedElement(null); }}
-                data-tooltip="Glowing Laser Pointer"
-              >
-                <Zap size={20} />
-              </button>
-
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'line' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('line'); setSelectedElement(null); }}
-                data-tooltip="Draw Straight Line"
-              >
-                <Minus size={20} style={{ transform: 'rotate(-45deg)' }} />
-              </button>
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'arrow' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('arrow'); setSelectedElement(null); }}
-                data-tooltip="Draw Annotation Arrow"
-              >
-                <ArrowUpRight size={20} />
-              </button>
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'rectangle' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('rectangle'); setSelectedElement(null); }}
-                data-tooltip="Draw Rectangle"
-              >
-                <Square size={20} />
-              </button>
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'circle' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('circle'); setSelectedElement(null); }}
-                data-tooltip="Draw Circle"
-              >
-                <Circle size={20} />
-              </button>
-
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
-
-              <button 
-                className={`toolbar-btn ${activeTool === 'text' ? 'active' : ''}`} 
-                onClick={() => { setActiveTool('text'); setSelectedElement(null); }}
-                data-tooltip="Insert Typography Label"
-              >
-                <Type size={20} />
-              </button>
-
-              <button 
-                className="toolbar-btn" 
-                onClick={() => fileInputRef.current.click()}
-                data-tooltip="Insert Picture/Image"
-              >
-                <ImageIcon size={20} />
-              </button>
-
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
-
-              <button 
-                className="toolbar-btn collapse-btn"
-                onClick={() => setIsToolbarCollapsed(true)}
-                data-tooltip="Collapse Toolbar"
-                style={{ color: '#f87171' }}
-              >
-                <ChevronLeft size={20} />
-              </button>
-            </div>
-          )
-        )}
-
-        {/* Floating Right Properties Panel */}
-        {(!isHost && isCollaborating && !hasDrawAccess) ? null : (
-          isPropertiesCollapsed ? (
-            <button 
-              className="whiteboard-floating-trigger properties-trigger"
-              onClick={() => setIsPropertiesCollapsed(false)}
-              data-tooltip="Expand Options"
-            >
-              <ChevronLeft size={20} />
-            </button>
-          ) : (
-            <div className="whiteboard-properties">
-              <div className="properties-panel-header" style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '10px' }}>
-                <span className="prop-title" style={{ margin: 0 }}>Properties</span>
-              </div>
-
-              {/* Scrollable Settings Content */}
-              <div className="properties-panel-content">
-                {/* Colors Selection */}
-                <div className="prop-section">
-                  <span className="prop-title">Pen & Ink Palette</span>
-                  <div className="color-palette">
-                    {PRESET_COLORS.map(color => (
-                      <button 
-                        key={color}
-                        className={`color-swatch ${activeColor.toLowerCase() === color.toLowerCase() ? 'active' : ''}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setActiveColor(color)}
-                      />
-                    ))}
-                  </div>
-                  
-                  <div className="custom-color-input-wrapper">
-                    <input 
-                      type="color" 
-                      className="custom-color-picker"
-                      value={activeColor}
-                      onChange={(e) => setActiveColor(e.target.value)}
-                    />
-                    <input 
-                      type="text" 
-                      className="custom-color-hex"
-                      value={activeColor.toUpperCase()}
-                      onChange={(e) => setActiveColor(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Width / Size Settings */}
-                <div className="prop-section">
-                  <span className="prop-title">Line / Text Size</span>
-                  <div className="brush-sizes">
-                    {[2, 4, 8, 16].map(size => (
-                      <button 
-                        key={size}
-                        className={`brush-size-btn ${strokeWidth === size ? 'active' : ''}`}
-                        onClick={() => {
-                          setStrokeWidth(size);
-                          setFontSize(size + 16); // Sync font size logically
-                        }}
-                      >
-                        {size}px
-                      </button>
-                    ))}
-                  </div>
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="50" 
-                    className="brush-width-slider"
-                    value={strokeWidth}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setStrokeWidth(val);
-                      setFontSize(val + 16);
-                    }}
-                  />
-                </div>
-
-                {/* Shape Fill Modes */}
-                {['rectangle', 'circle'].includes(activeTool) && (
-                  <div className="prop-section">
-                    <span className="prop-title">Shape Fill mode</span>
-                    <div className="fill-modes">
-                      {['none', 'semi', 'solid'].map(mode => (
-                        <button
-                          key={mode}
-                          className={`fill-mode-btn ${fillMode === mode ? 'active' : ''}`}
-                          onClick={() => setFillMode(mode)}
-                        >
-                          {mode}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Backdrop/Grid Selector */}
-                <div className="prop-section">
-                  <span className="prop-title">Backdrop Canvas Grid</span>
-                  <div className="backdrop-grid">
-                    {['blank', 'dots', 'lines', 'graph'].map(type => (
-                      <button
-                        key={type}
-                        className={`backdrop-btn ${gridType === type ? 'active' : ''}`}
-                        onClick={() => setGridType(type)}
-                      >
-                        {type === 'lines' ? 'Notebook' : type === 'graph' ? 'Math Grid' : type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Advanced Canvas Settings */}
-                <div className="prop-section">
-                  <span className="prop-title">Canvas Options</span>
-                  <div className="canvas-settings-list">
-                    <label className="canvas-setting-item">
-                      <input 
-                        type="checkbox" 
-                        checked={snapToGrid} 
-                        onChange={(e) => setSnapToGrid(e.target.checked)} 
-                        className="canvas-setting-checkbox"
-                      />
-                      <span className="setting-label-text">Snap to Grid (24px)</span>
-                    </label>
-                    <label className="canvas-setting-item">
-                      <input 
-                        type="checkbox" 
-                        checked={isPressureSensitive} 
-                        onChange={(e) => setIsPressureSensitive(e.target.checked)} 
-                        className="canvas-setting-checkbox"
-                      />
-                      <span className="setting-label-text">Pressure Sensitive</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Theme Color Picker */}
-                <div className="prop-section">
-                  <span className="prop-title">Board Theme</span>
-                  <div className="theme-toggle-container">
-                    <button 
-                      className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-                      onClick={() => setTheme('dark')}
-                    >
-                      <Moon size={14} />
-                      <span>Blackboard</span>
-                    </button>
-                    <button 
-                      className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-                      onClick={() => setTheme('light')}
-                    >
-                      <Sun size={14} />
-                      <span>Whiteboard</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Delete Element option in properties panel when selected */}
-                {selectedElement && (
-                  <div className="prop-section" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '15px' }}>
-                    <span className="prop-title">Manage Selected Element</span>
-                    <button
-                      className="whiteboard-btn danger"
-                      style={{ width: '100%', justifyContent: 'center', marginTop: '5px' }}
-                      onClick={() => {
-                        const remaining = elements.filter(el => el.id !== selectedElement.id);
-                        pushToHistory(remaining);
-                        setSelectedElement(null);
-                      }}
-                    >
-                      <Trash size={16} />
-                      <span>Delete Element</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Non-scrollable Fixed Footer for collapse button */}
-              <div className="properties-panel-footer">
-                <button
-                  className="whiteboard-btn-icon"
-                  style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.25)', color: '#f87171', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  onClick={() => setIsPropertiesCollapsed(true)}
-                  title="Collapse Options"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-          )
-        )}
-
-        {/* Center Canvas Zoom Slider */}
+        {/* â”€â”€ Center Canvas Zoom Slider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="whiteboard-zoom-controls">
           <button className="zoom-btn" onClick={() => handleZoom(-0.1)} data-tooltip="Zoom Out">
             <ZoomIn size={14} style={{ transform: 'scale(0.8)' }} />
@@ -3696,7 +3125,7 @@ export default function Whiteboard({ user }) {
           </button>
         </div>
 
-        {/* Center Bottom Slide Navigator */}
+        {/* â”€â”€ Center Bottom Slide Navigator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="whiteboard-slide-controls">
           <button 
             className="slide-btn" 
@@ -3732,7 +3161,7 @@ export default function Whiteboard({ user }) {
           )}
         </div>
 
-        {/* Floating Bottom Status Indicator */}
+        {/* â”€â”€ Floating Bottom Status Indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="whiteboard-statusbar">
           <div className="status-item">
             <span>Pointer:</span>
@@ -3751,7 +3180,7 @@ export default function Whiteboard({ user }) {
         </div>
       </div>
 
-      {/* Hidden local image loader */}
+      {/* â”€â”€ Hidden File Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <input
         type="file"
         ref={fileInputRef}
@@ -3759,8 +3188,6 @@ export default function Whiteboard({ user }) {
         accept="image/*"
         onChange={handleImageUpload}
       />
-
-      {/* Hidden PDF file loader */}
       <input
         type="file"
         ref={pdfInputRef}
@@ -3769,40 +3196,23 @@ export default function Whiteboard({ user }) {
         onChange={handlePdfUpload}
       />
 
-      {/* PDF Import Progress Overlay */}
+      {/* â”€â”€ PDF Import Progress Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isProcessingPdf && (
         <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(10, 10, 15, 0.78)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '18px'
+          position: 'fixed', inset: 0, background: 'rgba(10, 10, 15, 0.78)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          zIndex: 9999, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '18px'
         }}>
           <div style={{
             background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-            borderRadius: '20px',
-            border: '1px solid rgba(99,102,241,0.3)',
-            padding: '40px 56px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '22px',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
-            minWidth: '360px'
+            borderRadius: '20px', border: '1px solid rgba(99,102,241,0.3)',
+            padding: '40px 56px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: '22px', boxShadow: '0 24px 80px rgba(0,0,0,0.5)', minWidth: '360px'
           }}>
-            {/* Animated spinner */}
             <div style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '50%',
-              border: '3px solid rgba(99,102,241,0.2)',
-              borderTop: '3px solid #6366f1',
+              width: '52px', height: '52px', borderRadius: '50%',
+              border: '3px solid rgba(99,102,241,0.2)', borderTop: '3px solid #6366f1',
               animation: 'spin 0.9s linear infinite'
             }} />
             <div style={{ textAlign: 'center' }}>
@@ -3811,16 +3221,14 @@ export default function Whiteboard({ user }) {
               </div>
               <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
                 {pdfProgress.total > 0
-                  ? `Rendering page ${pdfProgress.current} of ${pdfProgress.total}…`
-                  : 'Loading PDF file…'}
+                  ? `Rendering page ${pdfProgress.current} of ${pdfProgress.total}â€¦`
+                  : 'Loading PDF fileâ€¦'}
               </div>
             </div>
-            {/* Progress bar */}
             {pdfProgress.total > 0 && (
               <div style={{ width: '100%', background: 'rgba(255,255,255,0.08)', borderRadius: '100px', height: '7px', overflow: 'hidden' }}>
                 <div style={{
-                  height: '100%',
-                  borderRadius: '100px',
+                  height: '100%', borderRadius: '100px',
                   background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
                   width: `${(pdfProgress.current / pdfProgress.total) * 100}%`,
                   transition: 'width 0.3s ease'
@@ -3828,230 +3236,40 @@ export default function Whiteboard({ user }) {
               </div>
             )}
             <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
-              Please wait — slides will sync to all participants automatically
+              Please wait â€” slides will sync to all participants automatically
             </div>
           </div>
         </div>
       )}
 
-      {/* Wipe confirmation Dialog modal */}
-      {showClearModal && (
-        <div className="whiteboard-modal-overlay">
-          <div className="whiteboard-modal">
-            <div className="modal-header">Wipe Board Canvas</div>
-            <div className="modal-body">
-              Are you sure you want to delete all elements and drawings? This action will clear your workspace but can be undone via Undo (Ctrl+Z).
-            </div>
-            <div className="modal-footer">
-              <button className="whiteboard-btn" onClick={() => setShowClearModal(false)}>
-                Cancel
-              </button>
-              <button className="whiteboard-btn danger" onClick={clearBoard}>
-                Clear Board
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* â”€â”€ Modals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <WipeBoardModal
+        showClearModal={showClearModal}
+        setShowClearModal={setShowClearModal}
+        clearBoard={clearBoard}
+      />
 
-      {/* Collaboration Sidebar panel */}
-      {isCollaborating && showCollabSidebar && (
-        <div className="whiteboard-collab-sidebar">
-          <div className="collab-sidebar-header">
-            <span style={{ fontWeight: 600 }}>Active Classroom</span>
-            <button className="whiteboard-btn-icon" onClick={() => setShowCollabSidebar(false)}>
-              <ChevronRight size={18} />
-            </button>
-          </div>
-          
-          <div className="collab-sidebar-share">
-            <span className="prop-title" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '8px' }}>INVITE OTHERS</span>
-            <div className="share-link-box">
-              <input 
-                type="text" 
-                readOnly 
-                value={`${window.location.origin}${window.location.pathname}?room=${roomId}`}
-                className="share-link-input"
-              />
-              <button className="whiteboard-btn-icon" onClick={copyShareLink} title="Copy link">
-                <Copy size={16} />
-              </button>
-            </div>
-          </div>
+      <CollaborationSidebar
+        isCollaborating={isCollaborating}
+        showCollabSidebar={showCollabSidebar}
+        setShowCollabSidebar={setShowCollabSidebar}
+        roomId={roomId}
+        copyShareLink={copyShareLink}
+        participants={participants}
+        localUserId={localUserId.current}
+        isHost={isHost}
+        channelRef={channelRef}
+        setParticipants={setParticipants}
+        toggleParticipantDrawAccess={toggleParticipantDrawAccess}
+      />
 
-          <div className="collab-participants-list">
-            <span className="prop-title" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '8px' }}>PARTICIPANTS ({Object.keys(participants).length})</span>
-            <div className="participants-scroll-area">
-              {Object.values(participants).map(peer => {
-                const isPeerHost = peer.isHost;
-                const hasPeerAccess = peer.hasDrawAccess;
-                const isLocal = peer.userId === localUserId.current;
-                const initials = peer.userName ? peer.userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
-                
-                return (
-                  <div key={peer.userId} className="participant-card">
-                    <div className="participant-avatar" style={{ backgroundColor: peer.color || '#6366f1', position: 'relative' }}>
-                      {initials}
-                      {peer.handRaised && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '-4px',
-                          right: '-4px',
-                          background: '#f59e0b',
-                          color: '#fff',
-                          width: '16px',
-                          height: '16px',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.65rem',
-                          border: '1.5px solid #1e1e24',
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
-                        }} title="Hand Raised">
-                          ✋
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="participant-info">
-                      <span className="participant-name">{peer.userName} {isLocal && '(You)'}</span>
-                      <span className="participant-role">{isPeerHost ? '👑 Host / Tutor' : 'Student'}</span>
-                    </div>
-                    
-                    <div className="participant-actions">
-                      <span className={`participant-mic-status ${peer.isMicOn ? 'active' : ''}`} title={peer.isMicOn ? 'Microphone Active' : 'Muted'}>
-                        {peer.isMicOn ? <Mic size={14} style={{ color: '#10b981' }} /> : <MicOff size={14} style={{ color: 'rgba(255,255,255,0.3)' }} />}
-                      </span>
-
-                      {!isPeerHost && isHost && peer.handRaised && (
-                        <button 
-                          onClick={() => {
-                            // Lower student's hand
-                            channelRef.current.send({
-                              type: 'broadcast',
-                              event: 'lower-hand-request',
-                              payload: { targetUserId: peer.userId }
-                            });
-                            // Also update local state
-                            setParticipants(prev => {
-                              const next = { ...prev };
-                              if (next[peer.userId]) next[peer.userId].handRaised = false;
-                              return next;
-                            });
-                          }}
-                          style={{
-                            background: 'rgba(245, 158, 11, 0.2)',
-                            border: '1px solid rgba(245, 158, 11, 0.5)',
-                            color: '#fbbf24',
-                            borderRadius: '6px',
-                            padding: '4px 8px',
-                            fontSize: '0.72rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            marginRight: '5px',
-                            transition: 'all 0.2s'
-                          }}
-                          title="Lower hand"
-                        >
-                          Lower Hand
-                        </button>
-                      )}
-
-                      {!isPeerHost && isHost && (
-                        <button 
-                          className={`draw-access-badge ${hasPeerAccess ? 'granted' : 'locked'}`}
-                          onClick={() => toggleParticipantDrawAccess(peer.userId, hasPeerAccess)}
-                          title={hasPeerAccess ? "Click to revoke drawing access" : "Click to grant drawing access"}
-                          style={{
-                            background: hasPeerAccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.15)',
-                            border: `1px solid ${hasPeerAccess ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.4)'}`,
-                            color: hasPeerAccess ? '#6ee7b7' : '#fca5a5',
-                            borderRadius: '6px',
-                            padding: '4px 9px',
-                            fontSize: '0.72rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {hasPeerAccess ? '✏️ Can Draw' : '🔒 Locked'}
-                        </button>
-                      )}
-                      {!isPeerHost && !isHost && (
-                        <span style={{
-                          fontSize: '0.72rem',
-                          fontWeight: '600',
-                          color: hasPeerAccess ? '#6ee7b7' : 'rgba(255,255,255,0.3)',
-                          padding: '3px 8px',
-                          borderRadius: '5px',
-                          background: hasPeerAccess ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${hasPeerAccess ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)'}`
-                        }}>
-                          {hasPeerAccess ? '✏️ Drawing' : '🔒 Watching'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Guest Name Modal */}
-      {showNameModal && (
-        <div className="whiteboard-modal-overlay" style={{ zIndex: 11000 }}>
-          <div className="whiteboard-modal" style={{ maxWidth: '400px' }}>
-            <div className="modal-header">Join Virtual Classroom</div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <p style={{ margin: 0, opacity: 0.85, fontSize: '0.95rem', lineHeight: '1.4' }}>
-                Enter your name to start collaborating on the tutor's whiteboard.
-              </p>
-              <input 
-                type="text" 
-                placeholder="Enter name (e.g. Student Alex)" 
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '10px',
-                  color: '#ffffff',
-                  fontSize: '0.95rem',
-                  outline: 'none'
-                }}
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && userName.trim() !== '') {
-                    startCollaboration(roomId, userName.trim(), false);
-                  }
-                }}
-              />
-            </div>
-            <div className="modal-footer" style={{ borderTop: 'none', paddingTop: 0 }}>
-              <button 
-                className="whiteboard-btn" 
-                onClick={() => {
-                  const defaultName = generateRandomName();
-                  startCollaboration(roomId, defaultName, false);
-                }}
-              >
-                Quick Join
-              </button>
-              <button 
-                className="whiteboard-btn primary" 
-                disabled={userName.trim() === ''}
-                onClick={() => startCollaboration(roomId, userName.trim(), false)}
-              >
-                Join Classroom
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <NameModal
+        showNameModal={showNameModal}
+        roomId={roomId}
+        userName={userName}
+        setUserName={setUserName}
+        startCollaboration={startCollaboration}
+      />
 
       {/* Live Toast banner indicator */}
       {toastMessage && (
@@ -4062,3 +3280,4 @@ export default function Whiteboard({ user }) {
     </div>
   );
 }
+

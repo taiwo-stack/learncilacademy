@@ -1,4 +1,4 @@
-import { supabase, hasSupabaseConfig, supabaseAdmin } from '../supabaseClient';
+import { supabase, hasSupabaseConfig } from '../supabaseClient';
 
 const initialMockUsers = [
   { id: 'admin_mock_id', email: 'admin@foundaxia.com', password: 'admin123', role: 'admin', full_name: 'Administrator' },
@@ -612,99 +612,32 @@ export const signOut = async () => {
   }
 };
 
+const callAdminApi = async (action, payload) => {
+  const sessionResponse = await supabase.auth.getSession();
+  const token = sessionResponse?.data?.session?.access_token;
+  if (!token) {
+    throw new Error('Not authenticated.');
+  }
+
+  const response = await fetch('/api/admin-action', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ action, ...payload })
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error || 'Failed to perform administrative action');
+  }
+  return result;
+};
+
 export const createStudentAccount = async (email, password, studentData) => {
   if (hasSupabaseConfig) {
-    let authUserId = null;
-    try {
-      const { data: existingTempStudents } = await supabaseAdmin
-        .from('students')
-        .select('id')
-        .eq('email', email);
-
-      if (existingTempStudents && existingTempStudents.length > 0) {
-        const tempIds = existingTempStudents.map(s => s.id);
-        await supabaseAdmin.from('students').delete().in('id', tempIds);
-      }
-
-      let authUser = null;
-      let authError = null;
-
-      try {
-        const { data, error } = await supabaseAdmin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true
-        });
-        authUser = data?.user;
-        authError = error;
-      } catch (err) {
-        authError = err;
-      }
-
-      if (authError) {
-        if (authError.message && authError.message.toLowerCase().includes('already')) {
-          // Try to look up existing user ID from profiles table
-          const { data: profileRow } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', email.toLowerCase())
-            .maybeSingle();
-
-          if (profileRow) {
-            authUserId = profileRow.id;
-          } else {
-            // Fallback to auth listUsers
-            const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-            if (!listError && userList && userList.users) {
-              const existingUser = userList.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-              if (existingUser) {
-                authUserId = existingUser.id;
-              }
-            }
-          }
-
-          if (authUserId) {
-            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password });
-          }
-        }
-        if (!authUserId) throw authError;
-      } else if (authUser) {
-        authUserId = authUser.id;
-      }
-
-      const { error: profileError } = await supabaseAdmin.from('profiles').upsert([
-        {
-          id: authUserId,
-          email,
-          role: 'student',
-          full_name: studentData.full_name
-        }
-      ]);
-      if (profileError) throw new Error(profileError.message || JSON.stringify(profileError));
-
-      const { profile_id, ...cleanStudentData } = studentData;
-
-      if (cleanStudentData.date_of_birth === '' || cleanStudentData.date_of_birth === null) {
-        cleanStudentData.date_of_birth = new Date().toISOString().split('T')[0];
-      }
-      if (cleanStudentData.start_date === '' || cleanStudentData.start_date === null) {
-        cleanStudentData.start_date = new Date().toISOString().split('T')[0];
-      }
-
-      const { data: student, error: studentError } = await supabaseAdmin.from('students').insert([
-        {
-          id: authUserId,
-          email,
-          status: 'approved',
-          ...cleanStudentData
-        }
-      ]).select();
-      if (studentError) throw new Error(studentError.message || JSON.stringify(studentError));
-
-      return student[0];
-    } catch (err) {
-      throw new Error(err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err)));
-    }
+    return await callAdminApi('createStudentAccount', { email, password, studentData });
   } else {
     initLocalStorage();
     const users = JSON.parse(localStorage.getItem('lc_users'));
@@ -737,99 +670,7 @@ export const createStudentAccount = async (email, password, studentData) => {
 
 export const activateStudentAccount = async (studentId, email, password) => {
   if (hasSupabaseConfig) {
-    let authUserId = null;
-    try {
-      let authUser = null;
-      let authError = null;
-
-      try {
-        const { data, error } = await supabaseAdmin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true
-        });
-        authUser = data?.user;
-        authError = error;
-      } catch (err) {
-        authError = err;
-      }
-
-      if (authError) {
-        if (authError.message && authError.message.toLowerCase().includes('already')) {
-          // Try to look up existing user ID from profiles table
-          const { data: profileRow } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', email.toLowerCase())
-            .maybeSingle();
-
-          if (profileRow) {
-            authUserId = profileRow.id;
-          } else {
-            // Fallback to auth listUsers
-            const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-            if (!listError && userList && userList.users) {
-              const existingUser = userList.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-              if (existingUser) {
-                authUserId = existingUser.id;
-              }
-            }
-          }
-
-          if (authUserId) {
-            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password });
-          }
-        }
-        if (!authUserId) throw authError;
-      } else if (authUser) {
-        authUserId = authUser.id;
-      }
-
-      // Get existing student details to copy over
-      const { data: studentRow, error: getError } = await supabaseAdmin
-        .from('students')
-        .select('*')
-        .eq('id', studentId)
-        .single();
-      if (getError) throw getError;
-
-      // Upsert into profiles table to prevent constraint failures
-      const { error: profileError } = await supabaseAdmin.from('profiles').upsert([
-        {
-          id: authUserId,
-          email,
-          role: 'student',
-          full_name: studentRow.full_name
-        }
-      ]);
-      if (profileError) throw new Error(profileError.message || JSON.stringify(profileError));
-
-      // Delete the temporary lead record
-      const { error: deleteError } = await supabaseAdmin
-        .from('students')
-        .delete()
-        .eq('id', studentId);
-      if (deleteError) throw new Error(deleteError.message || JSON.stringify(deleteError));
-
-      // Upsert student record linked to the authUserId
-      const { profiles, ...studentWithoutRelations } = studentRow;
-      const { data: student, error: studentInsertError } = await supabaseAdmin.from('students').upsert([
-        {
-          ...studentWithoutRelations,
-          id: authUserId,
-          email,
-          status: 'approved'
-        }
-      ]).select();
-      if (studentInsertError) throw new Error(studentInsertError.message || JSON.stringify(studentInsertError));
-
-      return student[0];
-    } catch (err) {
-      if (authUserId) {
-        await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
-      }
-      throw new Error(err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err)));
-    }
+    return await callAdminApi('activateStudentAccount', { studentId, email, password });
   } else {
     initLocalStorage();
     const users = JSON.parse(localStorage.getItem('lc_users'));
@@ -865,12 +706,7 @@ export const activateStudentAccount = async (studentId, email, password) => {
 
 export const resetUserPassword = async (userId, newPassword) => {
   if (hasSupabaseConfig) {
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      { password: newPassword }
-    );
-    if (error) throw error;
-    return data;
+    return await callAdminApi('resetUserPassword', { userId, newPassword });
   } else {
     initLocalStorage();
     const users = JSON.parse(localStorage.getItem('lc_users'));
@@ -882,91 +718,9 @@ export const resetUserPassword = async (userId, newPassword) => {
   }
 };
 
-
 export const createTutorAccount = async (email, password, tutorData) => {
   if (hasSupabaseConfig) {
-    let authUserId = null;
-    let isNewUser = false;
-    try {
-      let authUser = null;
-      let authError = null;
-
-      try {
-        const { data, error } = await supabaseAdmin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true
-        });
-        authUser = data?.user;
-        authError = error;
-      } catch (err) {
-        authError = err;
-      }
-
-      if (authError) {
-        if (authError.message && authError.message.toLowerCase().includes('already')) {
-          // Try to look up existing user ID from profiles table
-          const { data: profileRow } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', email.toLowerCase())
-            .maybeSingle();
-
-          if (profileRow) {
-            authUserId = profileRow.id;
-          } else {
-            // Fallback to auth listUsers
-            const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-            if (!listError && userList && userList.users) {
-              const existingUser = userList.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-              if (existingUser) {
-                authUserId = existingUser.id;
-              }
-            }
-          }
-
-          if (authUserId) {
-            await supabaseAdmin.auth.admin.updateUserById(authUserId, { password });
-          }
-        }
-        if (!authUserId) throw authError;
-      } else if (authUser) {
-        authUserId = authUser.id;
-        isNewUser = true;
-      }
-
-      // Upsert into profiles table to prevent constraint failures
-      const { error: profileError } = await supabaseAdmin.from('profiles').upsert([
-        {
-          id: authUserId,
-          email,
-          role: 'tutor',
-          full_name: tutorData.full_name
-        }
-      ]);
-      if (profileError) throw new Error(profileError.message || JSON.stringify(profileError));
-
-      // Strip any client-only or non-existent DB columns before inserting
-      const { profile_id, ...cleanTutorData } = tutorData;
-
-      // Upsert into tutors table
-      const { data: tutor, error: tutorError } = await supabaseAdmin.from('tutors').upsert([
-        {
-          id: authUserId,
-          rating: 5.0,
-          ...cleanTutorData
-        }
-      ]).select();
-      if (tutorError) throw new Error(tutorError.message || JSON.stringify(tutorError));
-
-      return tutor[0];
-    } catch (err) {
-      // Rollback only if the user was newly created in this run
-      if (authUserId && isNewUser) {
-        await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
-      }
-      throw new Error(err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err)));
-    }
+    return await callAdminApi('createTutorAccount', { email, password, tutorData });
   } else {
     initLocalStorage();
     const users = JSON.parse(localStorage.getItem('lc_users'));
