@@ -68,7 +68,7 @@ export default function Header({ currentUser, onLogout }) {
       <nav>
         <div className="logo" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }} onClick={() => navigate('/')}>
           <img src="/images/logo_icon.png" alt="Foundaxia Icon" style={{ height: '48px', objectFit: 'contain', flexShrink: 0 }} />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }} className="logo-text-block">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden', position: 'relative', minHeight: '40px' }} className="logo-text-block">
             <img src="/images/logo_text.png" alt="Foundaxia Brand" style={{ height: '26px', objectFit: 'contain', marginBottom: '2px', maxWidth: '180px' }} />
             <span className="logo-tagline" style={{ textTransform: 'capitalize', fontSize: '0.68rem', letterSpacing: '0.3px', opacity: 0.85 }}>Committed to Building Excellent Foundations</span>
           </div>

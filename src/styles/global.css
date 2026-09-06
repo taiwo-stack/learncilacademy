@@ -463,6 +463,11 @@ footer {
 
 /* Typing tagline under logo */
 .logo-tagline {
+  /* Absolutely positioned so its width animation (below) can never grow the logo
+     block's own layout size and squeeze the nav menu next to it, at any screen size. */
+  position: absolute;
+  top: 28px;
+  left: 0;
   font-size: 0.58rem;
   font-style: italic;
   font-weight: 300;
@@ -473,7 +478,7 @@ footer {
   width: 0;
   display: inline-block;
   letter-spacing: 0.3px;
-  animation: 
+  animation:
     typing 6s steps(40, end) infinite alternate,
     blink-caret 0.75s step-end infinite;
 }
