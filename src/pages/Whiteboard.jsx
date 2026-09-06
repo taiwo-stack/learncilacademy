@@ -55,6 +55,7 @@ export default function Whiteboard({ user }) {
   const localVideoStripRef = useRef(null); // Local camera preview in Right Participant Strip
   const remoteVideoRefs = useRef({}); // { peerId: HTMLVideoElement }
   const currentStrokeRef = useRef(null);
+  const collaborationStartedRef = useRef(false); // guards against the mount effect below running more than once
   const dragOriginalElementsRef = useRef(null); // pre-gesture elements snapshot for select-drag/resize and eraser-drag, so undo restores the true "before" state
   const handleBroadcastEventRef = useRef(null);
   const presenceSyncHandlerRef = useRef(null);
@@ -327,8 +328,16 @@ export default function Whiteboard({ user }) {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  // On mount: check room ID, join collaboration automatically if URL link exists
+  // On mount: check room ID, join collaboration automatically if URL link exists.
+  // Guarded to run at most once: this effect has been observed firing twice in both dev
+  // and production (not just StrictMode), and Supabase's realtime client dedupes channels
+  // by topic name - a second `supabase.channel('room-X')` call for the same room reuses
+  // the already-subscribed instance, so `channel.on(...)` throws on the second attempt and
+  // silently corrupts that invocation's own listener setup (broadcast events like
+  // board-state-response/page-change then never reach that client).
   useEffect(() => {
+    if (collaborationStartedRef.current) return;
+    collaborationStartedRef.current = true;
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get('room');
     
