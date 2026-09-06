@@ -1865,7 +1865,12 @@ export default function AdminDashboard() {
                               {new Date(s.start_time).toLocaleString()} - {new Date(s.end_time).toLocaleTimeString()}
                             </td>
                             <td>
-                              {s.meeting_link ? <a href={s.meeting_link} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline', fontSize: '0.8rem' }}>Join Class</a> : <span style={{ color: '#cbd5e0' }}>None</span>}
+                              {s.meeting_link || s.meeting_link_2 ? (
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                  {s.meeting_link && <a href={s.meeting_link} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline', fontSize: '0.8rem' }}>{s.meeting_link_2 ? '1st Half' : 'Join Class'}</a>}
+                                  {s.meeting_link_2 && <a href={s.meeting_link_2} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline', fontSize: '0.8rem' }}>2nd Half</a>}
+                                </div>
+                              ) : <span style={{ color: '#cbd5e0' }}>None</span>}
                             </td>
                             <td><button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleDeleteSchedule(s.id)}><Trash2 size={12} /></button></td>
                           </tr>

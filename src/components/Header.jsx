@@ -1,13 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Download, RotateCw } from 'lucide-react';
 import { signOut } from '../services/dataService';
+import { isInstallAvailable, isRunningStandalone, subscribeToInstallAvailability, promptInstall } from '../pwaInstall';
 
 export default function Header({ currentUser, onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeMobileDropdown, setActiveMobileDropdown] = useState(null);
+  const [canInstall, setCanInstall] = useState(isInstallAvailable());
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => subscribeToInstallAvailability(setCanInstall), []);
+
+  const handleInstallClick = async () => {
+    setMobileOpen(false);
+    await promptInstall();
+  };
+
+  const handleRefresh = () => {
+    window.location.reload();
+  };
 
   const isDashboard = ['/student', '/tutor', '/admin'].some(path => location.pathname.startsWith(path));
 
@@ -61,6 +74,7 @@ export default function Header({ currentUser, onLogout }) {
           </div>
         </div>
 
+        <div className="nav-right">
         {/* Desktop and Mobile navigation links */}
         <ul className={`nav-links ${mobileOpen ? 'show' : ''}`}>
           {!isDashboard ? (
@@ -70,7 +84,7 @@ export default function Header({ currentUser, onLogout }) {
                 <a 
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
                   onClick={(e) => {
-                    if (window.innerWidth <= 900) {
+                    if (window.innerWidth <= 1150) {
                       e.preventDefault();
                       setActiveMobileDropdown(activeMobileDropdown === 'grades' ? null : 'grades');
                     }
@@ -91,7 +105,7 @@ export default function Header({ currentUser, onLogout }) {
                 <a 
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
                   onClick={(e) => {
-                    if (window.innerWidth <= 900) {
+                    if (window.innerWidth <= 1150) {
                       e.preventDefault();
                       setActiveMobileDropdown(activeMobileDropdown === 'subjects' ? null : 'subjects');
                     }
@@ -181,8 +195,20 @@ export default function Header({ currentUser, onLogout }) {
           </li>
         </ul>
 
-        <button 
-          className="mobile-menu-toggle" 
+        {/* Persistent icon actions: always visible, even with the mobile menu collapsed */}
+        <div className="header-icon-actions">
+          <button onClick={handleRefresh} className="btn-icon-action" title="Refresh page" aria-label="Refresh page">
+            <RotateCw size={16} />
+          </button>
+          {canInstall && !isRunningStandalone() && (
+            <button onClick={handleInstallClick} className="btn-install" title="Install app" aria-label="Install app">
+              <Download size={15} /> <span className="btn-install-label">Install</span>
+            </button>
+          )}
+        </div>
+
+        <button
+          className="mobile-menu-toggle"
           onClick={() => {
             setMobileOpen(!mobileOpen);
             setActiveMobileDropdown(null);
@@ -191,6 +217,7 @@ export default function Header({ currentUser, onLogout }) {
         >
           {mobileOpen ? <X /> : <Menu />}
         </button>
+        </div>
       </nav>
     </header>
   );

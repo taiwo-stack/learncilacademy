@@ -483,25 +483,49 @@ export default function StudentDashboard({ user }) {
                               {classTime.toLocaleDateString([], { month: 'short', day: 'numeric' })} &bull; {classTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </strong>
                           </div>
-                          {nextClass.meeting_link && (
-                            <a
-                              href={nextClass.meeting_link}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn-action approve"
-                              style={{
-                                textDecoration: 'none',
-                                padding: '0.5rem 1rem',
-                                fontSize: '0.85rem',
-                                fontWeight: 700,
-                                background: '#10b981',
-                                color: 'white',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
-                              }}
-                            >
-                              Join Now
-                            </a>
+                          {(nextClass.meeting_link || nextClass.meeting_link_2) && (
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              {nextClass.meeting_link && (
+                                <a
+                                  href={nextClass.meeting_link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn-action approve"
+                                  style={{
+                                    textDecoration: 'none',
+                                    padding: '0.5rem 1rem',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
+                                    background: '#10b981',
+                                    color: 'white',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                                  }}
+                                >
+                                  {nextClass.meeting_link_2 ? 'Join (1st Half)' : 'Join Now'}
+                                </a>
+                              )}
+                              {nextClass.meeting_link_2 && (
+                                <a
+                                  href={nextClass.meeting_link_2}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn-action approve"
+                                  style={{
+                                    textDecoration: 'none',
+                                    padding: '0.5rem 1rem',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
+                                    background: '#10b981',
+                                    color: 'white',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                                  }}
+                                >
+                                  Join (2nd Half)
+                                </a>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -552,21 +576,41 @@ export default function StudentDashboard({ user }) {
                                 ⏰ {classTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
-                            {!isPast && sch.meeting_link && (
-                              <a
-                                href={sch.meeting_link}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="btn-action approve"
-                                style={{
-                                  textDecoration: 'none',
-                                  padding: '0.4rem 0.8rem',
-                                  fontSize: '0.8rem',
-                                  borderRadius: '6px'
-                                }}
-                              >
-                                Join
-                              </a>
+                            {!isPast && (sch.meeting_link || sch.meeting_link_2) && (
+                              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                {sch.meeting_link && (
+                                  <a
+                                    href={sch.meeting_link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn-action approve"
+                                    style={{
+                                      textDecoration: 'none',
+                                      padding: '0.4rem 0.8rem',
+                                      fontSize: '0.8rem',
+                                      borderRadius: '6px'
+                                    }}
+                                  >
+                                    {sch.meeting_link_2 ? '1st Half' : 'Join'}
+                                  </a>
+                                )}
+                                {sch.meeting_link_2 && (
+                                  <a
+                                    href={sch.meeting_link_2}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn-action approve"
+                                    style={{
+                                      textDecoration: 'none',
+                                      padding: '0.4rem 0.8rem',
+                                      fontSize: '0.8rem',
+                                      borderRadius: '6px'
+                                    }}
+                                  >
+                                    2nd Half
+                                  </a>
+                                )}
+                              </div>
                             )}
                           </div>
                         );
@@ -944,8 +988,11 @@ export default function StudentDashboard({ user }) {
                               <td>{tName}</td>
                               <td style={{ fontSize: '0.8rem' }}>{new Date(sch.start_time).toLocaleString()}</td>
                               <td>
-                                {sch.meeting_link ? (
-                                  <a href={sch.meeting_link} target="_blank" rel="noreferrer" className="btn-action approve" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>Join Class</a>
+                                {sch.meeting_link || sch.meeting_link_2 ? (
+                                  <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                    {sch.meeting_link && <a href={sch.meeting_link} target="_blank" rel="noreferrer" className="btn-action approve" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>{sch.meeting_link_2 ? '1st Half' : 'Join Class'}</a>}
+                                    {sch.meeting_link_2 && <a href={sch.meeting_link_2} target="_blank" rel="noreferrer" className="btn-action approve" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>2nd Half</a>}
+                                  </div>
                                 ) : (
                                   <span style={{ color: '#cbd5e0' }}>None</span>
                                 )}

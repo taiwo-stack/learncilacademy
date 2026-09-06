@@ -88,10 +88,16 @@ nav {
   transform: scale(1.02);
 }
 
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
 .nav-links {
   display: flex;
   list-style: none;
-  gap: 2rem;
+  gap: 1.25rem;
   align-items: center;
 }
 
@@ -183,6 +189,69 @@ nav {
 
 .nav-links li:hover .dropdown-menu {
   display: block;
+}
+
+.btn-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  background: transparent;
+  color: var(--primary-color);
+  border: 1.5px solid var(--primary-color);
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-install:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.header-icon-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.btn-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  color: var(--primary-color);
+  border: 1.5px solid var(--primary-color);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-icon-action:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: rotate(90deg);
+}
+
+@media (max-width: 480px) {
+  .btn-install-label {
+    display: none;
+  }
+
+  .btn-install {
+    padding: 0.5rem;
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+  }
 }
 
 .mobile-menu-toggle {
@@ -348,7 +417,7 @@ footer {
 }
 
 /* Mobile responsiveness */
-@media (max-width: 900px) {
+@media (max-width: 1150px) {
   header {
     padding: 0.8rem 0;
   }
@@ -462,7 +531,7 @@ footer {
 }
 
 /* Nav mobile: hide dropdown chevrons and make items tap-friendly */
-@media (max-width: 900px) {
+@media (max-width: 1150px) {
   .nav-links li {
     padding: 0.25rem 0;
     width: 100%;

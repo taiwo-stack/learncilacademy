@@ -118,7 +118,8 @@ const initialSchedules = [
     tutor_id: 'tutor_mock_id',
     title: 'HTML & CSS Foundations Class',
     start_time: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
-    meeting_link: 'https://meet.google.com/abc-defg-hij',
+    meeting_link: 'https://zoom.us/j/1111111111',
+    meeting_link_2: 'https://zoom.us/j/2222222222',
     scheduled_date: new Date().toISOString().split('T')[0]
   },
   {
