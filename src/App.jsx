@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import LandingPage from './pages/LandingPage';
-import Login from './pages/Login';
-import SubjectsPage from './pages/SubjectsPage';
-import StudentDashboard from './pages/StudentDashboard';
-import TutorDashboard from './pages/TutorDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import Whiteboard from './pages/Whiteboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import './styles/global.css';
+
+// Each page loads as its own chunk instead of all being bundled together, so visiting
+// e.g. /login doesn't force downloading the Whiteboard's WebRTC/canvas code first.
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Login = lazy(() => import('./pages/Login'));
+const SubjectsPage = lazy(() => import('./pages/SubjectsPage'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const TutorDashboard = lazy(() => import('./pages/TutorDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const Whiteboard = lazy(() => import('./pages/Whiteboard'));
+
+const RouteFallback = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+    <div
+      className="loading-spinner"
+      style={{ borderColor: 'rgba(15, 44, 89, 0.15)', borderTopColor: 'var(--primary-color)', width: '32px', height: '32px' }}
+    />
+  </div>
+);
 
 function AppContent() {
   // Persist session across refreshes via sessionStorage
@@ -44,43 +56,45 @@ function AppContent() {
   return (
     <>
       {!isWhiteboard && <Header currentUser={currentUser} onLogout={handleLogout} />}
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/subjects" element={<SubjectsPage />} />
-        <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-        <Route 
-          path="/whiteboard" 
-          element={
-            <ProtectedRoute allowedRoles={['tutor', 'admin']} user={currentUser} allowRoomParticipant={true}>
-              <Whiteboard user={currentUser} />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/student" 
-          element={
-            <ProtectedRoute allowedRoles={['student']} user={currentUser}>
-              <StudentDashboard user={currentUser} />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/tutor" 
-          element={
-            <ProtectedRoute allowedRoles={['tutor']} user={currentUser}>
-              <TutorDashboard user={currentUser} />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin" 
-          element={
-            <ProtectedRoute allowedRoles={['admin']} user={currentUser}>
-              <AdminDashboard user={currentUser} />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/subjects" element={<SubjectsPage />} />
+          <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
+          <Route
+            path="/whiteboard"
+            element={
+              <ProtectedRoute allowedRoles={['tutor', 'admin']} user={currentUser} allowRoomParticipant={true}>
+                <Whiteboard user={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student"
+            element={
+              <ProtectedRoute allowedRoles={['student']} user={currentUser}>
+                <StudentDashboard user={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tutor"
+            element={
+              <ProtectedRoute allowedRoles={['tutor']} user={currentUser}>
+                <TutorDashboard user={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']} user={currentUser}>
+                <AdminDashboard user={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
       {!isDashboardOrWhiteboard && !location.pathname.startsWith('/login') && <Footer />}
     </>
   );

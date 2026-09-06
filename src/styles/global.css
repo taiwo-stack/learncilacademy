@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap');
+/* Outfit/Poppins are loaded via an async <link> in index.html, not @import here —
+   @import blocks parsing of this entire stylesheet until the external fetch resolves. */
 
 :root {
   --primary-color: #0F2C59;       /* Foundaxia Navy Blue */
