@@ -327,7 +327,11 @@ export default function AdminDashboard() {
       };
 
       if (tutorEditPassword.trim() !== '') {
-        await resetUserPassword(id, tutorEditPassword.trim());
+        try {
+          await resetUserPassword(id, tutorEditPassword.trim());
+        } catch (pwErr) {
+          throw new Error('Failed to reset password: ' + pwErr.message);
+        }
       }
 
       const updated = await updateTutor(id, updates);

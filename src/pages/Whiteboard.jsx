@@ -53,6 +53,7 @@ export default function Whiteboard({ user }) {
   const localVideoStripRef = useRef(null); // Local camera preview in Right Participant Strip
   const remoteVideoRefs = useRef({}); // { peerId: HTMLVideoElement }
   const currentStrokeRef = useRef(null);
+  const dragOriginalElementsRef = useRef(null); // pre-gesture elements snapshot for select-drag/resize and eraser-drag, so undo restores the true "before" state
   const handleBroadcastEventRef = useRef(null);
   const presenceSyncHandlerRef = useRef(null);
   const pointsSentCountRef = useRef(0);
@@ -564,6 +565,11 @@ export default function Whiteboard({ user }) {
         break;
 
       case 'drawing-end':
+        // Record a history checkpoint before applying the remote stroke, so a local
+        // Undo reverts this specific change instead of popping a now-stale snapshot
+        // from before the remote update (which would silently drop it).
+        setUndoStack(prev => [...prev, elements]);
+        setRedoStack([]);
         setElements(prev => [...prev, payload.element]);
         // Delay active drawing ref cleanup slightly to overlap with React state commit
         // and prevent concurrent cursor-move updates from wiping the stroke off canvas
@@ -574,6 +580,8 @@ export default function Whiteboard({ user }) {
         break;
 
       case 'element-update':
+        setUndoStack(prev => [...prev, elements]);
+        setRedoStack([]);
         if (payload.action === 'clear') {
           setElements([]);
           updateCurrentPageElements([]);
@@ -943,6 +951,9 @@ export default function Whiteboard({ user }) {
         delete peerConnectionsRef.current[peerId];
         delete iceCandidateQueuesRef.current[peerId];
         delete remoteVideoRefs.current[peerId];
+        delete remoteAnalysersRef.current[peerId];
+        const audioEl = document.getElementById('peer-audio-' + peerId);
+        if (audioEl) audioEl.remove();
         setRemoteVideoStreams(prev => {
           const next = { ...prev };
           delete next[peerId];
@@ -1584,10 +1595,11 @@ export default function Whiteboard({ user }) {
 
     // ERASER: Stroke / element eraser checks intersection and deletes (restricted to strokes and text)
     if (activeTool === 'eraser') {
+      dragOriginalElementsRef.current = elements;
       const hit = getElementAtPosition(x, y);
       if (hit && (hit.element.type === 'stroke' || hit.element.type === 'text')) {
         const remaining = elements.filter(el => el.id !== hit.element.id);
-        pushToHistory(remaining);
+        setElements(remaining);
       }
       setIsDrawing(true);
       return;
@@ -1597,6 +1609,7 @@ export default function Whiteboard({ user }) {
     if (activeTool === 'select') {
       const hit = getElementAtPosition(x, y);
       if (hit) {
+        dragOriginalElementsRef.current = elements;
         setSelectedElement(hit.element);
         setDragStart({ x: x, y: y });
         if (hit.type === 'resize') {
@@ -1876,16 +1889,25 @@ export default function Whiteboard({ user }) {
     setIsDrawing(false);
 
     if (activeTool === 'eraser' && isDrawing) {
-      setUndoStack(prev => [...prev, elements]);
+      // Use the snapshot captured at gesture start, not the current `elements` closure —
+      // by pointer-up, `elements` already reflects every deletion made during the drag,
+      // so the true "before" state has to come from the ref, not this render's state.
+      const before = dragOriginalElementsRef.current !== null ? dragOriginalElementsRef.current : elements;
+      setUndoStack(prev => [...prev, before]);
       setRedoStack([]);
+      dragOriginalElementsRef.current = null;
       // Broadcast elements state after eraser wipe
       broadcastElementsUpdate(elements);
       return;
     }
 
     if (activeTool === 'select' && selectedElement) {
-      // Finished drag/resize, save state in history
-      pushToHistory(elements);
+      // Same as above: `elements` already reflects the final dragged/resized position by
+      // the time we get here, so history has to be seeded from the pre-drag snapshot.
+      const before = dragOriginalElementsRef.current !== null ? dragOriginalElementsRef.current : elements;
+      setUndoStack(prev => [...prev, before]);
+      setRedoStack([]);
+      dragOriginalElementsRef.current = null;
       // Broadcast updated layout
       broadcastElementsUpdate(elements);
       return;
@@ -1915,6 +1937,11 @@ export default function Whiteboard({ user }) {
 
   // Double click handler (can edit text easily or add text anywhere)
   const handleDoubleClick = (e) => {
+    if (isCollaborating && !hasDrawAccess) {
+      triggerToast("Drawing locked! Ask the tutor (host) to grant you drawing access.");
+      return;
+    }
+
     const { x, y, screenX, screenY } = getCanvasCoords(e);
     const hit = getElementAtPosition(x, y);
     
