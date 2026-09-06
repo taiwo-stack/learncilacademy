@@ -1307,6 +1307,24 @@ export const saveSchedule = async (schedule) => {
   }
 };
 
+export const updateSchedule = async (id, updates) => {
+  if (hasSupabaseConfig) {
+    const { data, error } = await supabase.from('schedules').update(updates).eq('id', id).select();
+    if (error) throw error;
+    return data[0];
+  } else {
+    initLocalStorage();
+    const items = JSON.parse(localStorage.getItem('lc_schedules'));
+    const idx = items.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      items[idx] = { ...items[idx], ...updates };
+      localStorage.setItem('lc_schedules', JSON.stringify(items));
+      return items[idx];
+    }
+    throw new Error('Schedule not found');
+  }
+};
+
 export const deleteSchedule = async (id) => {
   if (hasSupabaseConfig) {
     const { error } = await supabase.from('schedules').delete().eq('id', id);

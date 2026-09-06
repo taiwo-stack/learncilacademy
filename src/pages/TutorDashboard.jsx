@@ -5,15 +5,15 @@ import {
   getTasks, saveTask, deleteTask,
   getStudentTasks, gradeStudentTask,
   getTopics,
-  getSchedules, getAttendance, markAttendance, saveSchedule, deleteSchedule,
+  getSchedules, getAttendance, markAttendance, saveSchedule, updateSchedule, deleteSchedule,
   getAnnouncements, createAnnouncement,
   getChatMessages, sendChatMessage,
   getCourseTutors, getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile
 } from '../services/dataService';
 import { 
-  Calendar, User, Clock, AlertCircle, Save, Check, X, 
+  Calendar, User, Clock, AlertCircle, Save, Check, X,
   MessageSquare, Plus, CheckSquare, Megaphone, Trash2, Send,
-  BookOpen, FileText, Upload, MonitorPlay
+  BookOpen, FileText, Upload, MonitorPlay, Edit
 } from 'lucide-react';
 import HtmlSlideModal from '../components/HtmlSlideModal';
 import '../styles/Dashboard.css';
@@ -148,6 +148,8 @@ export default function TutorDashboard({ user }) {
   const [schTitle, setSchTitle] = useState('');
   const [schStart, setSchStart] = useState('');
   const [schEnd, setSchEnd] = useState('');
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [showEditScheduleModal, setShowEditScheduleModal] = useState(false);
   const [schLink, setSchLink] = useState('');
   const [schLink2, setSchLink2] = useState('');
   const [schType, setSchType] = useState('single'); // 'single' or 'recurring'
@@ -460,6 +462,35 @@ export default function TutorDashboard({ user }) {
     }
   };
 
+  const handleEditScheduleClick = (sch) => {
+    setEditingSchedule({
+      ...sch,
+      start_time: sch.start_time ? new Date(sch.start_time).toISOString().slice(0, 16) : '',
+      end_time: sch.end_time ? new Date(sch.end_time).toISOString().slice(0, 16) : ''
+    });
+    setShowEditScheduleModal(true);
+  };
+
+  const handleEditScheduleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const updates = {
+        title: editingSchedule.title,
+        start_time: new Date(editingSchedule.start_time).toISOString(),
+        end_time: editingSchedule.end_time ? new Date(editingSchedule.end_time).toISOString() : null,
+        meeting_link: editingSchedule.meeting_link || null,
+        meeting_link_2: editingSchedule.meeting_link_2 || null
+      };
+      const updated = await updateSchedule(editingSchedule.id, updates);
+      setSchedules(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setShowEditScheduleModal(false);
+      setEditingSchedule(null);
+      alert('Class schedule updated!');
+    } catch (err) {
+      alert('Error updating schedule: ' + err.message);
+    }
+  };
+
   // Chat Actions
   const handleSendChat = async (e) => {
     e.preventDefault();
@@ -766,9 +797,14 @@ export default function TutorDashboard({ user }) {
                                 </div>
                               </td>
                               <td>
-                                <button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleDeleteSchedule(sch.id)} title="Delete Class">
-                                  <Trash2 size={12} />
-                                </button>
+                                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                  <button className="btn-action edit" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleEditScheduleClick(sch)} title="Edit Class">
+                                    <Edit size={12} />
+                                  </button>
+                                  <button className="btn-action delete" style={{ padding: '0.2rem 0.4rem' }} onClick={() => handleDeleteSchedule(sch.id)} title="Delete Class">
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -2235,6 +2271,44 @@ export default function TutorDashboard({ user }) {
           </div>
         )}
       </main>
+
+      {showEditScheduleModal && editingSchedule && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => { setShowEditScheduleModal(false); setEditingSchedule(null); }}><X size={20} /></button>
+            <h3 className="modal-title">Edit Class Schedule</h3>
+            <form onSubmit={handleEditScheduleSubmit}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Class Title *</label>
+                <input type="text" value={editingSchedule.title || ''} onChange={(e) => setEditingSchedule(prev => ({ ...prev, title: e.target.value }))} required />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label>Start Time *</label>
+                  <input type="datetime-local" value={editingSchedule.start_time || ''} onChange={(e) => setEditingSchedule(prev => ({ ...prev, start_time: e.target.value }))} required />
+                </div>
+                <div className="form-group">
+                  <label>End Time</label>
+                  <input type="datetime-local" value={editingSchedule.end_time || ''} onChange={(e) => setEditingSchedule(prev => ({ ...prev, end_time: e.target.value }))} />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Meeting Join Link - First Half</label>
+                <input type="url" value={editingSchedule.meeting_link || ''} onChange={(e) => setEditingSchedule(prev => ({ ...prev, meeting_link: e.target.value }))} placeholder="https://zoom.us/j/..." />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label>Meeting Join Link - Second Half (optional)</label>
+                <input type="url" value={editingSchedule.meeting_link_2 || ''} onChange={(e) => setEditingSchedule(prev => ({ ...prev, meeting_link_2: e.target.value }))} placeholder="https://zoom.us/j/..." />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" className="btn-prev" onClick={() => { setShowEditScheduleModal(false); setEditingSchedule(null); }}>Cancel</button>
+                <button type="submit" className="btn-submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <HtmlSlideModal url={viewingSlide?.file_url} title={viewingSlide?.title} onClose={() => setViewingSlide(null)} />
     </div>
   );
