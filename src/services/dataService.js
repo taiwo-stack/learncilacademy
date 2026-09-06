@@ -628,7 +628,13 @@ const callAdminApi = async (action, payload) => {
     body: JSON.stringify({ action, ...payload })
   });
 
-  const result = await response.json();
+  const rawText = await response.text();
+  let result;
+  try {
+    result = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    throw new Error(`Admin API returned an invalid response (status ${response.status}).`);
+  }
   if (!response.ok) {
     throw new Error(result.error || 'Failed to perform administrative action');
   }
