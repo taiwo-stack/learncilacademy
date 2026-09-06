@@ -1,19 +1,22 @@
 import React from 'react';
-import { 
-  ChevronLeft, 
-  Undo2, 
-  Redo2, 
-  Download, 
-  MonitorPlay, 
-  Trash2, 
-  Share2, 
-  Users, 
-  Mic, 
-  MicOff, 
-  Video, 
-  VideoOff, 
-  Hand, 
-  ChevronUp 
+import {
+  ChevronLeft,
+  Undo2,
+  Redo2,
+  Download,
+  MonitorPlay,
+  Trash2,
+  Share2,
+  Users,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Hand,
+  ChevronUp,
+  Presentation,
+  MousePointerClick,
+  Pencil
 } from 'lucide-react';
 
 export default function WhiteboardHeader({
@@ -47,7 +50,15 @@ export default function WhiteboardHeader({
   showParticipantStrip,
   setShowParticipantStrip,
   isHandRaised,
-  toggleRaiseHand
+  toggleRaiseHand,
+  slideMaterials,
+  currentSlideUrl,
+  showSlidePicker,
+  setShowSlidePicker,
+  attachSlideToCurrentPage,
+  clearSlideFromCurrentPage,
+  isSlideInteractive,
+  setIsSlideInteractive
 }) {
   return (
     <header className={`whiteboard-header ${isHeaderCollapsed ? 'collapsed' : ''}`}>
@@ -118,7 +129,84 @@ export default function WhiteboardHeader({
           </button>
         )}
 
-        <button 
+        {/* HTML Teaching Slide — Host only */}
+        {isHost && (
+          <div style={{ position: 'relative' }}>
+            <button
+              className="whiteboard-btn"
+              style={{
+                background: currentSlideUrl ? 'rgba(129, 140, 248, 0.18)' : 'rgba(129, 140, 248, 0.12)',
+                color: '#818cf8',
+                borderColor: 'rgba(129, 140, 248, 0.3)'
+              }}
+              onClick={() => setShowSlidePicker(prev => !prev)}
+              data-tooltip="Attach an HTML teaching slide to this page"
+            >
+              <Presentation size={16} />
+              <span>{currentSlideUrl ? 'Change Slide' : 'Attach Slide'}</span>
+            </button>
+
+            {showSlidePicker && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50,
+                background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px',
+                padding: '0.5rem', minWidth: '220px', maxHeight: '260px', overflowY: 'auto',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.4)'
+              }}>
+                {slideMaterials.length === 0 ? (
+                  <div style={{ color: '#94a3b8', fontSize: '0.78rem', padding: '0.5rem' }}>
+                    No HTML slides uploaded yet. Upload one from your Course Materials first.
+                  </div>
+                ) : (
+                  slideMaterials.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => attachSlideToCurrentPage(m)}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                        color: '#e2e8f0', padding: '0.5rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      🖥️ {m.title}
+                    </button>
+                  ))
+                )}
+                {currentSlideUrl && (
+                  <button
+                    onClick={clearSlideFromCurrentPage}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                      borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '0.3rem', paddingTop: '0.6rem',
+                      color: '#fca5a5', padding: '0.5rem 0.6rem', cursor: 'pointer', fontSize: '0.82rem'
+                    }}
+                  >
+                    ✕ Remove slide from this page
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Draw vs Interact-with-slide toggle — only meaningful once a slide is attached */}
+        {currentSlideUrl && (
+          <button
+            className="whiteboard-btn"
+            style={{
+              background: isSlideInteractive ? 'rgba(52, 211, 153, 0.18)' : 'rgba(255,255,255,0.06)',
+              color: isSlideInteractive ? '#34d399' : '#cbd5e1'
+            }}
+            onClick={() => setIsSlideInteractive(prev => !prev)}
+            data-tooltip={isSlideInteractive ? 'Clicks go to the slide — switch back to drawing' : 'Clicks draw on the canvas — switch to click the slide itself'}
+          >
+            {isSlideInteractive ? <MousePointerClick size={16} /> : <Pencil size={16} />}
+            <span>{isSlideInteractive ? 'Interacting' : 'Drawing'}</span>
+          </button>
+        )}
+
+        <button
           className="whiteboard-btn danger" 
           onClick={() => setShowClearModal(true)}
           disabled={elements.length === 0 || (isCollaborating && !isHost)}

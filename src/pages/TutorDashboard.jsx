@@ -15,6 +15,7 @@ import {
   MessageSquare, Plus, CheckSquare, Megaphone, Trash2, Send,
   BookOpen, FileText, Upload, MonitorPlay
 } from 'lucide-react';
+import HtmlSlideModal from '../components/HtmlSlideModal';
 import '../styles/Dashboard.css';
 
 const formatMessageTime = (dateStr) => {
@@ -38,6 +39,7 @@ const getSpecialClassImage = (title = '', index = 0) => {
 
 export default function TutorDashboard({ user }) {
   const [activeTab, setActiveTab] = useState('schedule');
+  const [viewingSlide, setViewingSlide] = useState(null); // material row being viewed in the embedded HTML slide modal
   const [bookings, setBookings] = useState([]);
   const [tutorInfo, setTutorInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -910,6 +912,12 @@ export default function TutorDashboard({ user }) {
                 const handleMaterialUpload = async (e) => {
                   e.preventDefault();
                   if (!newMaterialTitle.trim() || !materialFile || !activeTopicIdToUse) return;
+
+                  const isHtmlSlide = materialFile.type === 'text/html' || /\.html?$/i.test(materialFile.name);
+                  if (isHtmlSlide && materialFile.size > 5 * 1024 * 1024) {
+                    return alert('HTML slide files must be under 5MB.');
+                  }
+
                   setUploadingMaterial(true);
                   try {
                     const fileUrl = await uploadMaterialFile(materialFile.name, materialFile);
@@ -918,7 +926,7 @@ export default function TutorDashboard({ user }) {
                       topic_id: activeTopicIdToUse,
                       title: newMaterialTitle.trim(),
                       file_url: fileUrl,
-                      file_type: materialFile.type || 'file'
+                      file_type: isHtmlSlide ? 'html_slide' : (materialFile.type || 'file')
                     });
                     setMaterials(prev => [...prev, saved]);
                     setNewMaterialTitle('');
@@ -1015,9 +1023,15 @@ export default function TutorDashboard({ user }) {
                                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                                   {materials.filter(m => m.topic_id === activeTopicIdToUse).map(m => (
                                     <li key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #edf2f7' }}>
-                                      <a href={m.file_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--primary-color)', fontWeight: '600', textDecoration: 'none' }}>
-                                        📎 {m.title}
-                                      </a>
+                                      {m.file_type === 'html_slide' ? (
+                                        <button onClick={() => setViewingSlide(m)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--primary-color)', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                          🖥️ {m.title}
+                                        </button>
+                                      ) : (
+                                        <a href={m.file_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--primary-color)', fontWeight: '600', textDecoration: 'none' }}>
+                                          📎 {m.title}
+                                        </a>
+                                      )}
                                       <button onClick={() => handleMaterialDelete(m.id)} style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer', fontSize: '0.75rem', display: 'inline-flex', padding: '0.2rem' }} title="Delete material">✕</button>
                                     </li>
                                   ))}
@@ -2221,6 +2235,7 @@ export default function TutorDashboard({ user }) {
           </div>
         )}
       </main>
+      <HtmlSlideModal url={viewingSlide?.file_url} title={viewingSlide?.title} onClose={() => setViewingSlide(null)} />
     </div>
   );
 }

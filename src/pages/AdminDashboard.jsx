@@ -18,11 +18,13 @@ import {
   BookOpen, FolderMinus, Link2, BookOpenCheck, Settings, Eye, Paperclip, Clock,
   ArrowUp, ArrowDown, Edit, MessageSquare, MonitorPlay
 } from 'lucide-react';
+import HtmlSlideModal from '../components/HtmlSlideModal';
 import '../styles/Dashboard.css';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
-  
+  const [viewingSlide, setViewingSlide] = useState(null); // material row being viewed in the embedded HTML slide modal
+
   // Data lists
   const [bookings, setBookings] = useState([]);
   const [students, setStudents] = useState([]);
@@ -537,10 +539,14 @@ export default function AdminDashboard() {
     if (!selectedCourseId || !selectedTopicId || !materialFile) {
       return alert('Please select a topic and file first.');
     }
+    const isHtmlSlide = materialFile.type === 'text/html' || /\.html?$/i.test(materialFile.name);
+    if (isHtmlSlide && materialFile.size > 5 * 1024 * 1024) {
+      return alert('HTML slide files must be under 5MB.');
+    }
     setUploading(true);
     try {
       const fileUrl = await uploadMaterialFile(materialFile.name, materialFile);
-      const fileType = materialFile.type.includes('pdf') ? 'pdf' : (materialFile.type.includes('image') ? 'image' : 'other');
+      const fileType = isHtmlSlide ? 'html_slide' : (materialFile.type.includes('pdf') ? 'pdf' : (materialFile.type.includes('image') ? 'image' : 'other'));
       const saved = await saveMaterial({
         course_id: selectedCourseId,
         topic_id: selectedTopicId,
@@ -1549,7 +1555,11 @@ export default function AdminDashboard() {
                                         <li key={m.id} style={{ display: 'flex', justify: 'space-between', items: 'center', background: '#f7fafc', padding: '0.4rem 0.6rem', borderRadius: '8px', fontSize: '0.8rem' }}>
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                             <Paperclip size={12} color="#4a5568" />
-                                            <a href={m.file_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', fontWeight: '500', textDecoration: 'underline' }}>{m.title}</a>
+                                            {m.file_type === 'html_slide' ? (
+                                              <button onClick={() => setViewingSlide(m)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-color)', fontWeight: '500', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit' }}>{m.title}</button>
+                                            ) : (
+                                              <a href={m.file_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', fontWeight: '500', textDecoration: 'underline' }}>{m.title}</a>
+                                            )}
                                             <span style={{ fontSize: '0.65rem', color: '#a0aec0', textTransform: 'uppercase' }}>({m.file_type})</span>
                                           </div>
                                           <button style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer' }} onClick={() => handleDeleteMaterial(m.id)}><Trash2 size={12} /></button>
@@ -2990,6 +3000,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      <HtmlSlideModal url={viewingSlide?.file_url} title={viewingSlide?.title} onClose={() => setViewingSlide(null)} />
     </div>
   );
 }

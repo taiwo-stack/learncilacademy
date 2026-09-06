@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ZoomIn, ZoomOut, Maximize, Trash2, ChevronLeft, ChevronRight, ChevronDown, Image as ImageIcon, MonitorPlay } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { getMaterials, getCourseTutors } from '../services/dataService';
 import '../styles/Whiteboard.css';
 
 // â”€â”€ Whiteboard Sub-Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import WhiteboardHeader from '../components/whiteboard/WhiteboardHeader';
+import SlideLayer from '../components/whiteboard/SlideLayer';
 import WhiteboardToolbar from '../components/whiteboard/WhiteboardToolbar';
 import WhiteboardProperties from '../components/whiteboard/WhiteboardProperties';
 import CollaborationSidebar from '../components/whiteboard/CollaborationSidebar';
@@ -133,6 +135,57 @@ export default function Whiteboard({ user }) {
   const [pages, setPages] = useState(loadPersistedPages);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
+  // HTML Teaching Slide attached to the current page (live behind the drawing canvas)
+  const currentSlideUrl = pages[currentPageIndex]?.slideUrl || null;
+  const [slideMaterials, setSlideMaterials] = useState([]); // this tutor/admin's uploaded html_slide materials
+  const [showSlidePicker, setShowSlidePicker] = useState(false);
+  const [isSlideInteractive, setIsSlideInteractive] = useState(false); // false = draw on canvas, true = clicks pass through to the slide
+
+  // Load the host's available html_slide materials once, so the "Attach Slide" picker has something to show
+  useEffect(() => {
+    if (!isHost) return;
+    (async () => {
+      try {
+        const [allMaterials, courseTutors] = await Promise.all([getMaterials(), getCourseTutors()]);
+        const htmlSlides = allMaterials.filter(m => m.file_type === 'html_slide');
+        if (user?.role === 'admin') {
+          setSlideMaterials(htmlSlides);
+        } else {
+          const myCourseIds = new Set(courseTutors.filter(ct => ct.tutor_id === user?.id).map(ct => ct.course_id));
+          setSlideMaterials(htmlSlides.filter(m => myCourseIds.has(m.course_id)));
+        }
+      } catch (err) {
+        console.error('Failed to load slide materials for whiteboard picker:', err);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost]);
+
+  const broadcastPagesUpdate = (updatedPages) => {
+    if (isCollaborating && isHost && channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'page-change',
+        payload: { pages: updatedPages, pageIndex: currentPageIndex }
+      });
+    }
+  };
+
+  const attachSlideToCurrentPage = (material) => {
+    const updatedPages = [...pages];
+    updatedPages[currentPageIndex] = { ...updatedPages[currentPageIndex], slideUrl: material.file_url };
+    setPages(updatedPages);
+    setShowSlidePicker(false);
+    broadcastPagesUpdate(updatedPages);
+  };
+
+  const clearSlideFromCurrentPage = () => {
+    const updatedPages = [...pages];
+    updatedPages[currentPageIndex] = { ...updatedPages[currentPageIndex], slideUrl: null };
+    setPages(updatedPages);
+    setIsSlideInteractive(false);
+    broadcastPagesUpdate(updatedPages);
+  };
 
   // Active slide state (mirrors current page elements and history)
   const [elements, setElements] = useState([]);
@@ -2884,6 +2937,14 @@ export default function Whiteboard({ user }) {
         setShowParticipantStrip={setShowParticipantStrip}
         isHandRaised={isHandRaised}
         toggleRaiseHand={toggleRaiseHand}
+        slideMaterials={slideMaterials}
+        currentSlideUrl={currentSlideUrl}
+        showSlidePicker={showSlidePicker}
+        setShowSlidePicker={setShowSlidePicker}
+        attachSlideToCurrentPage={attachSlideToCurrentPage}
+        clearSlideFromCurrentPage={clearSlideFromCurrentPage}
+        isSlideInteractive={isSlideInteractive}
+        setIsSlideInteractive={setIsSlideInteractive}
       />
 
       {/* â”€â”€ Main Workspace Frame â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -2899,11 +2960,19 @@ export default function Whiteboard({ user }) {
           </button>
         )}
 
+        {/* â”€â”€ HTML Teaching Slide (live, behind the canvas) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <SlideLayer slideUrl={currentSlideUrl} interactive={isSlideInteractive} />
+
         {/* â”€â”€ Canvas Element â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <canvas
           ref={canvasRef}
           className={`whiteboard-canvas theme-${theme} grid-${gridType} ${isPanning ? 'grabbing' : ''}`}
-          style={{ cursor: getCanvasCursor() }}
+          style={{
+            cursor: getCanvasCursor(),
+            position: currentSlideUrl ? 'relative' : undefined,
+            background: currentSlideUrl ? 'transparent' : undefined,
+            pointerEvents: (currentSlideUrl && isSlideInteractive) ? 'none' : 'auto'
+          }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

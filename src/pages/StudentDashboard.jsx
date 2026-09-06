@@ -13,6 +13,7 @@ import {
   MessageSquare, FileText, Send, CheckSquare, Award, Check, X, Megaphone, Play, LayoutDashboard, Menu,
   ChevronLeft
 } from 'lucide-react';
+import HtmlSlideModal from '../components/HtmlSlideModal';
 import '../styles/Dashboard.css';
 
 const formatMessageTime = (dateStr) => {
@@ -51,6 +52,7 @@ export default function StudentDashboard({ user }) {
   const [uploading, setUploading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileChatView, setMobileChatView] = useState('list');
+  const [viewingSlide, setViewingSlide] = useState(null); // material row being viewed in the embedded HTML slide modal
 
   // LMS Student state variables
   const [enrollments, setEnrollments] = useState([]);
@@ -831,9 +833,10 @@ export default function StudentDashboard({ user }) {
                                   const isPdf = type === 'pdf' || /\.pdf$/i.test(m.file_url || '');
                                   const isVideo = type === 'video' || /\.(mp4|webm|mov|avi)$/i.test(m.file_url || '');
                                   const isDoc = type === 'doc' || type === 'docx' || /\.(doc|docx)$/i.test(m.file_url || '');
+                                  const isHtmlSlide = type === 'html_slide';
 
-                                  const fileIcon = isImage ? '🖼️' : isPdf ? '📄' : isVideo ? '🎬' : isDoc ? '📝' : '📎';
-                                  const typeLabel = isImage ? 'Image' : isPdf ? 'PDF' : isVideo ? 'Video' : isDoc ? 'Document' : 'File';
+                                  const fileIcon = isHtmlSlide ? '🖥️' : isImage ? '🖼️' : isPdf ? '📄' : isVideo ? '🎬' : isDoc ? '📝' : '📎';
+                                  const typeLabel = isHtmlSlide ? 'Slide' : isImage ? 'Image' : isPdf ? 'PDF' : isVideo ? 'Video' : isDoc ? 'Document' : 'File';
 
                                   return (
                                     <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.65rem 0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -850,23 +853,40 @@ export default function StudentDashboard({ user }) {
 
                                       {/* Action buttons */}
                                       <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-                                        {/* View button — opens in new tab */}
-                                        <a
-                                          href={m.file_url}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                                            padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.78rem',
-                                            fontWeight: '600', textDecoration: 'none',
-                                            background: 'var(--primary-color)', color: 'white',
-                                            boxShadow: '0 2px 6px rgba(0,0,0,0.12)', transition: 'opacity 0.15s'
-                                          }}
-                                          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                                        >
-                                          👁 View
-                                        </a>
+                                        {/* View button — html slides open embedded in a modal, everything else in a new tab */}
+                                        {isHtmlSlide ? (
+                                          <button
+                                            onClick={() => setViewingSlide(m)}
+                                            style={{
+                                              display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                                              padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.78rem',
+                                              fontWeight: '600', border: 'none', cursor: 'pointer',
+                                              background: 'var(--primary-color)', color: 'white',
+                                              boxShadow: '0 2px 6px rgba(0,0,0,0.12)', transition: 'opacity 0.15s'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                          >
+                                            👁 View
+                                          </button>
+                                        ) : (
+                                          <a
+                                            href={m.file_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{
+                                              display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                                              padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.78rem',
+                                              fontWeight: '600', textDecoration: 'none',
+                                              background: 'var(--primary-color)', color: 'white',
+                                              boxShadow: '0 2px 6px rgba(0,0,0,0.12)', transition: 'opacity 0.15s'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                          >
+                                            👁 View
+                                          </a>
+                                        )}
 
                                         {/* Download button — forces download */}
                                         <a
@@ -1403,6 +1423,7 @@ export default function StudentDashboard({ user }) {
           </div>
         )}
       </main>
+      <HtmlSlideModal url={viewingSlide?.file_url} title={viewingSlide?.title} onClose={() => setViewingSlide(null)} />
     </div>
   );
 }
