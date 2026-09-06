@@ -139,7 +139,15 @@ export default function Whiteboard({ user }) {
   const currentSlideUrl = pages[currentPageIndex]?.slideUrl || null;
   const [slideMaterials, setSlideMaterials] = useState([]); // this tutor/admin's uploaded html_slide materials
   const [showSlidePicker, setShowSlidePicker] = useState(false);
-  const [isSlideInteractive, setIsSlideInteractive] = useState(false); // false = draw on canvas, true = clicks pass through to the slide
+  const [isSlideInteractive, setIsSlideInteractive] = useState(true); // false = draw on canvas, true = clicks pass through to the slide
+
+  // Default to "interactive" whenever a (new) slide becomes active - most uploaded slide
+  // decks are click-driven (their own Next/Back nav, quiz buttons, etc.), so navigating
+  // them should work immediately without an extra manual toggle. Drawing over it is the
+  // opt-in action via the Draw/Interact toggle, not the other way around.
+  useEffect(() => {
+    if (currentSlideUrl) setIsSlideInteractive(true);
+  }, [currentSlideUrl]);
 
   // Load the host's available html_slide materials once, so the "Attach Slide" picker has something to show
   useEffect(() => {
@@ -3164,6 +3172,11 @@ export default function Whiteboard({ user }) {
           showVideoGrid={showVideoGrid}
         />
 
+        {/* While actively interacting with an attached slide, hide the drawing-only chrome
+            entirely - these floating panels would otherwise sit on top of (and block clicks
+            on) the slide's own UI, which every uploaded deck has pinned to fixed positions. */}
+        {!(currentSlideUrl && isSlideInteractive) && (
+        <>
         {/* â”€â”€ Floating Left Toolbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <WhiteboardToolbar
           isToolbarCollapsed={isToolbarCollapsed}
@@ -3220,8 +3233,11 @@ export default function Whiteboard({ user }) {
             <Maximize size={14} style={{ transform: 'scale(0.8)' }} />
           </button>
         </div>
+        </>
+        )}
 
         {/* â”€â”€ Center Bottom Slide Navigator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {!(currentSlideUrl && isSlideInteractive) && (
         <div className="whiteboard-slide-controls">
           <button 
             className="slide-btn" 
@@ -3256,6 +3272,7 @@ export default function Whiteboard({ user }) {
             </button>
           )}
         </div>
+        )}
 
         {/* â”€â”€ Floating Bottom Status Indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="whiteboard-statusbar">
