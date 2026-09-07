@@ -36,9 +36,24 @@ export default function SandboxedFrame({ src, title = 'Slide content', allowInte
     );
   }
 
+  // While the fetch is in flight, show something rather than a blank white pane -
+  // otherwise a slower connection makes an in-progress load look like a broken/blank slide.
+  if (html === null) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: '#94a3b8', background: 'white', gap: '0.6rem', ...style }}>
+        <div className="loading-spinner" style={{ borderColor: 'rgba(15, 44, 89, 0.15)', borderTopColor: 'var(--primary-color)', width: '20px', height: '20px' }} />
+        Loading slide…
+      </div>
+    );
+  }
+
   return (
     <iframe
-      srcDoc={html ?? ''}
+      // Forces a full remount instead of React mutating srcDoc on an existing iframe -
+      // some browsers don't reliably reload an iframe's document when only its srcDoc
+      // property changes on an already-mounted element.
+      key={src}
+      srcDoc={html}
       title={title}
       sandbox="allow-scripts"
       style={{
