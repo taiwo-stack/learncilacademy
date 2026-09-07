@@ -1349,7 +1349,14 @@ export const createLiveSession = async (session) => {
 
 export const getLiveSessionsForStudent = async (studentId) => {
   if (hasSupabaseConfig) {
-    const { data, error } = await supabase.from('live_sessions').select('*').contains('student_ids', [studentId]);
+    // .contains() sends a Postgres array literal here instead of JSON, which this
+    // project's PostgREST rejects against a jsonb column - .filter('cs', ...) with an
+    // explicit JSON string is the encoding that actually works (confirmed against
+    // another jsonb array column, tasks.target_student_ids).
+    const { data, error } = await supabase
+      .from('live_sessions')
+      .select('*')
+      .filter('student_ids', 'cs', JSON.stringify([studentId]));
     if (error) throw error;
     return data;
   }
@@ -1434,17 +1441,69 @@ export const getChatMessages = async () => {
 };
 
 export const sendChatMessage = async (msg) => {
+  const { sender_name, ...dbMsg } = msg;
   const chatMessageId = 'ch_' + Date.now();
   if (hasSupabaseConfig) {
-    const { data, error } = await supabase.from('chat_messages').insert([{ id: chatMessageId, ...msg }]).select();
+    const { data, error } = await supabase.from('chat_messages').insert([{ id: chatMessageId, ...dbMsg }]).select();
     if (error) throw error;
-    return data[0];
+    const saved = data[0];
+    notifyNewMessage(saved, sender_name);
+    return saved;
   } else {
     initLocalStorage();
     const items = JSON.parse(localStorage.getItem('lc_chat_messages'));
-    const newMsg = { id: chatMessageId, created_at: new Date().toISOString(), ...msg };
+    const newMsg = { id: chatMessageId, created_at: new Date().toISOString(), ...dbMsg };
     items.push(newMsg);
     localStorage.setItem('lc_chat_messages', JSON.stringify(items));
     return newMsg;
   }
+};
+
+export const markMessagesRead = async (ids) => {
+  if (!ids || ids.length === 0) return;
+  if (hasSupabaseConfig) {
+    const { error } = await supabase.from('chat_messages').update({ read: true }).in('id', ids);
+    if (error) throw error;
+  } else {
+    initLocalStorage();
+    const items = JSON.parse(localStorage.getItem('lc_chat_messages'));
+    const updated = items.map(m => ids.includes(m.id) ? { ...m, read: true } : m);
+    localStorage.setItem('lc_chat_messages', JSON.stringify(updated));
+  }
+};
+
+// Best-effort push notification for a newly-sent message. Never allowed to make
+// sendChatMessage itself fail - a lost notification is fine, a lost message isn't.
+const notifyNewMessage = async (message, senderName) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({
+        receiverId: message.receiver_id,
+        senderName: senderName || 'FoundaXia',
+        messageText: message.message_text
+      })
+    });
+  } catch (_) {}
+};
+
+export const savePushSubscription = async (userId, subscription) => {
+  if (!hasSupabaseConfig) return;
+  const { endpoint, keys } = subscription.toJSON ? subscription.toJSON() : subscription;
+  const { error } = await supabase.from('push_subscriptions').upsert([{
+    id: 'push_' + btoa(endpoint).slice(0, 40).replace(/[^a-zA-Z0-9]/g, ''),
+    user_id: userId,
+    endpoint,
+    p256dh: keys.p256dh,
+    auth: keys.auth
+  }], { onConflict: 'endpoint' });
+  if (error) throw error;
+};
+
+export const removePushSubscription = async (endpoint) => {
+  if (!hasSupabaseConfig) return;
+  await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
 };

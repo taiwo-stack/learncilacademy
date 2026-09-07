@@ -12,6 +12,36 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Chat message push notifications - fires even when no tab is open.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (_) {}
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'FoundaXia', {
+      body: data.body || 'You have a new message.',
+      icon: '/images/logo_icon.png',
+      badge: '/images/logo_icon.png',
+      data: { url: data.url || '/' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 

@@ -6,7 +6,7 @@ import {
   getTasks, getStudentTasks, submitStudentTask,
   getSchedules, getAttendance,
   getAnnouncements,
-  getChatMessages, sendChatMessage,
+  getChatMessages, sendChatMessage, markMessagesRead,
   getLiveSessionsForStudent
 } from '../services/dataService';
 import {
@@ -15,6 +15,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import HtmlSlideModal from '../components/HtmlSlideModal';
+import NotificationToggle from '../components/NotificationToggle';
 import '../styles/Dashboard.css';
 
 const formatMessageTime = (dateStr) => {
@@ -174,6 +175,30 @@ export default function StudentDashboard({ user }) {
     return () => clearInterval(interval);
   }, [studentInfo?.id, studentId]);
 
+  // Mark the open conversation's incoming messages read as soon as it's opened
+  useEffect(() => {
+    if (!activeTutorChat) return;
+    const actualStudentId = studentInfo?.profile_id || studentInfo?.id || studentId;
+    const otherId = activeTutorChat.profile_id || activeTutorChat.id;
+    const unreadIds = chatMessages
+      .filter(m => m.sender_id === otherId && m.receiver_id === actualStudentId && !m.read)
+      .map(m => m.id);
+    if (unreadIds.length === 0) return;
+    markMessagesRead(unreadIds)
+      .then(() => setChatMessages(prev => prev.map(m => unreadIds.includes(m.id) ? { ...m, read: true } : m)))
+      .catch(err => console.error('Failed to mark messages read:', err));
+  }, [activeTutorChat, chatMessages, studentInfo, studentId]);
+
+  // Reflect unread count on the installed app's icon, where supported
+  useEffect(() => {
+    const actualStudentId = studentInfo?.profile_id || studentInfo?.id || studentId;
+    const count = chatMessages.filter(m => m.receiver_id === actualStudentId && !m.read).length;
+    if ('setAppBadge' in navigator) {
+      if (count > 0) navigator.setAppBadge(count).catch(() => {});
+      else navigator.clearAppBadge().catch(() => {});
+    }
+  }, [chatMessages, studentInfo, studentId]);
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -266,6 +291,7 @@ export default function StudentDashboard({ user }) {
       const saved = await sendChatMessage({
         course_id: selectedCourseId || null,
         sender_id: studentInfo?.profile_id || studentInfo?.id || studentId,
+        sender_name: studentInfo?.full_name || user?.full_name || 'A student',
         receiver_id: activeTutorChat.profile_id || activeTutorChat.id,
         message_text: chatInput.trim()
       });
@@ -338,7 +364,7 @@ export default function StudentDashboard({ user }) {
       {/* Floating Unread Messages Badge FAB */}
       {(() => {
         const unreadCount = chatMessages.filter(
-          m => m.receiver_id === (studentInfo?.profile_id || studentInfo?.id)
+          m => m.receiver_id === (studentInfo?.profile_id || studentInfo?.id) && !m.read
         ).length;
         return unreadCount > 0 ? (
           <button
@@ -1096,8 +1122,9 @@ export default function StudentDashboard({ user }) {
           <div className="whatsapp-chat-container">
             {/* Contacts Sidebar Pane */}
             <div className={`whatsapp-contacts-sidebar ${activeTutorChat && mobileChatView === 'chat' ? 'mobile-hidden' : ''}`}>
-              <div className="whatsapp-sidebar-header">
+              <div className="whatsapp-sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                 <h3>Tutor Chat</h3>
+                <NotificationToggle userId={studentInfo?.profile_id || studentInfo?.id || studentId} />
               </div>
               <ul className="whatsapp-contacts-list">
                 {enrollments.map(en => {

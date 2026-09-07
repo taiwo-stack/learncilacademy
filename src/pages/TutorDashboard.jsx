@@ -7,7 +7,7 @@ import {
   getTopics,
   getSchedules, getAttendance, markAttendance, saveSchedule, updateSchedule, deleteSchedule,
   getAnnouncements, createAnnouncement,
-  getChatMessages, sendChatMessage,
+  getChatMessages, sendChatMessage, markMessagesRead,
   getCourseTutors, getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile,
   createLiveSession
 } from '../services/dataService';
@@ -17,6 +17,7 @@ import {
   BookOpen, FileText, Upload, MonitorPlay, Edit
 } from 'lucide-react';
 import HtmlSlideModal from '../components/HtmlSlideModal';
+import NotificationToggle from '../components/NotificationToggle';
 import '../styles/Dashboard.css';
 
 const formatMessageTime = (dateStr) => {
@@ -214,6 +215,29 @@ export default function TutorDashboard({ user }) {
   useEffect(() => {
     loadTutorDashboard();
   }, [tutorId]);
+
+  // Mark the open conversation's incoming messages read as soon as it's opened
+  useEffect(() => {
+    if (!activeStudentChat) return;
+    const actualTutorId = tutorInfo?.id || tutorId;
+    const otherId = activeStudentChat.profile_id || activeStudentChat.id;
+    const unreadIds = chatMessages
+      .filter(m => m.sender_id === otherId && m.receiver_id === actualTutorId && !m.read)
+      .map(m => m.id);
+    if (unreadIds.length === 0) return;
+    markMessagesRead(unreadIds)
+      .then(() => setChatMessages(prev => prev.map(m => unreadIds.includes(m.id) ? { ...m, read: true } : m)))
+      .catch(err => console.error('Failed to mark messages read:', err));
+  }, [activeStudentChat, chatMessages, tutorInfo, tutorId]);
+
+  // Reflect unread count on the installed app's icon, where supported
+  useEffect(() => {
+    const count = chatMessages.filter(m => m.receiver_id === (tutorInfo?.id || tutorId) && !m.read).length;
+    if ('setAppBadge' in navigator) {
+      if (count > 0) navigator.setAppBadge(count).catch(() => {});
+      else navigator.clearAppBadge().catch(() => {});
+    }
+  }, [chatMessages, tutorInfo, tutorId]);
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
@@ -533,6 +557,7 @@ export default function TutorDashboard({ user }) {
       const saved = await sendChatMessage({
         course_id: activeCourseChat || null,
         sender_id: tutorInfo?.id || tutorId,
+        sender_name: tutorInfo?.full_name || 'Your Tutor',
         receiver_id: activeStudentChat.profile_id || activeStudentChat.id,
         message_text: chatInput.trim()
       });
@@ -557,6 +582,7 @@ export default function TutorDashboard({ user }) {
           return sendChatMessage({
             course_id: null,
             sender_id: senderId,
+            sender_name: tutorInfo?.full_name || 'Your Tutor',
             receiver_id: student?.profile_id || studentId,
             message_text: broadcastText.trim()
           });
@@ -575,9 +601,11 @@ export default function TutorDashboard({ user }) {
   };
 
   // Find students mapped to this tutor
-  const tutorStudents = students.filter(s => 
+  const tutorStudents = students.filter(s =>
     enrollments.some(sc => sc.student_id === s.id && sc.tutor_id === (tutorInfo?.id || tutorId))
   );
+
+  const unreadMessageCount = chatMessages.filter(m => m.receiver_id === (tutorInfo?.id || tutorId) && !m.read).length;
 
   if (loading) {
     return (
@@ -608,9 +636,9 @@ export default function TutorDashboard({ user }) {
           <li className={`sidebar-item ${activeTab === 'messages' ? 'active' : ''}`}>
             <button onClick={() => setActiveTab('messages')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <MessageSquare size={18} /> Messages
-              {chatMessages.length > 0 && (
+              {unreadMessageCount > 0 && (
                 <span style={{ background: 'var(--accent-color)', color: 'white', borderRadius: '50%', fontSize: '0.65rem', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', fontWeight: 'bold' }}>
-                  {chatMessages.filter(m => m.receiver_id === (tutorInfo?.id || '') && !m.read).length || chatMessages.length > 0 ? chatMessages.filter(m => m.receiver_id === (tutorInfo?.id || '')).length : ''}
+                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                 </span>
               )}
             </button>
@@ -1238,6 +1266,10 @@ export default function TutorDashboard({ user }) {
         {/* Tab: Messages / Student Chat Inbox */}
         {activeTab === 'messages' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <NotificationToggle userId={tutorInfo?.id || tutorId} />
+            </div>
 
             {/* ── Broadcast Toolbar ── */}
             <div className="dashboard-card" style={{ padding: '1rem 1.5rem', marginBottom: 0 }}>
