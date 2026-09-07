@@ -60,23 +60,6 @@
   object-fit: contain;
 }
 
-.whiteboard-title-block {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.whiteboard-badge {
-  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
-  color: white;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 /* History (undo/redo) & top bar controls */
 .whiteboard-top-controls {
   display: flex;

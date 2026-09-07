@@ -71,11 +71,6 @@ export default function WhiteboardHeader({
           <img src="/images/logo_icon.png" alt="Foundaxia Logo" className="whiteboard-logo-icon" />
           <img src="/images/logo_text.png" alt="Foundaxia Text" className="whiteboard-logo-text" />
         </div>
-        
-        <div className="whiteboard-title-block">
-          <span style={{ fontWeight: 600, fontSize: '1.05rem', letterSpacing: '0.2px' }}>Interactive Canvas</span>
-          <span className="whiteboard-badge">Online Classroom</span>
-        </div>
       </div>
 
       {/* Undo/Redo & Save Buttons */}
