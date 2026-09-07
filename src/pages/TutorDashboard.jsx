@@ -8,7 +8,8 @@ import {
   getSchedules, getAttendance, markAttendance, saveSchedule, updateSchedule, deleteSchedule,
   getAnnouncements, createAnnouncement,
   getChatMessages, sendChatMessage,
-  getCourseTutors, getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile
+  getCourseTutors, getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile,
+  createLiveSession
 } from '../services/dataService';
 import { 
   Calendar, User, Clock, AlertCircle, Save, Check, X,
@@ -150,6 +151,9 @@ export default function TutorDashboard({ user }) {
   const [schEnd, setSchEnd] = useState('');
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [showEditScheduleModal, setShowEditScheduleModal] = useState(false);
+  const [showStartSessionModal, setShowStartSessionModal] = useState(false);
+  const [startSessionStudentIds, setStartSessionStudentIds] = useState([]);
+  const [startingSession, setStartingSession] = useState(false);
   const [schLink, setSchLink] = useState('');
   const [schLink2, setSchLink2] = useState('');
   const [schType, setSchType] = useState('single'); // 'single' or 'recurring'
@@ -170,8 +174,8 @@ export default function TutorDashboard({ user }) {
         getCourseTutors(), getMaterials()
       ]);
 
-      const currentTutor = allTutors.find(t => 
-        t.id === tutorId || 
+      const currentTutor = allTutors.find(t =>
+        t.id === tutorId ||
         t.profile_id === tutorId ||
         t.full_name === (user?.full_name || 'Adebayo Olumide')
       );
@@ -495,6 +499,32 @@ export default function TutorDashboard({ user }) {
     }
   };
 
+  const handleStartLiveSession = async () => {
+    if (startSessionStudentIds.length === 0) {
+      return alert('Select at least one student to invite.');
+    }
+    setStartingSession(true);
+    try {
+      const roomId = 'room-' + Math.random().toString(36).substr(2, 9);
+      const actualTutorId = tutorInfo?.id || tutorId;
+      await createLiveSession({
+        id: roomId,
+        tutor_id: actualTutorId,
+        tutor_name: tutorInfo?.full_name || user?.full_name || 'Your Tutor',
+        student_ids: startSessionStudentIds,
+        title: 'Live Whiteboard Session'
+      });
+      sessionStorage.setItem(`wb-host-${roomId}`, 'true');
+      setShowStartSessionModal(false);
+      setStartSessionStudentIds([]);
+      window.open(`/whiteboard?room=${roomId}`, '_blank');
+    } catch (err) {
+      alert('Error starting session: ' + err.message);
+    } finally {
+      setStartingSession(false);
+    }
+  };
+
   // Chat Actions
   const handleSendChat = async (e) => {
     e.preventDefault();
@@ -592,8 +622,8 @@ export default function TutorDashboard({ user }) {
             <button onClick={() => setActiveTab('settings')}><Save size={18} /> Profile Settings</button>
           </li>
           <li className="sidebar-item" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
-            <button onClick={() => window.open('/whiteboard', '_blank')} style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>
-              <MonitorPlay size={18} /> Launch Whiteboard ↗
+            <button onClick={() => setShowStartSessionModal(true)} style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>
+              <MonitorPlay size={18} /> Start Live Whiteboard ↗
             </button>
           </li>
         </ul>
@@ -2309,6 +2339,43 @@ export default function TutorDashboard({ user }) {
                 <button type="submit" className="btn-submit">Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showStartSessionModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => { setShowStartSessionModal(false); setStartSessionStudentIds([]); }}><X size={20} /></button>
+            <h3 className="modal-title">Start Live Whiteboard Session</h3>
+            <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              Pick one or more students to invite. A join link will appear on their dashboard the moment you start.
+            </p>
+            <div style={{ maxHeight: '260px', overflowY: 'auto', border: '2px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem', marginBottom: '1.5rem' }}>
+              {tutorStudents.length === 0 && (
+                <p style={{ padding: '0.5rem', color: '#94a3b8' }}>No assigned students yet.</p>
+              )}
+              {tutorStudents.map(s => (
+                <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={startSessionStudentIds.includes(s.id)}
+                    onChange={(e) => {
+                      setStartSessionStudentIds(prev =>
+                        e.target.checked ? [...prev, s.id] : prev.filter(id => id !== s.id)
+                      );
+                    }}
+                  />
+                  {s.full_name}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <button type="button" className="btn-prev" onClick={() => { setShowStartSessionModal(false); setStartSessionStudentIds([]); }}>Cancel</button>
+              <button type="button" className="btn-submit" disabled={startingSession} onClick={handleStartLiveSession}>
+                {startingSession ? 'Starting...' : 'Start Session'}
+              </button>
+            </div>
           </div>
         </div>
       )}

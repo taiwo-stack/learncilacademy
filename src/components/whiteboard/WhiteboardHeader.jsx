@@ -16,7 +16,8 @@ import {
   ChevronUp,
   Presentation,
   MousePointerClick,
-  Pencil
+  Pencil,
+  PhoneOff
 } from 'lucide-react';
 
 export default function WhiteboardHeader({
@@ -58,7 +59,8 @@ export default function WhiteboardHeader({
   attachSlideToCurrentPage,
   clearSlideFromCurrentPage,
   isSlideInteractive,
-  setIsSlideInteractive
+  setIsSlideInteractive,
+  handleEndSession
 }) {
   return (
     <header className={`whiteboard-header ${isHeaderCollapsed ? 'collapsed' : ''}`}>
@@ -341,10 +343,21 @@ export default function WhiteboardHeader({
           </>
         )}
 
+        {isHost && (
+          <button
+            className="whiteboard-btn danger"
+            onClick={handleEndSession}
+            data-tooltip="End this session for everyone and remove the join link from students' dashboards"
+          >
+            <PhoneOff size={16} />
+            <span>End Session</span>
+          </button>
+        )}
+
         <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 5px' }} />
 
-        <button 
-          className="whiteboard-btn-icon" 
+        <button
+          className="whiteboard-btn-icon"
           onClick={() => setIsHeaderCollapsed(true)}
           data-tooltip="Collapse Header"
         >

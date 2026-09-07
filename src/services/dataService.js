@@ -1337,6 +1337,32 @@ export const deleteSchedule = async (id) => {
   }
 };
 
+// 8b. Live Whiteboard Sessions
+export const createLiveSession = async (session) => {
+  if (hasSupabaseConfig) {
+    const { data, error } = await supabase.from('live_sessions').insert([session]).select();
+    if (error) throw error;
+    return data[0];
+  }
+  return session;
+};
+
+export const getLiveSessionsForStudent = async (studentId) => {
+  if (hasSupabaseConfig) {
+    const { data, error } = await supabase.from('live_sessions').select('*').contains('student_ids', [studentId]);
+    if (error) throw error;
+    return data;
+  }
+  return [];
+};
+
+export const endLiveSession = async (id) => {
+  if (hasSupabaseConfig) {
+    const { error } = await supabase.from('live_sessions').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
 // 9. Attendance CRUD
 export const getAttendance = async () => {
   if (hasSupabaseConfig) {

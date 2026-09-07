@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ZoomIn, ZoomOut, Maximize, Trash2, ChevronLeft, ChevronRight, ChevronDown, Image as ImageIcon, MonitorPlay } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { getMaterials, getCourseTutors } from '../services/dataService';
+import { getMaterials, getCourseTutors, endLiveSession } from '../services/dataService';
 import '../styles/Whiteboard.css';
 
 // â”€â”€ Whiteboard Sub-Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -326,6 +326,21 @@ export default function Whiteboard({ user }) {
   const triggerToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  // Host-only: end the session for everyone, remove the join link from invited
+  // students' dashboards, and boot any currently-connected participants out.
+  const handleEndSession = async () => {
+    if (!window.confirm('End this session for everyone?')) return;
+    try {
+      await endLiveSession(roomId);
+    } catch (_) {
+      // Non-fatal: an ad-hoc room (no matching live_sessions row) is a harmless no-op.
+    }
+    if (channelRef.current) {
+      channelRef.current.send({ type: 'broadcast', event: 'session-ended', payload: {} });
+    }
+    navigate(user?.role === 'admin' ? '/admin' : '/tutor');
   };
 
   // On mount: check room ID, join collaboration automatically if URL link exists.
@@ -805,6 +820,13 @@ export default function Whiteboard({ user }) {
             });
             triggerToast("Whiteboard sync complete!");
           }
+        }
+        break;
+
+      case 'session-ended':
+        if (!isHost) {
+          triggerToast('The tutor ended this session.');
+          setTimeout(() => navigate('/student'), 1500);
         }
         break;
 
@@ -2962,6 +2984,7 @@ export default function Whiteboard({ user }) {
         clearSlideFromCurrentPage={clearSlideFromCurrentPage}
         isSlideInteractive={isSlideInteractive}
         setIsSlideInteractive={setIsSlideInteractive}
+        handleEndSession={handleEndSession}
       />
 
       {/* â”€â”€ Main Workspace Frame â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}

@@ -6,7 +6,8 @@ import {
   getTasks, getStudentTasks, submitStudentTask,
   getSchedules, getAttendance,
   getAnnouncements,
-  getChatMessages, sendChatMessage
+  getChatMessages, sendChatMessage,
+  getLiveSessionsForStudent
 } from '../services/dataService';
 import {
   Calendar, User, BookOpen, Clock, AlertCircle, Save,
@@ -154,6 +155,24 @@ export default function StudentDashboard({ user }) {
   useEffect(() => {
     loadStudentData();
   }, [studentId]);
+
+  // Poll for live whiteboard sessions a tutor has started and invited this student to
+  const [liveSessions, setLiveSessions] = useState([]);
+  useEffect(() => {
+    const actualStudentId = studentInfo?.id || studentId;
+    if (!actualStudentId) return;
+    const checkLiveSessions = async () => {
+      try {
+        const sessions = await getLiveSessionsForStudent(actualStudentId);
+        setLiveSessions(sessions);
+      } catch (err) {
+        console.error('Error checking live sessions:', err);
+      }
+    };
+    checkLiveSessions();
+    const interval = setInterval(checkLiveSessions, 8000);
+    return () => clearInterval(interval);
+  }, [studentInfo?.id, studentId]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -400,6 +419,49 @@ export default function StudentDashboard({ user }) {
 
       {/* Main Panel */}
       <main className="dashboard-main">
+
+        {/* Live Whiteboard Session Invite Banner - shown on every tab while active */}
+        {liveSessions.length > 0 && liveSessions.map(session => (
+          <div key={session.id} style={{
+            background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+            borderRadius: '14px',
+            padding: '1rem 1.5rem',
+            marginBottom: '1.5rem',
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            boxShadow: '0 6px 20px rgba(220, 38, 38, 0.35)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+              <div>
+                <strong style={{ fontSize: '1rem' }}>{session.tutor_name || 'Your tutor'} started a live whiteboard session!</strong>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Join now to collaborate in real time.</div>
+              </div>
+            </div>
+            <button
+              onClick={() => window.open(`/whiteboard?room=${session.id}`, '_blank')}
+              style={{
+                background: 'white',
+                color: '#dc2626',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.6rem 1.25rem',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              <Play size={16} /> Join Session
+            </button>
+          </div>
+        ))}
 
         {/* Tab 0: Overview Dashboard */}
         {activeTab === 'overview' && (
