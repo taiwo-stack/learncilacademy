@@ -373,8 +373,12 @@ export default function TutorDashboard({ user }) {
           course_id: schCourseId,
           tutor_id: actualTutorId,
           title: schTitle,
-          start_time: schStart,
-          end_time: schEnd,
+          // Convert the datetime-local input's timezone-less value ("2026-09-10T14:30") to a
+          // real UTC instant. Without this, Postgres stores the literal string as if it were
+          // already UTC, silently shifting the effective time by the tutor's own UTC offset -
+          // which can push a class that's genuinely upcoming into appearing already past.
+          start_time: new Date(schStart).toISOString(),
+          end_time: new Date(schEnd).toISOString(),
           meeting_link: schLink,
           meeting_link_2: schLink2
         });
