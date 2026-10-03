@@ -19,6 +19,7 @@ import {
   ArrowUp, ArrowDown, Edit, MessageSquare, MonitorPlay
 } from 'lucide-react';
 import HtmlSlideModal from '../components/HtmlSlideModal';
+import { convertPptxToSlideHtml } from '../utils/pptxConverter';
 import '../styles/Dashboard.css';
 
 export default function AdminDashboard({ user }) {
@@ -567,13 +568,19 @@ export default function AdminDashboard({ user }) {
     if (!selectedCourseId || !selectedTopicId || !materialFile) {
       return alert('Please select a topic and file first.');
     }
-    const isHtmlSlide = materialFile.type === 'text/html' || /\.html?$/i.test(materialFile.name);
-    if (isHtmlSlide && materialFile.size > 5 * 1024 * 1024) {
+    const isPptx = /\.pptx$/i.test(materialFile.name);
+    const isHtmlSlide = isPptx || materialFile.type === 'text/html' || /\.html?$/i.test(materialFile.name);
+    if (!isPptx && isHtmlSlide && materialFile.size > 5 * 1024 * 1024) {
       return alert('HTML slide files must be under 5MB.');
     }
     setUploading(true);
     try {
-      const fileUrl = await uploadMaterialFile(materialFile.name, materialFile);
+      let fileToUpload = materialFile;
+      if (isPptx) {
+        const html = await convertPptxToSlideHtml(materialFile, materialTitle || materialFile.name);
+        fileToUpload = new File([html], materialFile.name.replace(/\.pptx$/i, '.html'), { type: 'text/html' });
+      }
+      const fileUrl = await uploadMaterialFile(fileToUpload.name, fileToUpload);
       const fileType = isHtmlSlide ? 'html_slide' : (materialFile.type.includes('pdf') ? 'pdf' : (materialFile.type.includes('image') ? 'image' : 'other'));
       const saved = await saveMaterial({
         course_id: selectedCourseId,
@@ -585,7 +592,7 @@ export default function AdminDashboard({ user }) {
       setMaterials(prev => [...prev, saved]);
       setMaterialTitle('');
       setMaterialFile(null);
-      alert('Course material uploaded successfully!');
+      alert(isPptx ? 'PowerPoint converted to a slide deck and uploaded!' : 'Course material uploaded successfully!');
     } catch (err) {
       alert('Failed to upload material: ' + err.message);
     } finally {
@@ -1562,6 +1569,7 @@ export default function AdminDashboard({ user }) {
                                   {/* Upload Material Inline Form */}
                                   {showMaterialForm && (
                                     <form onSubmit={handleUploadMaterial} style={{ background: '#f7fafc', padding: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '0.8rem' }}>
+                                      <div style={{ fontSize: '0.7rem', color: '#a0aec0' }}>PowerPoint (.pptx) files are automatically converted into an interactive slide deck.</div>
                                       <div className="form-group" style={{ margin: 0 }}>
                                         <input type="text" value={materialTitle} onChange={(e) => setMaterialTitle(e.target.value)} placeholder="File Title (e.g. PDF Guide)" required style={{ padding: '0.4rem', fontSize: '0.8rem' }} />
                                       </div>

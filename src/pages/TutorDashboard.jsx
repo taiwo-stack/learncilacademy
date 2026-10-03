@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import HtmlSlideModal from '../components/HtmlSlideModal';
 import NotificationToggle from '../components/NotificationToggle';
+import { convertPptxToSlideHtml } from '../utils/pptxConverter';
 import '../styles/Dashboard.css';
 
 const formatMessageTime = (dateStr) => {
@@ -1011,14 +1012,20 @@ export default function TutorDashboard({ user }) {
                   e.preventDefault();
                   if (!newMaterialTitle.trim() || !materialFile || !activeTopicIdToUse) return;
 
-                  const isHtmlSlide = materialFile.type === 'text/html' || /\.html?$/i.test(materialFile.name);
-                  if (isHtmlSlide && materialFile.size > 5 * 1024 * 1024) {
+                  const isPptx = /\.pptx$/i.test(materialFile.name);
+                  const isHtmlSlide = isPptx || materialFile.type === 'text/html' || /\.html?$/i.test(materialFile.name);
+                  if (!isPptx && isHtmlSlide && materialFile.size > 5 * 1024 * 1024) {
                     return alert('HTML slide files must be under 5MB.');
                   }
 
                   setUploadingMaterial(true);
                   try {
-                    const fileUrl = await uploadMaterialFile(materialFile.name, materialFile);
+                    let fileToUpload = materialFile;
+                    if (isPptx) {
+                      const html = await convertPptxToSlideHtml(materialFile, newMaterialTitle.trim());
+                      fileToUpload = new File([html], materialFile.name.replace(/\.pptx$/i, '.html'), { type: 'text/html' });
+                    }
+                    const fileUrl = await uploadMaterialFile(fileToUpload.name, fileToUpload);
                     const saved = await saveMaterial({
                       course_id: selectedCourseId,
                       topic_id: activeTopicIdToUse,
@@ -1029,7 +1036,7 @@ export default function TutorDashboard({ user }) {
                     setMaterials(prev => [...prev, saved]);
                     setNewMaterialTitle('');
                     setMaterialFile(null);
-                    alert('Material file uploaded successfully!');
+                    alert(isPptx ? 'PowerPoint converted to a slide deck and uploaded!' : 'Material file uploaded successfully!');
                   } catch (err) {
                     alert('Failed to upload material: ' + err.message);
                   } finally {
@@ -1138,7 +1145,10 @@ export default function TutorDashboard({ user }) {
 
                               {/* Upload form */}
                               <form onSubmit={handleMaterialUpload} style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                <div style={{ fontWeight: '600', fontSize: '0.82rem', color: '#4a5568' }}>Upload Lesson File</div>
+                                <div>
+                                  <div style={{ fontWeight: '600', fontSize: '0.82rem', color: '#4a5568' }}>Upload Lesson File</div>
+                                  <div style={{ fontSize: '0.72rem', color: '#a0aec0' }}>PowerPoint (.pptx) files are automatically converted into an interactive slide deck.</div>
+                                </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                                   <div className="form-group" style={{ marginBottom: 0 }}>
                                     <input
