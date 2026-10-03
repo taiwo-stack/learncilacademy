@@ -138,28 +138,37 @@ export const convertPptxToSlideHtml = async (file, deckTitle) => {
     const { title, bullets } = extractSlideContent(slideDoc);
     const images = await extractSlideImages(zip, slidePath);
     if (!title && bullets.length === 0 && images.length === 0) continue; // skip genuinely blank slides
-    slides.push({
-      title: escapeHtml(title),
-      bullets: bullets.map(escapeHtml),
-      images
-    });
+    slides.push({ title, bullets, images });
   }
 
   if (slides.length === 0) {
     throw new Error('Could not find any readable text or images in this file.');
   }
 
-  // Guards against a literal "</script>" in extracted text (or an embedded image's base64
-  // data, vanishingly unlikely but free to guard) from prematurely closing our script tag.
-  const slidesJson = JSON.stringify(slides).replace(/<\/script/gi, '<\\/script');
+  return buildSlideDeckHtml(deckTitle, slides);
+};
+
+// Shared by the PPTX converter above and the manual slide-deck editor page: takes raw
+// (unescaped) { title, bullets, images } slide objects and produces the final standalone
+// HTML file - same FoundaXia-branded template, same `go(n)` navigation, for both.
+export const buildSlideDeckHtml = (deckTitle, slides) => {
+  const escapedSlides = slides.map((s) => ({
+    title: escapeHtml(s.title || ''),
+    bullets: (s.bullets || []).map(escapeHtml),
+    images: s.images || []
+  }));
+
+  // Guards against a literal "</script>" in extracted/typed text (or an embedded image's
+  // base64 data, vanishingly unlikely but free to guard) from prematurely closing the tag.
+  const slidesJson = JSON.stringify(escapedSlides).replace(/<\/script/gi, '<\\/script');
 
   const html = buildTemplateHtml(escapeHtml(deckTitle || 'Lesson Slides'), slidesJson);
 
   const sizeBytes = new Blob([html]).size;
   if (sizeBytes > MAX_OUTPUT_BYTES) {
     throw new Error(
-      `Converted slide deck is ${(sizeBytes / (1024 * 1024)).toFixed(1)}MB, over the 5MB limit - ` +
-      'try compressing the images in your PowerPoint first.'
+      `Slide deck is ${(sizeBytes / (1024 * 1024)).toFixed(1)}MB, over the 5MB limit - ` +
+      'try compressing or removing some images.'
     );
   }
 

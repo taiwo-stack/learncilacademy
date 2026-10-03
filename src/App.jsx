@@ -14,6 +14,7 @@ const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
 const TutorDashboard = lazy(() => import('./pages/TutorDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const Whiteboard = lazy(() => import('./pages/Whiteboard'));
+const SlideEditor = lazy(() => import('./pages/SlideEditor'));
 
 const RouteFallback = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -39,7 +40,7 @@ function AppContent() {
   const isWhiteboard = location.pathname.startsWith('/whiteboard');
   
   // Hide the footer on dashboard and whiteboard pages for a cleaner web app dashboard workspace feel
-  const isDashboardOrWhiteboard = ['/student', '/tutor', '/admin', '/whiteboard'].some(path => 
+  const isDashboardOrWhiteboard = ['/student', '/tutor', '/admin', '/whiteboard', '/slide-editor'].some(path =>
     location.pathname.startsWith(path)
   );
 
@@ -90,6 +91,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['admin']} user={currentUser}>
                 <AdminDashboard user={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/slide-editor"
+            element={
+              <ProtectedRoute allowedRoles={['tutor', 'admin']} user={currentUser}>
+                <SlideEditor user={currentUser} />
               </ProtectedRoute>
             }
           />

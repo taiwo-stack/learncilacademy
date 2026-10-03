@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   getBookings, getTutors, updateTutor, updateBookingStatus, uploadAvatar,
   getStudentCourses, getStudents, getCourses,
@@ -41,6 +42,7 @@ const getSpecialClassImage = (title = '', index = 0) => {
 };
 
 export default function TutorDashboard({ user }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('schedule');
   const [viewingSlide, setViewingSlide] = useState(null); // material row being viewed in the embedded HTML slide modal
   const [bookings, setBookings] = useState([]);
@@ -1169,9 +1171,20 @@ export default function TutorDashboard({ user }) {
                                     />
                                   </div>
                                 </div>
-                                <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', padding: '0.45rem 1rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }} disabled={uploadingMaterial}>
-                                  <Upload size={14} /> {uploadingMaterial ? 'Uploading...' : 'Upload File'}
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <button type="submit" className="btn-primary" style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }} disabled={uploadingMaterial}>
+                                    <Upload size={14} /> {uploadingMaterial ? 'Uploading...' : 'Upload File'}
+                                  </button>
+                                  <span style={{ fontSize: '0.75rem', color: '#a0aec0' }}>or</span>
+                                  <button
+                                    type="button"
+                                    className="btn-action edit"
+                                    style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                                    onClick={() => navigate(`/slide-editor?courseId=${selectedCourseId}&topicId=${activeTopicIdToUse}`)}
+                                  >
+                                    <MonitorPlay size={14} /> Create Slide Deck
+                                  </button>
+                                </div>
                               </form>
                             </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   getBookings, getStudents, getTutors, getContactMessages,
   updateBookingStatus, deleteBooking, deleteStudent, deleteTutor, updateStudent, updateTutor,
@@ -23,6 +24,7 @@ import { convertPptxToSlideHtml } from '../utils/pptxConverter';
 import '../styles/Dashboard.css';
 
 export default function AdminDashboard({ user }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [viewingSlide, setViewingSlide] = useState(null); // material row being viewed in the embedded HTML slide modal
   const [showStartSessionModal, setShowStartSessionModal] = useState(false);
@@ -1576,9 +1578,20 @@ export default function AdminDashboard({ user }) {
                                       <div className="form-group" style={{ margin: 0 }}>
                                         <input type="file" onChange={(e) => setMaterialFile(e.target.files[0])} required style={{ fontSize: '0.75rem' }} />
                                       </div>
-                                      <button type="submit" className="btn-primary" style={{ padding: '0.4rem', fontSize: '0.8rem' }} disabled={uploading}>
-                                        {uploading ? 'Uploading...' : 'Upload Attachment'}
-                                      </button>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                        <button type="submit" className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} disabled={uploading}>
+                                          {uploading ? 'Uploading...' : 'Upload Attachment'}
+                                        </button>
+                                        <span style={{ fontSize: '0.72rem', color: '#a0aec0' }}>or</span>
+                                        <button
+                                          type="button"
+                                          className="btn-action edit"
+                                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                                          onClick={() => navigate(`/slide-editor?courseId=${selectedCourseId}&topicId=${selectedTopicId}`)}
+                                        >
+                                          Create Slide Deck
+                                        </button>
+                                      </div>
                                     </form>
                                   )}
 
