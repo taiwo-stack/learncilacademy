@@ -18,7 +18,7 @@ const NS = {
 };
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']);
-const MAX_OUTPUT_BYTES = 5 * 1024 * 1024; // matches the existing html_slide upload cap
+const MAX_OUTPUT_BYTES = 15 * 1024 * 1024; // matches the html_slide upload cap in TutorDashboard/AdminDashboard
 
 const parseXml = (text) => new DOMParser().parseFromString(text, 'application/xml');
 

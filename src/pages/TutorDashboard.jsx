@@ -1016,8 +1016,8 @@ export default function TutorDashboard({ user }) {
 
                   const isPptx = /\.pptx$/i.test(materialFile.name);
                   const isHtmlSlide = isPptx || materialFile.type === 'text/html' || /\.html?$/i.test(materialFile.name);
-                  if (!isPptx && isHtmlSlide && materialFile.size > 5 * 1024 * 1024) {
-                    return alert('HTML slide files must be under 5MB.');
+                  if (!isPptx && isHtmlSlide && materialFile.size > 15 * 1024 * 1024) {
+                    return alert('HTML slide files must be under 15MB.');
                   }
 
                   setUploadingMaterial(true);
