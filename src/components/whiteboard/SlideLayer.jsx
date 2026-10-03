@@ -5,12 +5,18 @@ import SandboxedFrame from '../SandboxedFrame';
 // annotate directly on top of it with the existing pen/highlighter/shape tools.
 // `interactive` toggles whether clicks reach the slide (for using its own buttons/
 // links) or pass through to nothing so the canvas underneath can be drawn on instead.
-export default function SlideLayer({ slideUrl, interactive }) {
+export default function SlideLayer({ slideUrl, interactive, onNavigate, gotoIndex }) {
   if (!slideUrl) return null;
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-      <SandboxedFrame src={slideUrl} title="Teaching slide" allowInteraction={interactive} />
+      <SandboxedFrame
+        src={slideUrl}
+        title="Teaching slide"
+        allowInteraction={interactive}
+        onNavigate={onNavigate}
+        gotoIndex={gotoIndex}
+      />
     </div>
   );
 }

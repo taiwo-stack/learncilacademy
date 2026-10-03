@@ -142,6 +142,16 @@ export default function Whiteboard({ user }) {
   const [showSlidePicker, setShowSlidePicker] = useState(false);
   const [isSlideInteractive, setIsSlideInteractive] = useState(true); // false = draw on canvas, true = clicks pass through to the slide
 
+  // Relays a slide deck's OWN internal Next/Prev navigation (most uploaded decks drive this
+  // through a `go(n)`-style function - see SandboxedFrame's injected bridge) to everyone else
+  // in the session, the same way page navigation and drawing already sync live.
+  const [remoteSlideGoto, setRemoteSlideGoto] = useState(null); // { index, nonce }
+  const handleSlideNavigate = (index) => {
+    if (isHost && channelRef.current) {
+      channelRef.current.send({ type: 'broadcast', event: 'slide-nav', payload: { index } });
+    }
+  };
+
   // Default to "interactive" whenever a (new) slide becomes active - most uploaded slide
   // decks are click-driven (their own Next/Back nav, quiz buttons, etc.), so navigating
   // them should work immediately without an extra manual toggle. Drawing over it is the
@@ -827,6 +837,12 @@ export default function Whiteboard({ user }) {
         if (!isHost) {
           triggerToast('The tutor ended this session.');
           setTimeout(() => navigate('/student'), 1500);
+        }
+        break;
+
+      case 'slide-nav':
+        if (!isHost) {
+          setRemoteSlideGoto({ index: payload.index, nonce: Date.now() });
         }
         break;
 
@@ -3015,7 +3031,12 @@ export default function Whiteboard({ user }) {
         )}
 
         {/* â”€â”€ HTML Teaching Slide (live, behind the canvas) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <SlideLayer slideUrl={currentSlideUrl} interactive={isSlideInteractive} />
+        <SlideLayer
+          slideUrl={currentSlideUrl}
+          interactive={isSlideInteractive}
+          onNavigate={handleSlideNavigate}
+          gotoIndex={remoteSlideGoto}
+        />
 
         {/* â”€â”€ Canvas Element â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <canvas
