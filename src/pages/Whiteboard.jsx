@@ -989,18 +989,32 @@ export default function Whiteboard({ user }) {
   const startLevelLoop = () => {
     if (levelRafRef.current) return; // already running
     const SPEAKING_THRESHOLD = 0.015;
-    const tick = () => {
-      // Local mic level
-      if (localAnalyserRef.current) {
-        const rms = getRMS(localAnalyserRef.current);
-        setMicLevel(Math.min(100, Math.round(rms * 600)));
+    // Reading audio data every frame is cheap, but each setMicLevel/setSpeakingPeers call
+    // re-renders this whole component - at 60fps that's enough forced re-renders to make the
+    // local <video> tile's ref callback keep re-firing and glitch. 10 updates/sec is still a
+    // smooth-looking level meter, so throttle the STATE UPDATES, not the read loop itself.
+    let lastUpdate = 0;
+    const UPDATE_INTERVAL_MS = 100;
+    let prevSpeaking = new Set();
+    const tick = (now) => {
+      if (now - lastUpdate >= UPDATE_INTERVAL_MS) {
+        lastUpdate = now;
+        // Local mic level
+        if (localAnalyserRef.current) {
+          const rms = getRMS(localAnalyserRef.current);
+          setMicLevel(Math.min(100, Math.round(rms * 600)));
+        }
+        // Remote peer speaking detection
+        const talking = new Set();
+        Object.entries(remoteAnalysersRef.current).forEach(([pid, analyser]) => {
+          if (getRMS(analyser) > SPEAKING_THRESHOLD) talking.add(pid);
+        });
+        const changed = talking.size !== prevSpeaking.size || [...talking].some(id => !prevSpeaking.has(id));
+        if (changed) {
+          setSpeakingPeers(talking);
+          prevSpeaking = talking;
+        }
       }
-      // Remote peer speaking detection
-      const talking = new Set();
-      Object.entries(remoteAnalysersRef.current).forEach(([pid, analyser]) => {
-        if (getRMS(analyser) > SPEAKING_THRESHOLD) talking.add(pid);
-      });
-      setSpeakingPeers(talking);
       levelRafRef.current = requestAnimationFrame(tick);
     };
     levelRafRef.current = requestAnimationFrame(tick);
@@ -3124,7 +3138,9 @@ export default function Whiteboard({ user }) {
                 <video
                   ref={(el) => {
                     localVideoGridRef.current = el;
-                    if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
+                    if (el && localStreamRef.current && el.srcObject !== localStreamRef.current) {
+                      el.srcObject = localStreamRef.current;
+                    }
                   }}
                   className="video-tile-stream"
                   autoPlay muted playsInline
@@ -3185,9 +3201,13 @@ export default function Whiteboard({ user }) {
         )}
 
         {/* â”€â”€ Right-Side Participant Strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* Hidden while the Classroom sidebar is open: both float on the same right edge and
+            the strip's avatar tiles sat on top of (and blocked clicks on) the sidebar's
+            per-student draw-access toggle. The sidebar already shows mic status per participant,
+            so nothing is lost by not showing both at once. */}
         <ParticipantStrip
           isCollaborating={isCollaborating}
-          showParticipantStrip={showParticipantStrip}
+          showParticipantStrip={showParticipantStrip && !showCollabSidebar}
           participants={participants}
           localUserId={localUserId.current}
           userName={userName}

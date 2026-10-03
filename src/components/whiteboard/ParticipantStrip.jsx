@@ -67,7 +67,9 @@ export default function ParticipantStrip({
                     <video
                       ref={(el) => {
                         localVideoStripRef.current = el;
-                        if (el && localStreamRef.current) el.srcObject = localStreamRef.current;
+                        if (el && localStreamRef.current && el.srcObject !== localStreamRef.current) {
+                          el.srcObject = localStreamRef.current;
+                        }
                       }}
                       className="pstrip-video"
                       autoPlay muted playsInline

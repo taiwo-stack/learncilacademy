@@ -1,0 +1,25 @@
+-- =============================================================
+-- FIX: both storage buckets (avatars, materials) have Row Level
+-- Security enabled on storage.objects with no policy permitting
+-- writes, so every upload from the browser's anon key fails with
+-- "new row violates row-level security policy" and silently falls
+-- back to embedding the file as a giant base64 data: URI directly in
+-- the database row instead of a short storage URL.
+--
+-- This is specifically why HTML slide decks never reach students:
+-- the fallback produces 60KB-560KB "URLs", and when the tutor
+-- attaches one to the whiteboard, broadcasting it over Supabase
+-- Realtime silently fails because the payload is far past Realtime's
+-- broadcast size limit - so the page-change event carrying the slide
+-- never arrives on the student's side. It also means avatar uploads
+-- have been doing the same thing.
+--
+-- Same reasoning as the earlier live_sessions/push_subscriptions
+-- fixes: this app controls access at the app layer, not via RLS,
+-- everywhere else - so disabling RLS on storage.objects matches that
+-- and unblocks both buckets' uploads at once.
+-- Run this in your Supabase SQL Editor:
+-- https://supabase.com/dashboard/project/wexqhlrhfostrpehknka/sql/new
+-- =============================================================
+
+ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
