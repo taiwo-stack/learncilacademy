@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronUp, ChevronDown, Trash2, Plus, Image as ImageIcon, X } from 'lucide-react';
 import { uploadMaterialFile, saveMaterial } from '../services/dataService';
-import { buildSlideDeckHtml } from '../utils/pptxConverter';
+import { buildSlideDeckHtml, compressImageDataUrl } from '../utils/pptxConverter';
 import '../styles/Dashboard.css';
 
 const blankSlide = () => ({ title: '', bulletsText: '', image: null, imageName: '' });
@@ -41,7 +41,10 @@ export default function SlideEditor() {
   const handleImageChange = (idx, file) => {
     if (!file) return updateSlide(idx, { image: null, imageName: '' });
     const reader = new FileReader();
-    reader.onload = () => updateSlide(idx, { image: reader.result, imageName: file.name });
+    reader.onload = async () => {
+      const compressed = await compressImageDataUrl(reader.result, file.type === 'image/png' || file.type === 'image/gif');
+      updateSlide(idx, { image: compressed, imageName: file.name });
+    };
     reader.readAsDataURL(file);
   };
 

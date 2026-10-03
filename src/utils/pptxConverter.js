@@ -19,6 +19,39 @@ const NS = {
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']);
 const MAX_OUTPUT_BYTES = 15 * 1024 * 1024; // matches the html_slide upload cap in TutorDashboard/AdminDashboard
+const MAX_IMAGE_DIMENSION = 900; // px - a slide image never renders taller than 340px, this covers retina displays with room to spare
+const JPEG_QUALITY = 0.72;
+
+// PowerPoint frequently embeds full camera-resolution photos (several MB each) even though
+// they're displayed small on a slide - re-embedding those as-is made converted/saved decks
+// slow to fetch and render. This decodes the image onto an offscreen canvas, downsizes it if
+// it's bigger than a slide will ever need, and re-encodes it - usually a 10-20x size drop for
+// real photos. PNG/GIF sources stay PNG (keeps transparency for logos/diagrams); everything
+// else re-encodes as JPEG for much better compression. Falls back to the original data URL
+// untouched if decoding ever fails, rather than losing the image.
+export const compressImageDataUrl = (dataUrl, preferPng = false) => new Promise((resolve) => {
+  const img = new Image();
+  img.onload = () => {
+    let { width, height } = img;
+    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+      const scale = MAX_IMAGE_DIMENSION / Math.max(width, height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(preferPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', JPEG_QUALITY));
+    } catch (_) {
+      resolve(dataUrl);
+    }
+  };
+  img.onerror = () => resolve(dataUrl);
+  img.src = dataUrl;
+});
 
 const parseXml = (text) => new DOMParser().parseFromString(text, 'application/xml');
 
@@ -115,7 +148,8 @@ const extractSlideImages = async (zip, slidePath) => {
     if (!imgFile) continue;
     const base64 = await imgFile.async('base64');
     const mime = ext === 'jpg' ? 'jpeg' : ext;
-    images.push(`data:image/${mime};base64,${base64}`);
+    const rawDataUrl = `data:image/${mime};base64,${base64}`;
+    images.push(await compressImageDataUrl(rawDataUrl, ext === 'png' || ext === 'gif'));
   }
   return images;
 };
