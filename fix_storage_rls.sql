@@ -14,12 +14,28 @@
 -- never arrives on the student's side. It also means avatar uploads
 -- have been doing the same thing.
 --
--- Same reasoning as the earlier live_sessions/push_subscriptions
--- fixes: this app controls access at the app layer, not via RLS,
--- everywhere else - so disabling RLS on storage.objects matches that
--- and unblocks both buckets' uploads at once.
+-- NOTE: storage.objects is owned by Supabase's internal
+-- supabase_storage_admin role, so (unlike every other table in this
+-- app) you can't just ALTER TABLE ... DISABLE ROW LEVEL SECURITY on
+-- it - the SQL Editor's connection isn't the table owner and Postgres
+-- requires that specifically for toggling RLS. Adding a policy is the
+-- operation Supabase actually grants here, and it gets to the same
+-- place: full open access, matching how every other table in this
+-- schema already works.
 -- Run this in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/wexqhlrhfostrpehknka/sql/new
 -- =============================================================
 
-ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public full access to materials bucket"
+ON storage.objects
+FOR ALL
+TO public
+USING (bucket_id = 'materials')
+WITH CHECK (bucket_id = 'materials');
+
+CREATE POLICY "Public full access to avatars bucket"
+ON storage.objects
+FOR ALL
+TO public
+USING (bucket_id = 'avatars')
+WITH CHECK (bucket_id = 'avatars');
