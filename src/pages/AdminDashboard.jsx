@@ -11,7 +11,7 @@ import {
   getStudentCourses, enrollStudentInCourse, unenrollStudentFromCourse, updateStudentEnrollment,
   getTasks, saveTask, deleteTask,
   getSchedules, saveSchedule, deleteSchedule,
-  getChatMessages
+  getChatMessages, createLiveSession
 } from '../services/dataService';
 import { 
   Users, Calendar, UserCheck, Mail, Plus, Trash2, AlertCircle, Layers, X,
@@ -21,9 +21,12 @@ import {
 import HtmlSlideModal from '../components/HtmlSlideModal';
 import '../styles/Dashboard.css';
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ user }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [viewingSlide, setViewingSlide] = useState(null); // material row being viewed in the embedded HTML slide modal
+  const [showStartSessionModal, setShowStartSessionModal] = useState(false);
+  const [startSessionStudentIds, setStartSessionStudentIds] = useState([]);
+  const [startingSession, setStartingSession] = useState(false);
 
   // Data lists
   const [bookings, setBookings] = useState([]);
@@ -237,6 +240,31 @@ export default function AdminDashboard() {
   };
 
   // Booking Actions
+  const handleStartLiveSession = async () => {
+    if (startSessionStudentIds.length === 0) {
+      return alert('Select at least one student to invite.');
+    }
+    setStartingSession(true);
+    try {
+      const roomId = 'room-' + Math.random().toString(36).substr(2, 9);
+      await createLiveSession({
+        id: roomId,
+        tutor_id: user?.id,
+        tutor_name: user?.full_name || 'Admin',
+        student_ids: startSessionStudentIds,
+        title: 'Live Whiteboard Session'
+      });
+      sessionStorage.setItem(`wb-host-${roomId}`, 'true');
+      setShowStartSessionModal(false);
+      setStartSessionStudentIds([]);
+      window.open(`/whiteboard?room=${roomId}`, '_blank');
+    } catch (err) {
+      alert('Error starting session: ' + err.message);
+    } finally {
+      setStartingSession(false);
+    }
+  };
+
   const handleBookingStatus = async (id, status) => {
     try {
       await updateBookingStatus(id, status);
@@ -900,8 +928,8 @@ export default function AdminDashboard() {
             <button onClick={() => setActiveTab('chatmonitor')}><MessageSquare size={18} /> Chat Monitor</button>
           </li>
           <li className="sidebar-item" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
-            <button onClick={() => window.open('/whiteboard', '_blank')} style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>
-              <MonitorPlay size={18} /> Launch Whiteboard ↗
+            <button onClick={() => setShowStartSessionModal(true)} style={{ color: 'var(--accent-color)', fontWeight: 'bold' }}>
+              <MonitorPlay size={18} /> Start Live Whiteboard ↗
             </button>
           </li>
         </ul>
@@ -3000,6 +3028,43 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      {showStartSessionModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={() => { setShowStartSessionModal(false); setStartSessionStudentIds([]); }}><X size={20} /></button>
+            <h3 className="modal-title">Start Live Whiteboard Session</h3>
+            <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              Pick one or more students to invite. A join link will appear on their dashboard the moment you start.
+            </p>
+            <div style={{ maxHeight: '260px', overflowY: 'auto', border: '2px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem', marginBottom: '1.5rem' }}>
+              {students.length === 0 && (
+                <p style={{ padding: '0.5rem', color: '#94a3b8' }}>No students yet.</p>
+              )}
+              {students.map(s => (
+                <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={startSessionStudentIds.includes(s.id)}
+                    onChange={(e) => {
+                      setStartSessionStudentIds(prev =>
+                        e.target.checked ? [...prev, s.id] : prev.filter(id => id !== s.id)
+                      );
+                    }}
+                  />
+                  {s.full_name}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <button type="button" className="btn-prev" onClick={() => { setShowStartSessionModal(false); setStartSessionStudentIds([]); }}>Cancel</button>
+              <button type="button" className="btn-submit" disabled={startingSession} onClick={handleStartLiveSession}>
+                {startingSession ? 'Starting...' : 'Start Session'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <HtmlSlideModal url={viewingSlide?.file_url} title={viewingSlide?.title} onClose={() => setViewingSlide(null)} />
     </div>
   );
