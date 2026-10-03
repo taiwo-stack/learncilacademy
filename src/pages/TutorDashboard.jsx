@@ -1267,13 +1267,9 @@ export default function TutorDashboard({ user }) {
         {activeTab === 'messages' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <NotificationToggle userId={tutorInfo?.id || tutorId} />
-            </div>
-
             {/* ── Broadcast Toolbar ── */}
             <div className="dashboard-card" style={{ padding: '1rem 1.5rem', marginBottom: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <span style={{ fontSize: '1.1rem' }}>📢</span>
                   <div>
@@ -1281,17 +1277,20 @@ export default function TutorDashboard({ user }) {
                     <div style={{ fontSize: '0.75rem', color: '#718096' }}>Send one message to multiple students at once</div>
                   </div>
                 </div>
-                <button
-                  onClick={() => { setShowBroadcast(!showBroadcast); setBroadcastSelected([]); setBroadcastText(''); setBroadcastSuccess(false); }}
-                  style={{
-                    padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.83rem',
-                    background: showBroadcast ? '#edf2f7' : 'var(--primary-color)',
-                    color: showBroadcast ? 'var(--primary-color)' : 'white',
-                    display: 'flex', alignItems: 'center', gap: '0.4rem', transition: 'all 0.2s'
-                  }}
-                >
-                  {showBroadcast ? '✕ Cancel' : '+ Compose Broadcast'}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <NotificationToggle userId={tutorInfo?.id || tutorId} />
+                  <button
+                    onClick={() => { setShowBroadcast(!showBroadcast); setBroadcastSelected([]); setBroadcastText(''); setBroadcastSuccess(false); }}
+                    style={{
+                      padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.83rem',
+                      background: showBroadcast ? '#edf2f7' : 'var(--primary-color)',
+                      color: showBroadcast ? 'var(--primary-color)' : 'white',
+                      display: 'flex', alignItems: 'center', gap: '0.4rem', transition: 'all 0.2s'
+                    }}
+                  >
+                    {showBroadcast ? '✕ Cancel' : '+ Compose Broadcast'}
+                  </button>
+                </div>
               </div>
 
               {/* Expanded compose panel */}
@@ -1399,7 +1398,7 @@ export default function TutorDashboard({ user }) {
             </div>
 
             {/* ── Chat split-pane ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', height: '620px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', height: 'calc(100vh - 280px)', minHeight: '420px', maxHeight: '620px' }}>
 
             {/* Left: Student contact list */}
             <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', marginBottom: 0 }}>
