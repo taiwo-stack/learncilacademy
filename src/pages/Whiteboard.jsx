@@ -353,6 +353,31 @@ export default function Whiteboard({ user }) {
     navigate(user?.role === 'admin' ? '/admin' : '/tutor');
   };
 
+  // Best-effort cleanup if the host just closes the tab instead of clicking "End Session" -
+  // without this, the live_sessions row (and the student's join banner) would never go away
+  // on its own. A normal supabase-js call made during page teardown gets cancelled before it
+  // completes, so this fires a raw fetch with keepalive: true, which browsers guarantee is
+  // allowed to finish even after the page starts unloading. This is a safety net on top of
+  // the explicit End Session flow, not a replacement for it - and getLiveSessionsForStudent's
+  // own age-based expiry covers the rest (tab killed outright, offline, etc.).
+  useEffect(() => {
+    if (!isHost || !roomId) return;
+    const cleanup = () => {
+      const url = import.meta.env.VITE_SUPABASE_URL;
+      const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (!url || !key) return;
+      try {
+        fetch(`${url}/rest/v1/live_sessions?id=eq.${encodeURIComponent(roomId)}`, {
+          method: 'DELETE',
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+          keepalive: true
+        });
+      } catch (_) {}
+    };
+    window.addEventListener('pagehide', cleanup);
+    return () => window.removeEventListener('pagehide', cleanup);
+  }, [isHost, roomId]);
+
   // On mount: check room ID, join collaboration automatically if URL link exists.
   // Guarded to run at most once: this effect has been observed firing twice in both dev
   // and production (not just StrictMode), and Supabase's realtime client dedupes channels

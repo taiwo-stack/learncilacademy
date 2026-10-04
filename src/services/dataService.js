@@ -1347,6 +1347,12 @@ export const createLiveSession = async (session) => {
   return session;
 };
 
+// A session row only ever disappears when the host explicitly clicks "End Session" -
+// if they instead just close the tab (crash, forgot, lost connection), nothing ever
+// deletes it and the join banner would otherwise show on the student's dashboard forever.
+// Anything older than this is treated as abandoned rather than actually still live.
+const LIVE_SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours - generous for one sitting, short enough to self-heal same day
+
 export const getLiveSessionsForStudent = async (studentId) => {
   if (hasSupabaseConfig) {
     // .contains() sends a Postgres array literal here instead of JSON, which this
@@ -1358,7 +1364,23 @@ export const getLiveSessionsForStudent = async (studentId) => {
       .select('*')
       .filter('student_ids', 'cs', JSON.stringify([studentId]));
     if (error) throw error;
-    return data;
+
+    const now = Date.now();
+    const fresh = [];
+    const expired = [];
+    (data || []).forEach((session) => {
+      if (now - new Date(session.created_at).getTime() > LIVE_SESSION_MAX_AGE_MS) {
+        expired.push(session.id);
+      } else {
+        fresh.push(session);
+      }
+    });
+    if (expired.length > 0) {
+      // Best-effort tidy-up so abandoned rows don't pile up - never blocks returning the
+      // still-live sessions, and a failure here just means they get caught again next poll.
+      supabase.from('live_sessions').delete().in('id', expired).then(() => {}, () => {});
+    }
+    return fresh;
   }
   return [];
 };
